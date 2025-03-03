@@ -24,7 +24,7 @@ export const AddressSchema: Schema<IAddress> = new Schema<IAddress>(
     landmark: { type: String, default: null },
     address_type: { type: String },
     is_deleted: {
-      type: Boolean,
+      type: Boolean, 
       default: false,
     },
   },

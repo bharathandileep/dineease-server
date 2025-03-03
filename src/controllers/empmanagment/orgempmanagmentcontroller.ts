@@ -227,11 +227,11 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
 };
 
 export const getOrgEmployeeById = async (req: Request, res: Response) => {
-  try {
+    try {
     const { id } = req.params;
     validateMogooseObjectId(id);
 
-    const orgemployees = await OrgEmployeeManagement.aggregate([
+    const employee = await OrgEmployeeManagement.aggregate([
       {
         $match: {
           _id: new mongoose.Types.ObjectId(id),
@@ -268,19 +268,19 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
       },
     ]);
 
-    if (!orgemployees || orgemployees.length === 0) {
+    if (!employee || employee.length === 0) {
       throw new CustomError(
         "Employee not found",
         HTTP_STATUS_CODE.NOT_FOUND,
         ERROR_TYPES.NOT_FOUND_ERROR,
         false
       );
-    }
+    } 
 
     sendSuccessResponse(
       res,
       "Employee retrieved successfully",
-      orgemployees[0], // Accessing the first element since aggregate returns an array
+      employee[0], 
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -291,6 +291,8 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
     );
   }
+
+
 };
 
 // Update employee
