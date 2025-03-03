@@ -10,13 +10,35 @@ import {
 } from "../../lib/helpers/responseHelper";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 
+
+
 export const getAllSubCategories = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string)?.trim() || '';
+    const status = req.query.status as string;
     const startIndex = (page - 1) * limit;
-    const total = await MenuSubcategory.countDocuments({});
-    const categories = await MenuSubcategory.find().populate("category", "category status").skip(startIndex).limit(limit);
+
+    // Build query object
+    const query: any = {};
+    if (search) {
+      query.subcategoryName = { $regex: search, $options: "i" }; // Case-insensitive search on subcategoryName
+    }
+    if (status && status !== "all") {
+      query.status = status === "active" ? true : false; // Boolean status filter
+    }
+
+  
+
+    const total = await MenuSubcategory.countDocuments(query);
+    const categories = await MenuSubcategory.find(query)
+      .populate("category", "category status") // Populate category details
+      .skip(startIndex)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    console.log("Fetched Subcategories:", categories);
 
     const pagination = {
       currentPage: page,
@@ -25,12 +47,22 @@ export const getAllSubCategories = async (req: Request, res: Response) => {
       itemsPerPage: limit,
     };
 
-    sendSuccessResponse(res, "Categories retrieved successfully", { categories, pagination }, HTTP_STATUS_CODE.OK);
+    sendSuccessResponse(
+      res,
+      "Subcategories retrieved successfully",
+      { categories, pagination },
+      HTTP_STATUS_CODE.OK
+    );
   } catch (error) {
-    sendErrorResponse(res, error, HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR, ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE);
+    console.error("Backend error:", error);
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
   }
 };
-
 
 // Create subcategory
 export const createSubcategory = async (req: Request, res: Response) => {
@@ -232,9 +264,9 @@ export const toggleSubcategoryStatus = async (req: Request, res: Response) => {
 
     const updatedSubcategory = await MenuSubcategory.findByIdAndUpdate(
       id,
-      { status: newStatus },
+      { status: !subcategory.status },
       { new: true }
-    ).populate<{ category: any }>("category", "category status");
+    ).populate("category", "category status");
 
     sendSuccessResponse(
       res,
@@ -254,7 +286,6 @@ export const toggleSubcategoryStatus = async (req: Request, res: Response) => {
   }
 };
 
-// Delete subcategory
 export const deleteSubcategory = async (req: Request, res: Response) => {
   try {
     const { id } = req.params; 

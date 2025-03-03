@@ -22,23 +22,13 @@ import Role from "../../models/users/RolesModels";
 
 export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
   try {
-   
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 8; 
+    const limit = parseInt(req.query.limit as string) || 8;
     const skip = (page - 1) * limit;
 
     const matchQuery: any = { is_deleted: false };
 
-    // Add search functionality
-    if (req.query.search) {
-      const searchRegex = new RegExp(req.query.search as string, 'i');
-      matchQuery.$or = [
-        { username: searchRegex },
-        { email: searchRegex },
-        { phone_number: searchRegex }
-      ];
-    }
-
+    // Optional filters for designation and status
     if (req.query.designation) {
       matchQuery.designation = req.query.designation;
     }
@@ -46,10 +36,8 @@ export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
       matchQuery.status = req.query.status;
     }
 
-    const orgEmployees = await OrgEmployeeManagement.aggregate([
+    const pipeline: any[] = [
       { $match: matchQuery },
-      { $skip: skip },
-      { $limit: limit },
       {
         $lookup: {
           from: "designations",
@@ -67,9 +55,36 @@ export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
           as: "address",
         },
       },
-    ]);
+    ];
 
-    const totalEmployees = await OrgEmployeeManagement.countDocuments(matchQuery);
+    // Add search functionality
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search as string, "i");
+      pipeline.push({
+        $match: {
+          $or: [
+            { username: searchRegex },
+            { email: searchRegex },
+            { phone_number: searchRegex },
+            { "designation.designation_name": searchRegex },
+          ],
+        },
+      });
+    }
+
+    // Pagination stages
+    pipeline.push({ $skip: skip }, { $limit: limit });
+
+    const orgEmployees = await OrgEmployeeManagement.aggregate(pipeline);
+
+    // Count total employees with the same search criteria
+    const totalPipeline = [...pipeline];
+    totalPipeline.pop(); // Remove $limit
+    totalPipeline.pop(); // Remove $skip
+    totalPipeline.push({ $count: "total" });
+
+    const totalDocs = await OrgEmployeeManagement.aggregate(totalPipeline);
+    const totalEmployees = totalDocs.length > 0 ? totalDocs[0].total : 0;
 
     sendSuccessResponse(
       res,
@@ -298,8 +313,7 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] }; // Handle file uploads
-    console.log(req.body);
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] }; 
     validateMogooseObjectId(id);
 
     // Check if designation exists

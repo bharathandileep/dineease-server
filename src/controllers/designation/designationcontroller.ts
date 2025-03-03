@@ -79,13 +79,30 @@ export const createDesignation = async (req: Request, res: Response) => {
 
 
 
+// Backend controller
 export const getAllDesignations = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string)?.trim() || '';
+    const status = req.query.status as string;
+    
     const startIndex = (page - 1) * limit;
-    const total = await Designation.countDocuments({});
-    const designations = await Designation.find().skip(startIndex).limit(limit);
+    
+    // Build query object
+    const query: any = {};
+    if (search) {
+      query.designation_name = { $regex: search, $options: 'i' }; // Case-insensitive search
+    }
+    if (status && status !== 'all') {
+      query.status = status === 'active' ? true : false;
+    }
+
+    const total = await Designation.countDocuments(query);
+    const designations = await Designation.find(query)
+      .skip(startIndex)
+      .limit(limit)
+      .sort({ createdAt: -1 }); // Optional: sort by creation date
 
     const pagination = {
       currentPage: page,

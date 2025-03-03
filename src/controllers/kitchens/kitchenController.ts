@@ -232,10 +232,7 @@ export const handleCreateNewKitchens = async (
   }
 };
 
-export const handleGetKitchens = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
+export const handleGetKitchens = async (req: Request, res: Response): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 4;
@@ -347,19 +344,19 @@ export const handleGetKitchens = async (
       },
     ]);
 
-    const totalKitchens = await Kitchen.countDocuments(matchQuery);
+      const totalKitchens = await Kitchen.countDocuments(matchQuery);
 
-    sendSuccessResponse(
-      res,
-      "Kitchens retrieved successfully!",
-      {
-        kitchens,
-        totalPages: Math.ceil(totalKitchens / limit),
-        currentPage: page,
-        totalKitchens,
-      },
-      HTTP_STATUS_CODE.OK
-    );
+      sendSuccessResponse(
+        res,
+        "Kitchens retrieved successfully!",
+        {
+          kitchens,
+          totalPages: Math.ceil(totalKitchens / limit),
+          currentPage: page,
+          totalKitchens,
+        },
+        HTTP_STATUS_CODE.OK
+      );
   } catch (error) {
     sendErrorResponse(
       res,
