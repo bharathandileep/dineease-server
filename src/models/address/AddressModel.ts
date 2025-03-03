@@ -31,7 +31,7 @@ export const AddressSchema: Schema<IAddress> = new Schema<IAddress>(
   { timestamps: true }
 );  
 
-const Address: Model<IAddress> = mongoose.model<IAddress>(
+const Address: Model<IAddress> = mongoose.model<IAddress>(  
   "Address",
   AddressSchema
 );
