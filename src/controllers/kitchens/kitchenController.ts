@@ -84,8 +84,6 @@ export const handleCreateNewKitchens = async (
   req: Request,
   res: Response
 ): Promise<any> => {
-  console.log(req.body);
-
   try {
     // Validate request body
     const errors = validateKitchenDetails(req.body);
@@ -239,7 +237,6 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
     const skip = (page - 1) * limit;
     const { search, kitchen_status, kitchen_type } = req.query;
 
-    console.log(req.query);
     const matchQuery: any = { is_deleted: false };
     
     if (kitchen_status) matchQuery.kitchen_status = kitchen_status;

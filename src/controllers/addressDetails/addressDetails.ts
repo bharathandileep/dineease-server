@@ -19,11 +19,7 @@ export const getAllCountries = async (
   res: Response
 ): Promise<void> => {
   try {
-    console.log("inside getallcountries controller");
-
     const countries = await Country.find();
-    console.log(countries);
-
     res.status(200).json({
       success: true,
       data: countries,
@@ -44,7 +40,6 @@ export const getStatesByCountry = async (
   try {
     const { countryName } = req.params;
     const states = await State.find({ country_id: Number(countryName) });
-    console.log(states);
     if (states.length === 0) {
       res.status(404).json({
         success: false,
@@ -72,11 +67,7 @@ export const getCitiesByState = async (
 ): Promise<void> => {
   try {
     const { stateName } = req.params;
-    console.log(stateName, "heloo");
-
     const cities = await City.find({ state_id: Number(stateName) });
-    console.log(cities);
-
     if (cities.length === 0) {
       res.status(404).json({
         success: false,

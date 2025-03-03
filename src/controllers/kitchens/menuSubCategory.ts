@@ -38,8 +38,6 @@ export const getAllSubCategories = async (req: Request, res: Response) => {
       .limit(limit)
       .sort({ createdAt: -1 });
 
-    console.log("Fetched Subcategories:", categories);
-
     const pagination = {
       currentPage: page,
       totalItems: total,
@@ -238,7 +236,6 @@ export const updateSubcategory = async (req: Request, res: Response) => {
 export const toggleSubcategoryStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    console.log(id)
     const subcategory = await MenuSubcategory.findById(id).populate<{
       category: any;
     }>("category", "category status");

@@ -74,17 +74,12 @@ export const orgGetAllCategories = async (req: Request, res: Response) => {
       query.status = status === "active" ? true : false; 
     }
 
-    console.log("Received Query Parameters:", req.query);
-    console.log("Constructed MongoDB Query:", query);
-
     const total = await OrgCategory.countDocuments(query);
     const categories = await OrgCategory.find(query)
       .skip(startIndex)
       .limit(limit)
       .sort({ createdAt: -1 });
-
-    console.log("Fetched Categories:", categories);
-
+  
     const pagination = {
       currentPage: page,
       totalItems: total,

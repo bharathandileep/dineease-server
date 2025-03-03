@@ -38,8 +38,6 @@ export const orgGetAllSubCategories = async (req: Request, res: Response) => {
       .limit(limit)
       .sort({ createdAt: -1 });
 
-    console.log("Fetched Subcategories:", categories);
-
     const pagination = {
       currentPage: page,
       totalItems: total,

@@ -660,7 +660,6 @@ export const handledDeleteOrganisations = async (
 ): Promise<any> => {
   try {
     const { orgId } = req.params;
-    console.log(orgId)
     validateMogooseObjectId(orgId);
 
     const updatedOrg = await Organization.findByIdAndUpdate(
