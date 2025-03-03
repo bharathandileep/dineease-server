@@ -17,14 +17,10 @@ import GstCertificateDetails from "../../models/documentations/GstModel";
 import FssaiCertificateDetails from "../../models/documentations/FfsaiModel";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
-import Country from "../../models/country/Country";
-import State from "../../models/state/StateModel";
-import City from "../../models/city/City";
+
 
 const validateKitchenDetails = (data: any) => {
   const errors: { field: string; message: string }[] = [];
-
-  // PAN Card Validation
   if (!data.pan_card_number) {
     errors.push({
       field: "pan_card_number",
@@ -62,7 +58,6 @@ const validateKitchenDetails = (data: any) => {
     });
   }
 
-  // FSSAI Validation
   if (!data.ffsai_certificate_number) {
     errors.push({
       field: "ffsai_certificate_number",
@@ -243,13 +238,20 @@ export const handleGetKitchens = async (
 ): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const limit = parseInt(req.query.limit as string) || 4;
     const skip = (page - 1) * limit;
+    const { search, kitchen_status, kitchen_type } = req.query;
+
+    console.log(req.query);
     const matchQuery: any = { is_deleted: false };
-    if (req.query.kitchen_status)
-      matchQuery.kitchen_status = req.query.kitchen_status;
-    if (req.query.kitchen_type)
-      matchQuery.kitchen_type = req.query.kitchen_type;
+    
+    if (kitchen_status) matchQuery.kitchen_status = kitchen_status;
+    if (kitchen_type) matchQuery.kitchen_type = kitchen_type;
+    
+    // Implement search functionality on kitchen_name
+    if (search) {
+      matchQuery.kitchen_name = { $regex: new RegExp(search as string, "i") };
+    }
 
     const kitchens = await Kitchen.aggregate([
       { $match: matchQuery },
@@ -312,7 +314,6 @@ export const handleGetKitchens = async (
           as: "countryInfo",
         },
       },
-
       {
         $group: {
           _id: "$_id",
@@ -369,6 +370,7 @@ export const handleGetKitchens = async (
   }
 };
 
+
 export const handleGetKitchensById = async (
   req: Request,
   res: Response
@@ -376,7 +378,7 @@ export const handleGetKitchensById = async (
   try {
     const { kitchenId } = req.params;
     validateMogooseObjectId(kitchenId);
-
+     
     const kitchen = await Kitchen.aggregate([
       {
         $match: {
@@ -492,7 +494,7 @@ export const handleGetKitchensById = async (
           as: "countryInfo",
         },
       },
-      // Group everything back together (since we're looking up a single kitchen, but address was unwound)
+  
       {
         $group: {
           _id: "$_id",
@@ -500,6 +502,7 @@ export const handleGetKitchensById = async (
           kitchen_status: { $first: "$kitchen_status" },
           kitchen_owner_name: { $first: "$kitchen_owner_name" },
           owner_email: { $first: "$owner_email" },
+          status: { $first: "$status" },
           owner_phone_number: { $first: "$owner_phone_number" },
           restaurant_type: { $first: "$restaurant_type" },
           category: { $first: { $arrayElemAt: ["$categoryDetails", 0] } },
@@ -771,6 +774,47 @@ export const handleDeleteKitchens = async (
       res,
       "Kitchen soft deleted successfully!",
       null,
+      HTTP_STATUS_CODE.OK
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
+export const kitchenToggleStatus = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const kitchen = await Kitchen.findById(id);
+
+    if (!kitchen) {
+      throw new CustomError(
+        "Kitchen not found",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR,
+        false
+      );
+    }
+    const newStatus = !kitchen.status;
+    const updatedKitchen = await Kitchen.findByIdAndUpdate(
+      id, 
+      { status: newStatus }, 
+      { new: true }
+    );
+
+    sendSuccessResponse(
+      res,
+      `Kitchen status ${
+        updatedKitchen?.status ? "activated" : "deactivated"
+      } successfully`,
+      updatedKitchen,
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {

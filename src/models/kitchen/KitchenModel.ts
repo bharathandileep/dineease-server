@@ -20,6 +20,7 @@ export interface IKitchen extends Document, CommonDBInterface {
   kitchen_image: string;
   pre_ordering_options: string[];
   user_id: mongoose.Types.ObjectId;
+  status:boolean
 }
 
 export const KitchenSchema: Schema = new Schema<IKitchen>({
@@ -65,7 +66,6 @@ export const KitchenSchema: Schema = new Schema<IKitchen>({
     type: Boolean,
     default: false,
   },
- 
   kitchen_image: { type: String, required: true },
   working_days: [
     {
@@ -83,7 +83,10 @@ export const KitchenSchema: Schema = new Schema<IKitchen>({
       delivery_time: { type: String, required: true },
     },
   ],
-  
+  status:{
+    type:Boolean,
+    default:true
+  }
 });
 
 const Kitchen: Model<IKitchen> = mongoose.model<IKitchen>(

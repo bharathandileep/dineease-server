@@ -24,6 +24,7 @@ export const apiConfig = {
     deletekitchens: "/delete/:kitchenId",
     getAllkitchens: "/all",
     getkitchensById: "/:kitchenId",
+    toggleKitchensStatus: "/status/:id",
 
     createCategory: "/categories",
     getAllCategories: "/categories/all",
@@ -69,9 +70,10 @@ export const apiConfig = {
   organization: {
     newOrganization: "/new",
     updateOrganization: "/update/:id",
-    deleteOrganization: "/delete/:kitchenId",
+    deleteOrganization: "/delete/:orgId",
     getAllOrganization: "/all",
     getOrganizationById: "/:orgId",
+    toggleOrganizationStatus:"/status/:id",
 
     createCategory: "/categories",
     getAllCategories: "/categories/all",

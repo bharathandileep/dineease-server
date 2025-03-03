@@ -259,7 +259,6 @@ export const kitchenToggleSubcategoryStatus = async (
     );
   }
 };
-
 // Delete subcategory
 export const kitchenDeleteSubcategory = async (req: Request, res: Response) => {
   try {
@@ -292,3 +291,4 @@ export const kitchenDeleteSubcategory = async (req: Request, res: Response) => {
     );
   }
 };
+

@@ -1,595 +1,3 @@
-// import { Request, Response } from "express";
-// import {
-//   sendErrorResponse,
-//   sendSuccessResponse,
-// } from "../../lib/helpers/responseHelper";
-// import { HTTP_STATUS_CODE } from "../../lib/constants/httpStatusCodes";
-// import { ERROR_TYPES } from "../../lib/constants/errorType";
-// import { CustomError } from "../../lib/errors/customError";
-// import {
-//   createAddressAndUpdateModel,
-//   updateAddress,
-// } from "../../lib/helpers/addressUpdater";
-// import Organization from "../../models/organisations/OrgModel";
-// import PanCardDetails from "../../models/documentations/PanModel";
-// import GstCertificateDetails from "../../models/documentations/GstModel";
-// import mongoose from "mongoose";
-// import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
-// import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
-// import OrgCategory from "../../models/organisations/OrgCategory";
-
-// const validateOrganizationDetails = (data: any) => {
-//   const errors: { field: string; message: string }[] = [];
-
-//   // PAN Card Validation
-//   if (!data.pan_card_number) {
-//     errors.push({
-//       field: "pan_card_number",
-//       message: "PAN card number is required.",
-//     });
-//   } else if (!/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(data.pan_card_number)) {
-//     errors.push({
-//       field: "pan_card_number",
-//       message: "Invalid PAN card number.",
-//     });
-//   }
-
-//   if (!data.pan_card_user_name) {
-//     errors.push({
-//       field: "pan_card_user_name",
-//       message: "PAN card user name is required.",
-//     });
-//   }
-
-//   // GST Validation
-//   if (!data.gst_number) {
-//     errors.push({ field: "gst_number", message: "GST number is required." });
-//   } else if (
-//     !/^\d{2}[A-Z]{5}\d{4}[A-Z]{1}[A-Z\d]{1}[Z]{1}[A-Z\d]{1}$/.test(
-//       data.gst_number
-//     )
-//   ) {
-//     errors.push({ field: "gst_number", message: "Invalid GST number." });
-//   }
-
-//   if (!data.gst_expiry_date) {
-//     errors.push({
-//       field: "gst_expiry_date",
-//       message: "GST expiry date is required.",
-//     });
-//   }
-//   return errors;
-// };
-
-// export const handleCreateNewOrganisation = async (
-//   req: Request,
-//   res: Response
-// ) => {
-//   try {
-//     const {
-//       organizationName,
-//       managerName,
-//       registerNumber,
-//       contactNumber,
-//       email,
-//       numberOfEmployees,
-//       addressType,
-//       streetAddress,
-//       district,
-//       city,
-//       state,
-//       pincode,
-//       country,
-//       panNumber,
-//       panCardUserName,
-//       gstNumber,
-//       expiryDate,
-//       user_id,
-//     } = req.body;
-//     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-//     const kitchenImageUrl = await uploadFileToCloudinary(
-//       files.organizationLogo[0].buffer
-//     );
-
-//     const newOrg = await Organization.create({
-//       user_id: new mongoose.Types.ObjectId(user_id),
-//       organizationName,
-//       managerName,
-//       register_number: registerNumber,
-//       contact_number: contactNumber,
-//       email,
-//       no_of_employees: Number(numberOfEmployees),
-//       organizationLogo: kitchenImageUrl,
-//       is_deleted: false,
-//     });
-
-//     const newOrgId = newOrg._id;
-
-//     // Create an address for the organization
-//     await createAddressAndUpdateModel(Organization, newOrg._id, {
-//       street_address: streetAddress,
-//       city,
-//       state,
-//       district,
-//       pincode,
-//       country,
-//       address_type: addressType,
-//       prepared_by_id: newOrgId,
-//       entity_type: "Organization",
-//     });
-
-//     const gstImageUrl = await uploadFileToCloudinary(
-//       files.gstCertificateImage[0].buffer
-//     );
-//     const newGstCertificate = await GstCertificateDetails.create({
-//       prepared_by_id: newOrgId,
-//       entity_type: "Organization",
-//       gst_number: gstNumber,
-//       gst_certificate_image: gstImageUrl,
-//       expiry_date: expiryDate,
-//     });
-
-//     const panImageUrl = await uploadFileToCloudinary(
-//       files.panCardImage[0].buffer
-//     );
-//     const newPanCardDetails = await PanCardDetails.create({
-//       prepared_by_id: newOrgId,
-//       entity_type: "Organization",
-//       pan_card_number: panNumber,
-//       pan_card_user_name: panCardUserName,
-//       pan_card_image: panImageUrl,
-//     });
-
-//     return sendSuccessResponse(
-//       res,
-//       "Organization and associated details created successfully",
-//       null,
-//       HTTP_STATUS_CODE.OK
-//     );
-//   } catch (error) {
-//     return sendErrorResponse(
-//       res,
-//       error,
-//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-//     );
-//   }
-// };
-
-// export const handleGetOrganisations = async (
-//   req: Request,
-//   res: Response
-// ): Promise<any> => {
-//   try {
-//     const page = parseInt(req.query.page as string) || 1;
-//     const limit = parseInt(req.query.limit as string) || 10;
-//     const skip = (page - 1) * limit;
-
-//     const matchQuery: any = { is_deleted: false };
-//     if (req.query.organization_status)
-//       matchQuery.organization_status = req.query.organization_status;
-
-//     const organizations = await Organization.aggregate([
-//       { $match: matchQuery },
-//       { $skip: skip },
-//       { $limit: limit },
-//       {
-//         $lookup: {
-//           from: "addresses",
-//           localField: "address_id",
-//           foreignField: "_id",
-//           as: "addresses",
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "orgcategories",
-//           localField: "category",
-//           foreignField: "_id",
-//           as: "categoryDetails",
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "orgsubcategories",
-//           localField: "subcategoryName",
-//           foreignField: "_id",
-//           as: "subcategoryDetails",
-//         },
-//       },
-//       { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
-//       {
-//         $lookup: {
-//           from: "states",
-//           let: { stateId: { $toInt: "$addresses.state" } },
-//           pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
-//           as: "stateInfo",
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "cities",
-//           let: { cityId: { $toInt: "$addresses.city" } },
-//           pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
-//           as: "cityInfo",
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "districts",
-//           let: { districtId: { $toInt: "$addresses.district" } },
-//           pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
-//           as: "districtInfo",
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "countries",
-//           let: { countryId: { $toInt: "$addresses.country" } },
-//           pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
-//           as: "countryInfo",
-//         },
-//       },
-//       {
-//         $group: {
-//           _id: "$_id",
-//           organizationName: { $first: "$organizationName" },
-//           managerName: { $first: "$managerName" },
-//           register_number: { $first: "$register_number" },
-//           contact_number: { $first: "$contact_number" },
-//           email: { $first: "$email" },
-//           no_of_employees: { $first: "$no_of_employees" },
-//           organizationLogo: { $first: "$organizationLogo" },
-//           categoryDetails: { $first: "$categoryDetails" },
-//           subcategoryDetails: { $first: "$subcategoryDetails" },
-//           addresses: {
-//             $push: {
-//               _id: "$addresses._id",
-//               street_address: "$addresses.street_address",
-//               city_id: "$addresses.city",
-//               city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
-//               state_id: "$addresses.state",
-//               state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
-//               district_id: "$addresses.district",
-//               district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
-//               pincode: "$addresses.pincode",
-//               country_id: "$addresses.country",
-//               country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
-//               landmark: "$addresses.landmark",
-//               address_type: "$addresses.address_type",
-//             },
-//           },
-//         },
-//       },
-//     ]);
-
-//     const totalOrganization = await Organization.countDocuments(matchQuery);
-//     return sendSuccessResponse(
-//       res,
-//       "org retrieved successfully!",
-//       {
-//         organizations,
-//         totalPages: Math.ceil(totalOrganization / limit),
-//         currentPage: page,
-//         totalOrganization,
-//       },
-//       HTTP_STATUS_CODE.OK
-//     );
-//   } catch (error) {
-//     sendErrorResponse(
-//       res,
-//       error,
-//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-//     );
-//   }
-// };
-
-// export const handleGetByIdOrganisations = async (
-//   req: Request,
-//   res: Response
-// ): Promise<any> => {
-//   try {
-//     const { orgId } = req.params;
-//     validateMogooseObjectId(orgId);
-//     const organization = await Organization.aggregate([
-//       {
-//         $match: {
-//           _id: new mongoose.Types.ObjectId(orgId),
-//           is_deleted: false,
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "addresses",
-//           localField: "address_id",
-//           foreignField: "_id",
-//           as: "addresses",
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "orgcategories",
-//           localField: "category",
-//           foreignField: "_id",
-//           as: "categoryDetails",
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "orgsubcategories",
-//           localField: "subcategoryName",
-//           foreignField: "_id",
-//           as: "subcategoryDetails",
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "pancarddetails",
-//           let: { entityId: "$_id" },
-//           pipeline: [
-//             {
-//               $match: {
-//                 $expr: {
-//                   $and: [
-//                     { $eq: ["$prepared_by_id", "$$entityId"] },
-//                     { $eq: ["$entity_type", "Organization"] },
-//                   ],
-//                 },
-//               },
-//             },
-//           ],
-//           as: "panDetails",
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "gstcertificatedetails",
-//           let: { organizationId: "$_id" },
-//           pipeline: [
-//             {
-//               $match: {
-//                 $expr: {
-//                   $and: [
-//                     { $eq: ["$prepared_by_id", "$$organizationId"] },
-//                     { $eq: ["$entity_type", "Organization"] },
-//                   ],
-//                 },
-//               },
-//             },
-//           ],
-//           as: "gstDetails",
-//         },
-//       },
-//       { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
-//       {
-//         $lookup: {
-//           from: "states",
-//           let: { stateId: { $toInt: "$addresses.state" } },
-//           pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
-//           as: "stateInfo",
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "cities",
-//           let: { cityId: { $toInt: "$addresses.city" } },
-//           pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
-//           as: "cityInfo",
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "districts",
-//           let: { districtId: { $toInt: "$addresses.district" } },
-//           pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
-//           as: "districtInfo",
-//         },
-//       },
-//       {
-//         $lookup: {
-//           from: "countries",
-//           let: { countryId: { $toInt: "$addresses.country" } },
-//           pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
-//           as: "countryInfo",
-//         },
-//       },
-//       {
-//         $group: {
-//           _id: "$_id",
-//           organizationName: { $first: "$organizationName" },
-//           managerName: { $first: "$managerName" },
-//           register_number: { $first: "$register_number" },
-//           contact_number: { $first: "$contact_number" },
-//           email: { $first: "$email" },
-//           no_of_employees: { $first: "$no_of_employees" },
-//           organizationLogo: { $first: "$organizationLogo" },
-//           category: { $first: { $arrayElemAt: ["$categoryDetails", 0] } },
-//           subcategoryName: { $first: { $arrayElemAt: ["$subcategoryDetails", 0] } },
-//           panDetails: { $first: "$panDetails" },
-//           gstDetails: { $first: "$gstDetails" },
-//           addresses: {
-//             $push: {
-//               _id: "$addresses._id",
-//               street_address: "$addresses.street_address",
-//               city_id: "$addresses.city",
-//               city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
-//               state_id: "$addresses.state",
-//               state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
-//               district_id: "$addresses.district",
-//               district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
-//               pincode: "$addresses.pincode",
-//               country_id: "$addresses.country",
-//               country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
-//               landmark: "$addresses.landmark",
-//               address_type: "$addresses.address_type",
-//             },
-//           },
-//         },
-//       },
-//     ]);
-
-//     return sendSuccessResponse(
-//       res,
-//       "Kitchens retrieved successfully!",
-//       organization,
-//       HTTP_STATUS_CODE.OK
-//     );
-//   } catch (error) {
-//     sendErrorResponse(
-//       res,
-//       error,
-//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-//     );
-//   }
-// };
-
-// export const handleUpdateOrganisations = async (
-//   req: Request,
-//   res: Response
-// ) => {
-//   try {
-//     const errors = validateOrganizationDetails(req.body);
-//     if (errors.length > 0) {
-//       return sendErrorResponse(
-//         res,
-//         errors,
-//         HTTP_STATUS_CODE.BAD_REQUEST,
-//         ERROR_TYPES.BAD_REQUEST_ERROR
-//       );
-//     }
-
-//     const organizationId = req.params.id;
-//     const organization = await Organization.findById(organizationId);
-
-//     if (!organization) {
-//       return sendErrorResponse(
-//         res,
-//         "Organization not found",
-//         HTTP_STATUS_CODE.NOT_FOUND,
-//         ERROR_TYPES.NOT_FOUND_ERROR
-//       );
-//     }
-
-//     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-//     const updateData = { ...req.body };
-
-//     if (files?.organizationLogo) {
-//       updateData.organizationLogo = await uploadFileToCloudinary(
-//         files.organizationLogo[0].buffer
-//       );
-//     }
-
-//     // Update basic organization details
-//     await Organization.findByIdAndUpdate(organizationId, {
-//       organizationName: updateData.organizationName,
-//       managerName: updateData.managerName,
-//       register_number: updateData.registerNumber,
-//       category: updateData.category,
-//       subcategoryName: updateData.subcategoryName,
-//       contact_number: updateData.contactNumber,
-//       email: updateData.email,
-//       no_of_employees: Number(updateData.numberOfEmployees),
-//       ...(updateData.organizationLogo && {
-//         organizationLogo: updateData.organizationLogo,
-//       }),
-//     });
-
-//     await updateAddress(Organization, organizationId, {
-//       street_address: updateData.streetAddress,
-//       city: updateData.city,
-//       state: updateData.state,
-//       district: updateData.district,
-//       pincode: updateData.pincode,
-//       country: updateData.country,
-//       address_type: updateData.addressType,
-//       prepared_by_id: organizationId,
-//       entity_type: "Organization",
-//     });
-
-//     const gstUpdateData: any = {
-//       gst_number: updateData.gstNumber,
-//       expiry_date: updateData.expiryDate,
-//     };
-
-//     if (files?.gstCertificateImage) {
-//       gstUpdateData.gst_certificate_image = await uploadFileToCloudinary(
-//         files.gstCertificateImage[0].buffer
-//       );
-//     }
-
-//     await GstCertificateDetails.findOneAndUpdate(
-//       { prepared_by_id: organizationId },
-//       gstUpdateData,
-//       { upsert: true }
-//     );
-
-//     const panUpdateData: any = {
-//       pan_card_number: updateData.panNumber,
-//       pan_card_user_name: updateData.panCardUserName,
-//     };
-
-//     if (files?.panCardImage) {
-//       panUpdateData.pan_card_image = await uploadFileToCloudinary(
-//         files.panCardImage[0].buffer
-//       );
-//     }
-
-//     await PanCardDetails.findOneAndUpdate(
-//       { prepared_by_id: organizationId },
-//       panUpdateData,
-//       { upsert: true }
-//     );
-
-//     return sendSuccessResponse(
-//       res,
-//       "Organization details updated successfully",
-//       null,
-//       HTTP_STATUS_CODE.OK
-//     );
-//   } catch (error) {
-//     return sendErrorResponse(
-//       res,
-//       error,
-//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-//     );
-//   }
-// };
-
-// export const handledDeleteOrganisations = async (
-//   req: Request,
-//   res: Response
-// ): Promise<any> => {
-//   try {
-//     const { kitchenId } = req.params;
-//     validateMogooseObjectId(kitchenId);
-
-//     const updatedKitchen = await Organization.findByIdAndUpdate(
-//       kitchenId,
-//       { $set: { is_deleted: true } },
-//       { new: true }
-//     );
-
-//     if (!updatedKitchen) {
-//       return res.status(404).json({ message: "Kitchen not found" });
-//     }
-//     sendSuccessResponse(
-//       res,
-//       "Organization deleted successfully!",
-//       null,
-//       HTTP_STATUS_CODE.OK
-//     );
-//   } catch (error) {
-//     sendErrorResponse(
-//       res,
-//       error,
-//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-//     );
-//   }
-// };
 import { Request, Response } from "express";
 import {
   sendErrorResponse,
@@ -609,7 +17,7 @@ import mongoose from "mongoose";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
 
-// Validation function similar to kitchen validation
+
 const validateOrganizationDetails = (data: any) => {
   const errors: { field: string; message: string }[] = [];
 
@@ -658,10 +66,7 @@ export const handleCreateNewOrganisation = async (
   req: Request,
   res: Response
 ): Promise<any> => {
-  console.log(req.body);
-
   try {
-    // Validate request body
     const errors = validateOrganizationDetails(req.body);
     if (errors.length > 0) {
       return sendErrorResponse(
@@ -671,8 +76,6 @@ export const handleCreateNewOrganisation = async (
         ERROR_TYPES.BAD_REQUEST_ERROR
       );
     }
-
-    // Extract fields from request
     const {
       organizationName,
       managerName,
@@ -696,7 +99,6 @@ export const handleCreateNewOrganisation = async (
       subcategoryName,
     } = req.body;
 
-    // Validate category and subcategory before converting to ObjectId
     const categoryId = category ? new mongoose.Types.ObjectId(category) : null;
     const subcategoryId = subcategoryName
       ? new mongoose.Types.ObjectId(subcategoryName)
@@ -792,10 +194,13 @@ export const handleGetOrganisations = async (
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
+    const { search } = req.query;
 
     const matchQuery: any = { is_deleted: false };
-    if (req.query.organization_status)
-      matchQuery.organization_status = req.query.organization_status;
+
+    if (search) {
+      matchQuery.organizationName = { $regex: new RegExp(search as string, "i") };
+    }
 
     const organizations = await Organization.aggregate([
       { $match: matchQuery },
@@ -857,7 +262,7 @@ export const handleGetOrganisations = async (
           pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
           as: "countryInfo",
         },
-      },  
+      },
       {
         $group: {
           _id: "$_id",
@@ -913,6 +318,7 @@ export const handleGetOrganisations = async (
     );
   }
 };
+
 
 export const handleGetByIdOrganisations = async (
   req: Request,
@@ -1034,6 +440,7 @@ export const handleGetByIdOrganisations = async (
         $group: {
           _id: "$_id",
           organizationName: { $first: "$organizationName" },
+          status: { $first: "$status" },
           managerName: { $first: "$managerName" },
           register_number: { $first: "$register_number" },
           contact_number: { $first: "$contact_number" },
@@ -1256,6 +663,7 @@ export const handledDeleteOrganisations = async (
 ): Promise<any> => {
   try {
     const { orgId } = req.params;
+    console.log(orgId)
     validateMogooseObjectId(orgId);
 
     const updatedOrg = await Organization.findByIdAndUpdate(
@@ -1273,7 +681,7 @@ export const handledDeleteOrganisations = async (
     }
     sendSuccessResponse(
       res,
-      "Organization soft deleted successfully!",
+      "Organization deleted successfully!",
       null,
       HTTP_STATUS_CODE.OK
     );
@@ -1286,3 +694,44 @@ export const handledDeleteOrganisations = async (
     );
   }
 };
+
+export const organizationToggleStatus = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const organization = await Organization.findById(id);
+    if (!organization) {
+      throw new CustomError(
+        "Organization not found",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR,
+        false
+      );
+    }
+    const newStatus = !organization.status;
+    const updatedOrganization = await Organization.findByIdAndUpdate(
+      id, 
+      { status: newStatus }, 
+      { new: true }
+    );
+    sendSuccessResponse(
+      res,
+      `Organization status ${
+        updatedOrganization?.status ? "activated" : "deactivated"
+      } successfully`,
+      updatedOrganization,
+      HTTP_STATUS_CODE.OK
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
+  

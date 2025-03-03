@@ -15,6 +15,7 @@ export interface IOrganization extends Document, CommonDBInterface {
   email: string;
   no_of_employees: number;
   organizationLogo: string;
+  status:boolean  
 }
 
 export const OrganizationSchema: Schema<IOrganization> =
@@ -74,6 +75,10 @@ export const OrganizationSchema: Schema<IOrganization> =
         type: Boolean,
         default: false,
       },
+      status:{
+        type:Boolean,
+        default:true
+      }
     },
     { timestamps: true }
   );

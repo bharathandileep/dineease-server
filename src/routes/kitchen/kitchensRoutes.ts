@@ -8,6 +8,7 @@ import {
   handleGetKitchens,
   handleGetKitchensById,
   handleUpdateKitchensById,
+  kitchenToggleStatus,
 } from "../../controllers/kitchens/kitchenController";
 import {
   kitchenCreateCategory,
@@ -51,6 +52,11 @@ router.put(
 );
 
 router.delete(`${apiConfig.kitchens.deletekitchens}`, handleDeleteKitchens);
+router.get(`${apiConfig.kitchens.toggleKitchensStatus}`, kitchenToggleStatus);
+
+
+
+
 
 //kitchen category routes
 router.get(`${apiConfig.kitchens.getAllCategories}`, kitchenGetAllCategories);
@@ -85,7 +91,5 @@ router.get(
   `${apiConfig.kitchens.getAllSubCategories}`,
   kitchenGetAllSubCategories
 );
-
-
 
 export default router;
