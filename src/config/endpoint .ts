@@ -24,6 +24,7 @@ export const apiConfig = {
     deletekitchens: "/delete/:kitchenId",
     getAllkitchens: "/all",
     getkitchensById: "/:kitchenId",
+    toggleKitchensStatus: "/status/:id",
 
     createCategory: "/categories",
     getAllCategories: "/categories/all",
@@ -38,6 +39,9 @@ export const apiConfig = {
     updateSubcategory: "/subcategories/:id",
     deleteSubcategory: "/subcategories/:id",
     toggleSubcategoryStatus: "/subcategories/:id/toggle-status",
+
+    
+
   },
   menu: {
     createCategory: "/categories",
@@ -66,9 +70,10 @@ export const apiConfig = {
   organization: {
     newOrganization: "/new",
     updateOrganization: "/update/:id",
-    deleteOrganization: "/delete/:kitchenId",
+    deleteOrganization: "/delete/:orgId",
     getAllOrganization: "/all",
     getOrganizationById: "/:orgId",
+    toggleOrganizationStatus:"/status/:id",
 
     createCategory: "/categories",
     getAllCategories: "/categories/all",
@@ -109,6 +114,14 @@ export const apiConfig = {
     deleteOrgEmployee: "/orgemployee/:id",
     toggleOrgEmployeeStatus: "/orgemployee/:id/toggle-status",
   },
+  addressDetails:{
+     getAllCountries: "/allcountries",
+    getStatesByCountry: "/states/:countryName",
+    getCitiesByState: "/cities/:stateName",
+    getDistrictsByState:"/districts/:stateId",
+    //getcitiesByDistricts:"/cities/:districtName"
+  },
+
   kitchenMenu: {
     getKitchenMenu: "/kitchen-menu/:kitchenId",
     createkitchenMenu: "/kitchen-menu/:id",

@@ -7,7 +7,7 @@ import {
   sendSuccessResponse,
 } from "../../lib/helpers/responseHelper";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
-import Designation from "../../models/designation/designationModel";
+import Designation from "../../models/designation/DesignationModel";
 import Address from "../../models/address/AddressModel";
 import {
   createAddressAndUpdateModel,
@@ -19,11 +19,25 @@ import OrgEmployeeManagement from "../../models/empmanagment/OrgEmployeeManageme
 import { registerUser } from "../auth/loginsController";
 import Role from "../../models/users/RolesModels";
 
-// Get all employees
+
 export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
   try {
-    const orgemployees = await OrgEmployeeManagement.aggregate([
-      { $match: { is_deleted: false } },
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 8;
+    const skip = (page - 1) * limit;
+
+    const matchQuery: any = { is_deleted: false };
+
+    // Optional filters for designation and status
+    if (req.query.designation) {
+      matchQuery.designation = req.query.designation;
+    }
+    if (req.query.status) {
+      matchQuery.status = req.query.status;
+    }
+
+    const pipeline: any[] = [
+      { $match: matchQuery },
       {
         $lookup: {
           from: "designations",
@@ -41,12 +55,46 @@ export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
           as: "address",
         },
       },
-    ]);
+    ];
+
+    // Add search functionality
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search as string, "i");
+      pipeline.push({
+        $match: {
+          $or: [
+            { username: searchRegex },
+            { email: searchRegex },
+            { phone_number: searchRegex },
+            { "designation.designation_name": searchRegex },
+          ],
+        },
+      });
+    }
+
+    // Pagination stages
+    pipeline.push({ $skip: skip }, { $limit: limit });
+
+    const orgEmployees = await OrgEmployeeManagement.aggregate(pipeline);
+
+    // Count total employees with the same search criteria
+    const totalPipeline = [...pipeline];
+    totalPipeline.pop(); // Remove $limit
+    totalPipeline.pop(); // Remove $skip
+    totalPipeline.push({ $count: "total" });
+
+    const totalDocs = await OrgEmployeeManagement.aggregate(totalPipeline);
+    const totalEmployees = totalDocs.length > 0 ? totalDocs[0].total : 0;
 
     sendSuccessResponse(
       res,
       "Employees retrieved successfully",
-      orgemployees,
+      {
+        orgEmployees,
+        totalPages: Math.ceil(totalEmployees / limit),
+        currentPage: page,
+        totalEmployees,
+      },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -112,7 +160,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
         HTTP_STATUS_CODE.NOT_FOUND,
         ERROR_TYPES.NOT_FOUND_ERROR,
         false
-      );
+      ); 
     }
 
     // Fetch and validate role based on designation
@@ -194,11 +242,11 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
 };
 
 export const getOrgEmployeeById = async (req: Request, res: Response) => {
-  try {
+    try {
     const { id } = req.params;
     validateMogooseObjectId(id);
 
-    const orgemployees = await OrgEmployeeManagement.aggregate([
+    const employee = await OrgEmployeeManagement.aggregate([
       {
         $match: {
           _id: new mongoose.Types.ObjectId(id),
@@ -235,19 +283,19 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
       },
     ]);
 
-    if (!orgemployees || orgemployees.length === 0) {
+    if (!employee || employee.length === 0) {
       throw new CustomError(
         "Employee not found",
         HTTP_STATUS_CODE.NOT_FOUND,
         ERROR_TYPES.NOT_FOUND_ERROR,
         false
       );
-    }
+    } 
 
     sendSuccessResponse(
       res,
       "Employee retrieved successfully",
-      orgemployees[0], // Accessing the first element since aggregate returns an array
+      employee[0], 
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -258,6 +306,8 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
     );
   }
+
+
 };
 
 // Update employee
@@ -265,8 +315,7 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] }; // Handle file uploads
-    console.log(req.body);
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] }; 
     validateMogooseObjectId(id);
 
     // Check if designation exists

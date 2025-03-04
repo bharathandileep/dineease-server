@@ -1,13 +1,14 @@
 import { mailId, mailPassword } from "../../config/environment";
 import nodemailer from "nodemailer";
-import { generateOtpEmailHtml } from "../views/otpEmailTemplate";
 import { generateOtp } from "./generateOtp";
 import { hashPassword } from "./generatePasswordHash";
 import Otp from "../../models/users/OTPSModel";
 import { sendEmail } from "../../config/mailConfig";
 import { forgotPassHtml } from "../views/forgotPassTemplate";
-import { generateWelcomeEmailHtml } from "../views/generateWelcomeEmailHtml";
 import PasswordOTPResetOTP from "../../models/users/passwordResetOTP";
+import { generateOtpEmailHtml } from "../views/otpEmailTemplate";
+import { generateWelcomeEmailHtml } from "../views/generateWelcomeEmailHtml";
+
 
 
 
@@ -106,3 +107,4 @@ export const generateAndSendCredentialsEmail = async (
   }
 };
 
+ 

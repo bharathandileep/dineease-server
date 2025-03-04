@@ -10,19 +10,49 @@ import {
 } from "../../lib/helpers/responseHelper";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 
+
+
 export const getAllSubCategories = async (req: Request, res: Response) => {
   try {
-    const categories = await MenuSubcategory.find().populate(
-      "category",
-      "category status"
-    );
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string)?.trim() || '';
+    const status = req.query.status as string;
+    const startIndex = (page - 1) * limit;
+
+    // Build query object
+    const query: any = {};
+    if (search) {
+      query.subcategoryName = { $regex: search, $options: "i" }; // Case-insensitive search on subcategoryName
+    }
+    if (status && status !== "all") {
+      query.status = status === "active" ? true : false; // Boolean status filter
+    }
+
+  
+
+    const total = await MenuSubcategory.countDocuments(query);
+    const categories = await MenuSubcategory.find(query)
+      .populate("category", "category status") // Populate category details
+      .skip(startIndex)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    const pagination = {
+      currentPage: page,
+      totalItems: total,
+      totalPages: Math.ceil(total / limit),
+      itemsPerPage: limit,
+    };
+
     sendSuccessResponse(
       res,
-      "Categories retrieved successfully",
-      categories,
+      "Subcategories retrieved successfully",
+      { categories, pagination },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
+    console.error("Backend error:", error);
     sendErrorResponse(
       res,
       error,
@@ -99,7 +129,6 @@ export const getSubcategoriesByCategory = async (
 ) => {
   try {
     const { categoryId } = req.params;
-
     validateMogooseObjectId(categoryId);
 
     const category = await MenuCategory.findOne({
@@ -203,49 +232,10 @@ export const updateSubcategory = async (req: Request, res: Response) => {
   }
 };
 
-// Toggle subcategory status
-// export const toggleSubcategoryStatus = async (req: Request, res: Response) => {
-//   try {
-//     const { id } = req.params;
-
-//     const subcategory = await MenuSubcategory.findById(id);
-//     if (!subcategory) {
-//       throw new CustomError(
-//         "Subcategory not found",
-//         HTTP_STATUS_CODE.NOT_FOUND,
-//         ERROR_TYPES.NOT_FOUND_ERROR,
-//         false
-//       );
-//     }
-
-//     const updatedSubcategory = await MenuSubcategory.findByIdAndUpdate(
-//       id,
-//       { status: !subcategory.status },
-//       { new: true }
-//     ).populate("category", "category status");
-
-//     sendSuccessResponse(
-//       res,
-//       `Subcategory status ${
-//         updatedSubcategory?.status ? "activated" : "deactivated"
-//       } successfully`,
-//       updatedSubcategory,
-//       HTTP_STATUS_CODE.OK
-//     );
-//   } catch (error) {
-//     sendErrorResponse(
-//       res,
-//       error,
-//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-//     );
-//   }
-// };
 
 export const toggleSubcategoryStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-
     const subcategory = await MenuSubcategory.findById(id).populate<{
       category: any;
     }>("category", "category status");
@@ -271,9 +261,9 @@ export const toggleSubcategoryStatus = async (req: Request, res: Response) => {
 
     const updatedSubcategory = await MenuSubcategory.findByIdAndUpdate(
       id,
-      { status: newStatus },
+      { status: !subcategory.status },
       { new: true }
-    ).populate<{ category: any }>("category", "category status");
+    ).populate("category", "category status");
 
     sendSuccessResponse(
       res,
@@ -293,10 +283,9 @@ export const toggleSubcategoryStatus = async (req: Request, res: Response) => {
   }
 };
 
-// Delete subcategory
 export const deleteSubcategory = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params; 
 
     const subcategory = await MenuSubcategory.findById(id);
     if (!subcategory) {

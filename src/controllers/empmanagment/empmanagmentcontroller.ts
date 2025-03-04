@@ -8,7 +8,7 @@ import {
 } from "../../lib/helpers/responseHelper";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import EmployeeManagement from "../../models/empmanagment/EmployeeManagementModel";
-import Designation from "../../models/designation/designationModel";
+import Designation from "../../models/designation/DesignationModel";
 import Address from "../../models/address/AddressModel";
 import {
   createAddressAndUpdateModel,
@@ -22,8 +22,22 @@ import { registerUser } from "../auth/loginsController";
 // Get all employees
 export const getAllEmployees = async (req: Request, res: Response) => {
   try {
-    const employees = await EmployeeManagement.aggregate([
-      { $match: { is_deleted: false } },
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 8;
+    const skip = (page - 1) * limit;
+
+    const matchQuery: any = { is_deleted: false };
+
+    // Optional filters for designation and status
+    if (req.query.designation) {
+      matchQuery.designation = req.query.designation;
+    }
+    if (req.query.status) {
+      matchQuery.status = req.query.status;
+    }
+
+    const pipeline: any[] = [
+      { $match: matchQuery },
       {
         $lookup: {
           from: "designations",
@@ -41,12 +55,46 @@ export const getAllEmployees = async (req: Request, res: Response) => {
           as: "address",
         },
       },
-    ]);
+    ];
+
+    // Add search functionality
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search as string, "i");
+      pipeline.push({
+        $match: {
+          $or: [
+            { username: searchRegex },
+            { email: searchRegex },
+            { phone_number: searchRegex },
+            { "designation.designation_name": searchRegex },
+          ],
+        },
+      });
+    }
+
+    // Pagination stages
+    pipeline.push({ $skip: skip }, { $limit: limit });
+
+    const employees = await EmployeeManagement.aggregate(pipeline);
+
+    // Count total employees with the same search criteria
+    const totalPipeline = [...pipeline];
+    totalPipeline.pop(); // Remove $limit
+    totalPipeline.pop(); // Remove $skip
+    totalPipeline.push({ $count: "total" });
+
+    const totalDocs = await EmployeeManagement.aggregate(totalPipeline);
+    const totalEmployees = totalDocs.length > 0 ? totalDocs[0].total : 0;
 
     sendSuccessResponse(
       res,
       "Employees retrieved successfully",
-      employees,
+      {
+        employees,
+        totalPages: Math.ceil(totalEmployees / limit),
+        currentPage: page,
+        totalEmployees,
+      },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -58,7 +106,6 @@ export const getAllEmployees = async (req: Request, res: Response) => {
     );
   }
 };
-
 // Create new employee
 export const createEmployee = async (req: Request, res: Response) => {
   try {

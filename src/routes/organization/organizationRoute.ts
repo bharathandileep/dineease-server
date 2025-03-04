@@ -7,6 +7,7 @@ import {
   handleGetByIdOrganisations,
   handleGetOrganisations,
   handleUpdateOrganisations,
+  organizationToggleStatus,
 } from "../../controllers/organization/organizationsController";
 import {
   orgCreateCategory,
@@ -26,7 +27,6 @@ import {
 } from "../../controllers/organization/orgSubCategory";
 
 const router = express.Router();
-
 router.post(
   apiConfig.organization.newOrganization,
   upload.fields([
@@ -57,6 +57,11 @@ router.delete(
   `${apiConfig.organization.deleteOrganization}`,
   handledDeleteOrganisations
 );
+router.get(
+  `${apiConfig.organization.toggleOrganizationStatus}`,
+  organizationToggleStatus
+);
+
 
 //kitchen category routes
 router.get(`${apiConfig.organization.getAllCategories}`, orgGetAllCategories);

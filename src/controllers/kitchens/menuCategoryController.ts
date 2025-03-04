@@ -54,16 +54,51 @@ export const createCategory = async (req: Request, res: Response) => {
   }
 };
 
+
+
+
+
 export const getAllCategories = async (req: Request, res: Response) => {
   try {
-    const categories = await MenuCategory.find();
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string)?.trim() || '';
+    const status = req.query.status as string;
+
+    // Build query object
+    const query: any = {};
+    if (search) {
+      query.category = { $regex: search, $options: "i" };
+    }
+    if (status && status !== "all") {
+      query.status = status === "active" ? true : false;
+    }
+
+
+
+    const total = await MenuCategory.countDocuments(query);
+    const categories = await MenuCategory.find(query)
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    console.log("Fetched Categories:", categories);
+
+    const pagination = {
+      currentPage: page,
+      totalItems: total,
+      totalPages: Math.ceil(total / limit),
+      itemsPerPage: limit,
+    };
+
     sendSuccessResponse(
       res,
       "Categories retrieved successfully",
-      categories,
+      { categories, pagination },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
+    console.error("Backend error:", error);
     sendErrorResponse(
       res,
       error,

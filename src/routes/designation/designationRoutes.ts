@@ -6,7 +6,7 @@ import {
   getDesignationById,
   toggleDesignationStatus,
   updateDesignation,
-} from "../../controllers/designation/designationcontroller";
+} from "../../controllers/designation/designationController";
 import { apiConfig } from "../../config/endpoint ";
 
 const router = express.Router();

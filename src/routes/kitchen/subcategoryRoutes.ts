@@ -23,7 +23,7 @@ router.put(`${apiConfig.menu.updateSubcategory}`, updateSubcategory);
 router.delete(`${apiConfig.menu.deleteSubcategory}`, deleteSubcategory);
 router.patch(
   `${apiConfig.menu.toggleSubcategoryStatus}`,
-  kitchenToggleSubcategoryStatus
+  toggleSubcategoryStatus
 );
 router.get(`${apiConfig.menu.getAllSubCategories}`, getAllSubCategories);
 router.get(

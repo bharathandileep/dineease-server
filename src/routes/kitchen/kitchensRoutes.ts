@@ -2,11 +2,13 @@ import express, { Application, Router } from "express";
 import { apiConfig } from "../../config/endpoint ";
 import upload from "../../lib/helpers/uploadMiddleware";
 import {
+ 
   handleCreateNewKitchens,
   handleDeleteKitchens,
   handleGetKitchens,
   handleGetKitchensById,
   handleUpdateKitchensById,
+  kitchenToggleStatus,
 } from "../../controllers/kitchens/kitchenController";
 import {
   kitchenCreateCategory,
@@ -50,6 +52,11 @@ router.put(
 );
 
 router.delete(`${apiConfig.kitchens.deletekitchens}`, handleDeleteKitchens);
+router.get(`${apiConfig.kitchens.toggleKitchensStatus}`, kitchenToggleStatus);
+
+
+
+
 
 //kitchen category routes
 router.get(`${apiConfig.kitchens.getAllCategories}`, kitchenGetAllCategories);
@@ -79,6 +86,7 @@ router.patch(
   `${apiConfig.kitchens.toggleSubcategoryStatus}`,
   kitchenToggleSubcategoryStatus
 );
+
 router.patch(`${apiConfig.kitchens.toggleSubcategoryStatus}`);
 router.get(
   `${apiConfig.kitchens.getAllSubCategories}`,

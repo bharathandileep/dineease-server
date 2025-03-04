@@ -89,7 +89,7 @@ export const addMenuItems = async (req: Request, res: Response) => {
       res,
       "Items added to menu successfully",
       existingMenu,
-      HTTP_STATUS_CODE.OK
+      HTTP_STATUS_CODE.OK 
     );
   } catch (error) {
     sendErrorResponse(
@@ -299,7 +299,7 @@ export const updateMenuItem = async (req: Request, res: Response) => {
     const updatedItemData = req.body;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     let custom_image = updatedItemData.custom_image;
-    console.log(req.body);
+   
     if (files?.custom_image?.[0]) {
       custom_image = await uploadFileToCloudinary(files.custom_image[0].buffer);
     }

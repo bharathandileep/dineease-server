@@ -8,7 +8,7 @@ import { CustomError } from "./lib/errors/customError";
 import { HTTP_STATUS_CODE } from "./lib/constants/httpStatusCodes";
 import { ERROR_TYPES } from "./lib/constants/errorType";
 import { sendSuccessResponse } from "./lib/helpers/responseHelper";
-
+import addressDetailsRoutes from "./routes/addressdetails/addressDetailsRoutes"
 import authRoute from "./routes/auth/AuthRoute";
 import kitchensRoute from "./routes/kitchen/kitchensRoutes";
 import organizationRoute from "./routes/organization/organizationRoute";
@@ -47,6 +47,8 @@ app.use(`${apiConfig.baseAPIUrl}/kitchens-menu`, kitchensMenuRoutes);
 app.use(`${apiConfig.baseAPIUrl}/menu-items`, menuitemsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/org-employee`, OrgEmployeeManagementRoutes);
 app.use(`${apiConfig.baseAPIUrl}/menu-items`,menuitemsRoutes)
+app.use(`${apiConfig.baseAPIUrl}/orgemployee`,OrgEmployeeManagementRoutes)
+app.use(`${apiConfig.baseAPIUrl}/addressDetails`,addressDetailsRoutes)
 app.use(`${apiConfig.baseAPIUrl}/org-employee`,OrgEmployeeManagementRoutes)
 app.use(`${apiConfig.baseAPIUrl}/menu-items`, menuitemsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/orgemployee`, OrgEmployeeManagementRoutes);

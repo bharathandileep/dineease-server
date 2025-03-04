@@ -17,7 +17,7 @@ export const createItem = async (req: Request, res: Response) => {
           files.item_image[0].buffer
         );
     
-      // Check if required fields are present
+    
       if (!item_name || !category) {
         throw new CustomError(
           "Item name and category are required",
@@ -27,7 +27,7 @@ export const createItem = async (req: Request, res: Response) => {
         );
       }
   
-      // Check if item already exists (optional: avoid duplicate names)
+   
       const existingItem = await Item.findOne({ item_name, category });
       if (existingItem) {
         throw new CustomError(
@@ -38,7 +38,7 @@ export const createItem = async (req: Request, res: Response) => {
         );
       }
   
-      // Create new item
+    
       const newItem = new Item({
         item_name,
         category,
@@ -66,7 +66,7 @@ export const createItem = async (req: Request, res: Response) => {
     }
   };
 
-// List all items
+
 export const listItems = async (req: Request, res: Response) => {
     try {
       
@@ -74,7 +74,7 @@ export const listItems = async (req: Request, res: Response) => {
       .populate("category", "category") 
       .populate("subcategory", "subcategoryName"); 
       
-      // Check if items exist
+  
       if (!items.length) {
         throw new CustomError(
           "No items found",
@@ -84,7 +84,7 @@ export const listItems = async (req: Request, res: Response) => {
         );
       }
   
-      // Send success response
+      
       sendSuccessResponse(
         res,
         "Items fetched successfully",
@@ -101,11 +101,13 @@ export const listItems = async (req: Request, res: Response) => {
     }
   };
 
-  // Get item by ID
-export const getItemById = async (req: Request, res: Response) => {
+
+  export const getItemById = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const item = await Item.findById(id);
+        const item = await Item.findById(id)
+            .populate("category", "category") 
+            .populate("subcategory", "subcategoryName");
 
         if (!item || item.is_deleted) {
             throw new CustomError(
@@ -123,6 +125,7 @@ export const getItemById = async (req: Request, res: Response) => {
 };
 
 
+
 export const updateItem = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -138,7 +141,7 @@ export const updateItem = async (req: Request, res: Response) => {
       return sendErrorResponse(res, "Item not found", HTTP_STATUS_CODE.NOT_FOUND, ERROR_TYPES.NOT_FOUND_ERROR);
     }
 
-    // Handle image update or retain existing image
+
     const item_image = files?.item_image
       ? await uploadFileToCloudinary(files.item_image[0].buffer)
       : existingItem.item_image;
@@ -159,12 +162,12 @@ export const updateItem = async (req: Request, res: Response) => {
     return sendErrorResponse(res, "Internal server error", HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR, ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE);
   }
 };
-// Delete an item (soft delete)
+
 export const deleteItem = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
   
-      // Check if item exists before updating
+  
       const existingItem = await Item.findById(id);
       if (!existingItem) {
         throw new CustomError(
@@ -175,14 +178,14 @@ export const deleteItem = async (req: Request, res: Response) => {
         );
       }
   
-      // Soft delete the item by setting is_deleted to true
+
       const deletedItem = await Item.findByIdAndUpdate(
         id,
         { is_deleted: true },
         { new: true }
       );
   
-      // Send success response
+     
       sendSuccessResponse(
         res,
         "Item deleted successfully",
@@ -199,12 +202,12 @@ export const deleteItem = async (req: Request, res: Response) => {
     }
   };
 
-// Change item status
+
 export const changeItemStatus = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
   
-      // Fetch item to check if it exists
+     
       const existingItem = await Item.findById(id);
       if (!existingItem) {
         throw new CustomError(
@@ -215,17 +218,17 @@ export const changeItemStatus = async (req: Request, res: Response) => {
         );
       }
   
-      // Toggle the status if no status is provided in the request
+    
       const newStatus = req.body.status ?? !existingItem.status;
   
-      // Update item status
+     
       const updatedItem = await Item.findByIdAndUpdate(
         id,
         { status: newStatus },
         { new: true }
       );
   
-      // Send success response
+     
       sendSuccessResponse(
         res,
         "Item status updated successfully",

@@ -7,7 +7,7 @@ import {
   sendErrorResponse,
   sendSuccessResponse,
 } from "../../lib/helpers/responseHelper";
-import Designation from "../../models/designation/designationModel";
+import Designation from "../../models/designation/DesignationModel";
 import Role from "../../models/users/RolesModels";
 
 
@@ -79,13 +79,42 @@ export const createDesignation = async (req: Request, res: Response) => {
 
 
 
+// Backend controller
 export const getAllDesignations = async (req: Request, res: Response) => {
   try {
-    const designations = await Designation.find();
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string)?.trim() || '';
+    const status = req.query.status as string;
+    
+    const startIndex = (page - 1) * limit;
+    
+    // Build query object
+    const query: any = {};
+    if (search) {
+      query.designation_name = { $regex: search, $options: 'i' }; // Case-insensitive search
+    }
+    if (status && status !== 'all') {
+      query.status = status === 'active' ? true : false;
+    }
+
+    const total = await Designation.countDocuments(query);
+    const designations = await Designation.find(query)
+      .skip(startIndex)
+      .limit(limit)
+      .sort({ createdAt: -1 }); // Optional: sort by creation date
+
+    const pagination = {
+      currentPage: page,
+      totalItems: total,
+      totalPages: Math.ceil(total / limit),
+      itemsPerPage: limit,
+    };
+
     sendSuccessResponse(
       res,
       "Designations retrieved successfully",
-      designations,
+      { designations, pagination },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -97,7 +126,6 @@ export const getAllDesignations = async (req: Request, res: Response) => {
     );
   }
 };
-
 export const getDesignationById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

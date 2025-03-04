@@ -24,7 +24,7 @@ export const updateAddress = async (
   modelId: any,
   addressData: any
 ) => {
-  console.log(addressData);
+
   const organization = await model.findById(modelId);
   if (!organization || !organization.address_id?.length) {
     return null;
