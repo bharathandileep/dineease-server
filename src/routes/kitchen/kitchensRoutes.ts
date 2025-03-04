@@ -86,6 +86,7 @@ router.patch(
   `${apiConfig.kitchens.toggleSubcategoryStatus}`,
   kitchenToggleSubcategoryStatus
 );
+
 router.patch(`${apiConfig.kitchens.toggleSubcategoryStatus}`);
 router.get(
   `${apiConfig.kitchens.getAllSubCategories}`,
