@@ -25,6 +25,8 @@ export const apiConfig = {
     getAllkitchens: "/all",
     getkitchensById: "/:kitchenId",
     toggleKitchensStatus: "/status/:id",
+    handleGetUserApprovedKitchens: "/user/approved",
+
 
     createCategory: "/categories",
     getAllCategories: "/categories/all",
@@ -74,6 +76,7 @@ export const apiConfig = {
     getAllOrganization: "/all",
     getOrganizationById: "/:orgId",
     toggleOrganizationStatus:"/status/:id",
+    handleGetUserApprovedOrganizations: "/org/approved",
 
     createCategory: "/categories",
     getAllCategories: "/categories/all",

@@ -6,6 +6,7 @@ import {
   handledDeleteOrganisations,
   handleGetByIdOrganisations,
   handleGetOrganisations,
+  handleGetUserApprovedOrganizations,
   handleUpdateOrganisations,
   organizationToggleStatus,
 } from "../../controllers/organization/organizationsController";
@@ -60,6 +61,10 @@ router.delete(
 router.get(
   `${apiConfig.organization.toggleOrganizationStatus}`,
   organizationToggleStatus
+);
+router.get(
+  `${apiConfig.organization.handleGetUserApprovedOrganizations}`,
+  handleGetUserApprovedOrganizations
 );
 
 
