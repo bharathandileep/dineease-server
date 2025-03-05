@@ -7,9 +7,8 @@ import {
   sendErrorResponse,
   sendSuccessResponse,
 } from "../../lib/helpers/responseHelper";
-import Designation from "../../models/designation/DesignationModel";
 import Role from "../../models/users/RolesModels";
-
+import Designation from "../../models/designation/designationModel";
 
 export const createDesignation = async (req: Request, res: Response) => {
   try {
