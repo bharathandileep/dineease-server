@@ -56,9 +56,6 @@ app.use(`${apiConfig.baseAPIUrl}/kitchens-menu`, kitchensMenuRoutes);
 
 
 
-
-
-
 app.get(`/`, (req, res) => {
   res.send(`
     <!DOCTYPE html>

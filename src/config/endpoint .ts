@@ -39,9 +39,6 @@ export const apiConfig = {
     updateSubcategory: "/subcategories/:id",
     deleteSubcategory: "/subcategories/:id",
     toggleSubcategoryStatus: "/subcategories/:id/toggle-status",
-
-    
-
   },
   menu: {
     createCategory: "/categories",
@@ -119,9 +116,7 @@ export const apiConfig = {
     getStatesByCountry: "/states/:countryName",
     getCitiesByState: "/cities/:stateName",
     getDistrictsByState:"/districts/:stateId",
-    //getcitiesByDistricts:"/cities/:districtName"
   },
-
   kitchenMenu: {
     getKitchenMenu: "/kitchen-menu/:kitchenId",
     createkitchenMenu: "/kitchen-menu/:id",
