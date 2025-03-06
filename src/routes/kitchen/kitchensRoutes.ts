@@ -7,6 +7,8 @@ import {
   handleDeleteKitchens,
   handleGetKitchens,
   handleGetKitchensById,
+  handleGetUnapprovedKitchens,
+  // handleGetUnapprovedKitchens,
   handleUpdateKitchensById,
   kitchenToggleStatus,
 } from "../../controllers/kitchens/kitchenController";
@@ -25,6 +27,7 @@ import {
   kitchenToggleSubcategoryStatus,
   kitchenUpdateSubcategory,
 } from "../../controllers/kitchens/kitchenSubCategory";
+import { getMenuItemsByKitchen } from "../../controllers/kitchens/menuController";
 
 const router = express.Router();
 
@@ -92,5 +95,8 @@ router.get(
   `${apiConfig.kitchens.getAllSubCategories}`,
   kitchenGetAllSubCategories
 );
+
+router.get(`${apiConfig.kitchens. getUnapprovedKitchens}`,handleGetUnapprovedKitchens)
+
 
 export default router;

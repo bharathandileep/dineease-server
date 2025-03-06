@@ -15,6 +15,7 @@ export interface IKitchen extends Document, CommonDBInterface {
   kitchen_phone_number: string;
   kitchen_document_verification: boolean;
   opens_at: string;
+  isapproved: { type: boolean, required: true },
   closes_at: string;
   working_days: string[];
   kitchen_image: string;
@@ -62,6 +63,11 @@ export const KitchenSchema: Schema = new Schema<IKitchen>({
     type: Boolean,
     default: false,
   },
+  isapproved:{
+    type:Boolean,
+    default:true,
+  },
+  
   is_deleted: {
     type: Boolean,
     default: false,

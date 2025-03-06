@@ -604,6 +604,7 @@ export const handleUpdateKitchensById = async (
       gst_certificate_image,
       ffsai_certificate_image,
     } = req.body;
+console.log(req.body);
 
     validateMogooseObjectId(kitchenId);
     const existingKitchen = await Kitchen.findOne({
@@ -820,3 +821,140 @@ export const kitchenToggleStatus = async (
     );
   }
 };
+
+export const handleGetUnapprovedKitchens = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 4;
+    const skip = (page - 1) * limit;
+    const { search } = req.query;
+
+    const matchQuery: any = { is_deleted: false, isapproved: false };
+
+    if (search) {
+      matchQuery.kitchen_name = { $regex: new RegExp(search as string, "i") };
+    }
+
+    const kitchens = await Kitchen.aggregate([
+      { $match: matchQuery },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "addresses",
+          localField: "address_id",
+          foreignField: "_id",
+          as: "addresses",
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "categoryDetails",
+        },
+      },
+      {
+        $lookup: {
+          from: "subcategories",
+          localField: "subcategoryName",
+          foreignField: "_id",
+          as: "subcategoryDetails",
+        },
+      },
+      { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "states",
+          let: { stateId: { $toInt: "$addresses.state" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          as: "stateInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "cities",
+          let: { cityId: { $toInt: "$addresses.city" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
+          as: "cityInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "districts",
+          let: { districtId: { $toInt: "$addresses.district" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
+          as: "districtInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "countries",
+          let: { countryId: { $toInt: "$addresses.country" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          as: "countryInfo",
+        },
+      },
+      {
+        $group: {
+          _id: "$_id",
+          kitchen_name: { $first: "$kitchen_name" },
+          kitchen_owner_name: { $first: "$kitchen_owner_name" },
+          kitchen_type: { $first: "$kitchen_type" },
+          kitchen_phone_number: { $first: "$kitchen_phone_number" },
+          kitchen_image: { $first: "$kitchen_image" },
+          categoryDetails: { $first: "$categoryDetails" },
+          subcategoryDetails: { $first: "$subcategoryDetails" },
+          owner_email: { $first: "$owner_email" },
+          kitchen_status: { $first: "$kitchen_status" },
+          addresses: {
+            $push: {
+              _id: "$addresses._id",
+              street_address: "$addresses.street_address",
+              city_id: "$addresses.city",
+              city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
+              state_id: "$addresses.state",
+              state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
+              district_id: "$addresses.district",
+              district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
+              pincode: "$addresses.pincode",
+              country_id: "$addresses.country",
+              country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
+              landmark: "$addresses.landmark",
+              address_type: "$addresses.address_type",
+            },
+          },
+        },
+      },
+    ]);
+
+    const totalKitchens = await Kitchen.countDocuments(matchQuery);
+
+    sendSuccessResponse(
+      res,
+      "Unapproved organizations retrieved successfully!",
+      {
+        kitchens,
+        totalPages: Math.ceil(totalKitchens / limit),
+        currentPage: page,
+        totalKitchens,
+      },
+      HTTP_STATUS_CODE.OK
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
+
+
+
+
+
+

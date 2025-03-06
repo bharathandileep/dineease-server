@@ -13,6 +13,7 @@ import {
 import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
 import { Console } from "console";
 
+
 export const addMenuItems = async (req: Request, res: Response) => {
   try {
     const kitchen_id = req.params.id;
@@ -224,7 +225,7 @@ export const removeMenuItem = async (req: Request, res: Response) => {
       res,
       error,
       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE  
     );
   }
 };
@@ -370,6 +371,65 @@ export const updateMenuItem = async (req: Request, res: Response) => {
     );
   } catch (error) {
     sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
+export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
+  try {
+    const { kitchenId } = req.params;
+
+    // Validate kitchen ID
+    if (!mongoose.Types.ObjectId.isValid(kitchenId)) {
+      return sendErrorResponse(
+        res,
+        new Error("Invalid kitchen ID format"),
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
+
+   const menu = await Menu.findOne({
+      kitchen_id: new mongoose.Types.ObjectId(kitchenId),
+      is_deleted: false,
+    })
+      .populate({
+        path: "items_id.item_id",
+        select: "item_name item_price description ingredients isAvailable custom_image reviews_id",
+      })
+      .lean();
+
+    if (!menu) {
+      return sendSuccessResponse(
+        res,
+        "No menu found for this kitchen",
+        [],
+        HTTP_STATUS_CODE.OK
+      );
+    }
+
+    
+    res.status(HTTP_STATUS_CODE.OK).json({
+      status: true,
+      message: "Menu items retrieved successfully",
+      data: {
+        _id: menu._id,
+        kitchen_id: menu.kitchen_id,
+        items_id: menu.items_id, 
+        is_deleted: menu.is_deleted,
+        createdAt: menu.createdAt,
+        updatedAt: menu.updatedAt,
+        __v: menu.__v,
+      },
+      statusCode: HTTP_STATUS_CODE.OK,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    return sendErrorResponse(
       res,
       error,
       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,

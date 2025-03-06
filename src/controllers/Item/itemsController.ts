@@ -193,7 +193,7 @@ export const deleteItem = async (req: Request, res: Response) => {
         HTTP_STATUS_CODE.OK
       );
     } catch (error) {
-      sendErrorResponse(
+      sendErrorResponse( 
         res,
         error,
         HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
