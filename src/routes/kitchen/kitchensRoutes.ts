@@ -9,6 +9,7 @@ import {
   handleGetKitchensById,
   handleGetUnapprovedKitchens,
   // handleGetUnapprovedKitchens,
+  handleGetUserApprovedKitchens,
   handleUpdateKitchensById,
   kitchenToggleStatus,
 } from "../../controllers/kitchens/kitchenController";
@@ -56,6 +57,7 @@ router.put(
 
 router.delete(`${apiConfig.kitchens.deletekitchens}`, handleDeleteKitchens);
 router.get(`${apiConfig.kitchens.toggleKitchensStatus}`, kitchenToggleStatus);
+router.get(`${apiConfig.kitchens.handleGetUserApprovedKitchens}`, handleGetUserApprovedKitchens);
 
 
 

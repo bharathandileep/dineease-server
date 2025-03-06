@@ -28,6 +28,8 @@ kitchens: {
     getAllkitchens: "/all",
     getkitchensById: "/:kitchenId",
     toggleKitchensStatus: "/status/:id",
+    handleGetUserApprovedKitchens: "/user/approved",
+
 
     createCategory: "/categories",
     getAllCategories: "/categories/all",
@@ -79,6 +81,7 @@ kitchens: {
     getAllOrganization: "/all",
     getOrganizationById: "/:orgId",
     toggleOrganizationStatus:"/status/:id",
+    handleGetUserApprovedOrganizations: "/org/approved",
 
     createCategory: "/categories",
     getAllCategories: "/categories/all",
