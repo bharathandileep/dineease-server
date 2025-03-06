@@ -138,7 +138,7 @@ export const handleCreateNewKitchens = async (
       ? await uploadFileToCloudinary(files.kitchen_image[0].buffer)
       : null;
 
-    // Create new Kitchen entry
+    // Create new Kitchen entry with hardcoded "user" role and isapproved set to false
     const newKitchen = await Kitchen.create({
       kitchen_name,
       user_id: new mongoose.Types.ObjectId(user_id),
@@ -152,6 +152,9 @@ export const handleCreateNewKitchens = async (
       kitchen_type,
       kitchen_phone_number,
       kitchen_image: kitchenImageUrl,
+      role: "user", // Hardcoded role as "user"
+      is_deleted: false,
+      isapproved: false, // Explicitly set to false since it's created by user
       working_days: [],
       pre_ordering_options: [],
     });
@@ -216,7 +219,10 @@ export const handleCreateNewKitchens = async (
     return sendSuccessResponse(
       res,
       "Kitchen and associated details created successfully",
-      null,
+      {
+        kitchen: newKitchen,
+        role: "user", // Include role in the response
+      },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -237,11 +243,12 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
     const skip = (page - 1) * limit;
     const { search, kitchen_status, kitchen_type } = req.query;
 
-    const matchQuery: any = { is_deleted: false };
-    
+    // Only get kitchens that are not deleted and are approved
+    const matchQuery: any = { is_deleted: false, isapproved: true };
+
     if (kitchen_status) matchQuery.kitchen_status = kitchen_status;
     if (kitchen_type) matchQuery.kitchen_type = kitchen_type;
-    
+
     // Implement search functionality on kitchen_name
     if (search) {
       matchQuery.kitchen_name = { $regex: new RegExp(search as string, "i") };
@@ -251,6 +258,7 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
       { $match: matchQuery },
       { $skip: skip },
       { $limit: limit },
+      // Lookup for addresses
       {
         $lookup: {
           from: "addresses",
@@ -259,6 +267,7 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           as: "addresses",
         },
       },
+      // Lookup for categories
       {
         $lookup: {
           from: "categories",
@@ -267,6 +276,7 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           as: "categoryDetails",
         },
       },
+      // Lookup for subcategories
       {
         $lookup: {
           from: "subcategories",
@@ -275,7 +285,35 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           as: "subcategoryDetails",
         },
       },
+      // Lookup for FSSAI certificate details
+      {
+        $lookup: {
+          from: "fssaicertificatedetails",
+          localField: "_id",
+          foreignField: "kitchen_id",
+          as: "fssaiDetails",
+        },
+      },
+      // Lookup for GST certificate details
+      {
+        $lookup: {
+          from: "gstcertificatedetails",
+          localField: "_id",
+          foreignField: "prepared_by_id",
+          as: "gstDetails",
+        },
+      },
+      // Lookup for PAN card details
+      {
+        $lookup: {
+          from: "pancarddetails",
+          localField: "_id",
+          foreignField: "prepared_by_id",
+          as: "panDetails",
+        },
+      },
       { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
+      // Lookup for states
       {
         $lookup: {
           from: "states",
@@ -284,6 +322,7 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           as: "stateInfo",
         },
       },
+      // Lookup for cities
       {
         $lookup: {
           from: "cities",
@@ -292,6 +331,7 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           as: "cityInfo",
         },
       },
+      // Lookup for districts
       {
         $lookup: {
           from: "districts",
@@ -300,6 +340,7 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           as: "districtInfo",
         },
       },
+      // Lookup for countries
       {
         $lookup: {
           from: "countries",
@@ -312,14 +353,20 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
         $group: {
           _id: "$_id",
           kitchen_name: { $first: "$kitchen_name" },
+          user_id: { $first: "$user_id" },
+          kitchen_status: { $first: "$kitchen_status" },
           kitchen_owner_name: { $first: "$kitchen_owner_name" },
+          owner_email: { $first: "$owner_email" },
+          owner_phone_number: { $first: "$owner_phone_number" },
+          restaurant_type: { $first: "$restaurant_type" },
           kitchen_type: { $first: "$kitchen_type" },
           kitchen_phone_number: { $first: "$kitchen_phone_number" },
           kitchen_image: { $first: "$kitchen_image" },
           categoryDetails: { $first: "$categoryDetails" },
           subcategoryDetails: { $first: "$subcategoryDetails" },
-          owner_email: { $first: "$owner_email" },
-          kitchen_status: { $first: "$kitchen_status" },
+          working_days: { $first: "$working_days" },
+          pre_ordering_options: { $first: "$pre_ordering_options" },
+          role: { $first: "$role" },
           addresses: {
             $push: {
               _id: "$addresses._id",
@@ -337,23 +384,45 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
               address_type: "$addresses.address_type",
             },
           },
+          fssaiDetails: {
+            $first: {
+              ffsai_certificate_number: "$fssaiDetails.ffsai_certificate_number",
+              ffsai_card_owner_name: "$fssaiDetails.ffsai_card_owner_name",
+              ffsai_certificate_image: "$fssaiDetails.ffsai_certificate_image",
+              expiry_date: "$fssaiDetails.expiry_date",
+            },
+          },
+          gstDetails: {
+            $first: {
+              gst_number: "$gstDetails.gst_number",
+              gst_certificate_image: "$gstDetails.gst_certificate_image",
+              expiry_date: "$gstDetails.expiry_date",
+            },
+          },
+          panDetails: {
+            $first: {
+              pan_card_number: "$panDetails.pan_card_number",
+              pan_card_user_name: "$panDetails.pan_card_user_name",
+              pan_card_image: "$panDetails.pan_card_image",
+            },
+          },
         },
       },
     ]);
 
-      const totalKitchens = await Kitchen.countDocuments(matchQuery);
+    const totalKitchens = await Kitchen.countDocuments(matchQuery);
 
-      sendSuccessResponse(
-        res,
-        "Kitchens retrieved successfully!",
-        {
-          kitchens,
-          totalPages: Math.ceil(totalKitchens / limit),
-          currentPage: page,
-          totalKitchens,
-        },
-        HTTP_STATUS_CODE.OK
-      );
+    sendSuccessResponse(
+      res,
+      "Kitchens retrieved successfully!",
+      {
+        kitchens,
+        totalPages: Math.ceil(totalKitchens / limit),
+        currentPage: page,
+        totalKitchens,
+      },
+      HTTP_STATUS_CODE.OK
+    );
   } catch (error) {
     sendErrorResponse(
       res,
@@ -822,6 +891,7 @@ export const kitchenToggleStatus = async (
   }
 };
 
+
 export const handleGetUnapprovedKitchens = async (req: Request, res: Response): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -951,10 +1021,129 @@ export const handleGetUnapprovedKitchens = async (req: Request, res: Response): 
     );
   }
 };
-
-
-
-
-
-
-
+export const handleGetUserApprovedKitchens = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const userId = "67a1fe128d946316957c42d8"; // Hardcoded user ID
+ 
+    // Validate the userId format
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return sendErrorResponse(
+        res,
+        "Invalid user ID format",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
+ 
+    const kitchens = await Kitchen.aggregate([
+      {
+        $match: {
+          // Use this if user_id is an ObjectId in your schema
+          user_id: new mongoose.Types.ObjectId(userId),
+          // Uncomment this if user_id is a String in your schema
+          // user_id: userId,
+          is_deleted: false,
+          isapproved: true, // Only approved kitchens
+        },
+      },
+      {
+        $lookup: {
+          from: "addresses",
+          localField: "address_id",
+          foreignField: "_id",
+          as: "addresses",
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "categoryDetails",
+        },
+      },
+      {
+        $lookup: {
+          from: "subcategories",
+          localField: "subcategoryName",
+          foreignField: "_id",
+          as: "subcategoryDetails",
+        },
+      },
+      { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "states",
+          let: { stateId: { $toInt: "$addresses.state" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          as: "stateInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "cities",
+          let: { cityId: { $toInt: "$addresses.city" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
+          as: "cityInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "countries",
+          let: { countryId: { $toInt: "$addresses.country" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          as: "countryInfo",
+        },
+      },
+      {
+        $project: {
+          id: "$_id",
+          name: "$kitchen_name",
+          address: {
+            $cond: {
+              if: { $eq: ["$addresses", null] },
+              then: "Address not available",
+              else: {
+                $concat: [
+                  { $ifNull: ["$addresses.street_address", ""] },
+                  ", ",
+                  { $ifNull: [{ $arrayElemAt: ["$cityInfo.name", 0] }, ""] },
+                  ", ",
+                  { $ifNull: [{ $arrayElemAt: ["$stateInfo.name", 0] }, ""] },
+                  ", ",
+                  { $ifNull: ["$addresses.pincode", ""] },
+                  ", ",
+                  { $ifNull: [{ $arrayElemAt: ["$countryInfo.name", 0] }, ""] },
+                ],
+              },
+            },
+          },
+          profilePic: "$kitchen_image",
+          rating: { $literal: 4.5 }, // Placeholder; replace with actual rating if available
+          cuisine: {
+            $concatArrays: [
+              { $ifNull: [{ $arrayElemAt: ["$categoryDetails.name", 0] }, []] },
+              { $ifNull: [{ $arrayElemAt: ["$subcategoryDetails.name", 0] }, []] },
+            ],
+          },
+          specialty: "$kitchen_type", // Using kitchen_type as specialty; adjust if needed
+        },
+      },
+    ]);
+ 
+    sendSuccessResponse(
+      res,
+      "User's approved kitchens retrieved successfully!",
+      { kitchens },
+      HTTP_STATUS_CODE.OK
+    );
+  } catch (error) {
+    console.error("Error in handleGetUserApprovedKitchens:", error); // Add logging for debugging
+    sendErrorResponse(
+      res,
+      (error as any).message || "Failed to retrieve user's approved kitchens",
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};

@@ -3,7 +3,7 @@ import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
 
 export interface IKitchen extends Document, CommonDBInterface {
   kitchen_name: string;
-  kitchen_status: string;
+  isapproved: { type: boolean, required: true },
   kitchen_owner_name: string;
   address_id: mongoose.Types.ObjectId;
   owner_email: string;
@@ -38,7 +38,8 @@ export const KitchenSchema: Schema = new Schema<IKitchen>({
       required: true,
     },
   ],
-  kitchen_status: { type: String, required: true },
+  isapproved: { type: Boolean, default: true },
+  
   kitchen_owner_name: { type: String, required: true },
   owner_email: { type: String, required: true },
   category:{

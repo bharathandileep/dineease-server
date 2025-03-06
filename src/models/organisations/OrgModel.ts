@@ -17,6 +17,7 @@ export interface IOrganization extends Document, CommonDBInterface {
   no_of_employees: number;
   organizationLogo: string;
   status:boolean  
+  isapproved: { type: boolean, required: true },
 }
 
 export const OrganizationSchema: Schema<IOrganization> =
