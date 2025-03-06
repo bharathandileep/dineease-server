@@ -735,12 +735,140 @@ export const organizationToggleStatus = async (
   }
 };
 
+export const handleGetUnapprovedOrganisations = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 4;
+    const skip = (page - 1) * limit;
+    const { search } = req.query;
 
+    const matchQuery: any = { is_deleted: false, isapproved: false };
+
+    if (search) {
+      matchQuery.organizationName = { $regex: new RegExp(search as string, "i") };
+    }
+
+    const organizations = await Organization.aggregate([
+      { $match: matchQuery },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "addresses",
+          localField: "address_id",
+          foreignField: "_id",
+          as: "addresses",
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "categoryDetails",
+        },
+      },
+      {
+        $lookup: {
+          from: "subcategories",
+          localField: "subcategoryName",
+          foreignField: "_id",
+          as: "subcategoryDetails",
+        },
+      },
+      { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "states",
+          let: { stateId: { $toInt: "$addresses.state" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          as: "stateInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "cities",
+          let: { cityId: { $toInt: "$addresses.city" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
+          as: "cityInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "districts",
+          let: { districtId: { $toInt: "$addresses.district" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
+          as: "districtInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "countries",
+          let: { countryId: { $toInt: "$addresses.country" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          as: "countryInfo",
+        },
+      },
+      {
+        $group: {
+          _id: "$_id",
+          organizationName: { $first: "$organizationName" },
+          managerName: { $first: "$managerName" },
+          register_number: { $first: "$register_number" },
+          contact_number: { $first: "$contact_number" },
+          email: { $first: "$email" },
+          organizationLogo: { $first: "$organizationLogo" },
+          no_of_employees: { $first: "$no_of_employees" },
+          categoryDetails: { $first: "$categoryDetails" },
+          subcategoryDetails: { $first: "$subcategoryDetails" },
+          addresses: {
+            $push: {
+              _id: "$addresses._id",
+              street_address: "$addresses.street_address",
+              city_id: "$addresses.city",
+              city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
+              state_id: "$addresses.state",
+              state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
+              district_id: "$addresses.district",
+              district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
+              pincode: "$addresses.pincode",
+              country_id: "$addresses.country",
+              country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
+              landmark: "$addresses.landmark",
+              address_type: "$addresses.address_type",
+            },
+          },
+        },
+      },
+    ]);
+
+    const totalOrganizations = await Organization.countDocuments(matchQuery);
+
+    sendSuccessResponse(
+      res,
+      "Unapproved organizations retrieved successfully!",
+      {
+        organizations,
+        totalPages: Math.ceil(totalOrganizations / limit),
+        currentPage: page,
+        totalOrganizations,
+      },
+      HTTP_STATUS_CODE.OK
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
 
 export const handleGetUserApprovedOrganizations = async (req: Request, res: Response): Promise<any> => {
   try {
     const userId = "67c83fb9332704ae5aa2cd63"; // Hardcoded user ID
-
+ 
     const organizations = await Organization.aggregate([
       {
         $match: {
@@ -828,7 +956,7 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
         },
       },
     ]);
-
+ 
     sendSuccessResponse(
       res,
       "User's approved organizations retrieved successfully!",
@@ -845,3 +973,8 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
     );
   }
 };
+
+ 
+
+
+
