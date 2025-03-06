@@ -2,10 +2,13 @@ import express, { Application, Router } from "express";
 import { apiConfig } from "../../config/endpoint ";
 import upload from "../../lib/helpers/uploadMiddleware";
 import {
+  // handleApproveOrganization,
+  // handleApproveOrganization,
   handleCreateNewOrganisation,
   handledDeleteOrganisations,
   handleGetByIdOrganisations,
   handleGetOrganisations,
+  handleGetUnapprovedOrganisations,
   handleGetUserApprovedOrganizations,
   handleUpdateOrganisations,
   organizationToggleStatus,
@@ -26,6 +29,7 @@ import {
   orgToggleSubcategoryStatus,
   orgUpdateSubcategory,
 } from "../../controllers/organization/orgSubCategory";
+import { authorizationAccess } from "../../middleware/TokenValidation";
 
 const router = express.Router();
 router.post(
@@ -64,6 +68,7 @@ router.get(
 );
 router.get(
   `${apiConfig.organization.handleGetUserApprovedOrganizations}`,
+  authorizationAccess,
   handleGetUserApprovedOrganizations
 );
 
@@ -106,4 +111,6 @@ router.get(
   getAllCategoriesByStatus
 );
 
+router.get(`${apiConfig.organization.getUnapprovedOrganisations}`,handleGetUnapprovedOrganisations)
+router.patch(`${apiConfig.organization.approveOrganization}`,handleGetUserApprovedOrganizations)
 export default router;

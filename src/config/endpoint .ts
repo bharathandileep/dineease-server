@@ -1,3 +1,4 @@
+
 export const apiConfig = {
   baseAPIUrl: `/api/v1`,
   auth: {
@@ -18,7 +19,7 @@ export const apiConfig = {
     userLogins:"/access/login",
     userRegister:"/access/register"
   },
-  kitchens: {
+kitchens: {
     newkitchens: "/new",
     updatekitchens: "/update/:id",
     deletekitchens: "/delete/:kitchenId",
@@ -41,6 +42,8 @@ export const apiConfig = {
     updateSubcategory: "/subcategories/:id",
     deleteSubcategory: "/subcategories/:id",
     toggleSubcategoryStatus: "/subcategories/:id/toggle-status",
+    
+    getUnapprovedKitchens:"/requested/all",
   },
   menu: {
     createCategory: "/categories",
@@ -61,10 +64,13 @@ export const apiConfig = {
     createItem: "/allmenuitems",
     getItemById: "/allmenuitems/:id",
     listItems: "/allmenuitems",
-    updateItem: "/allmenuitems/:id",
+    updateItem: "/allmenuitems/:id", 
     deleteItem: "/allmenuitems/:id",
     // changeItemStatus:"/allmenuitems/:id/status"
     changeItemStatus: "/allmenuitems/:id/status",
+
+    getMenuItemsByKitchen: "/menu-items/kitchen/:kitchenId",
+
   },
   organization: {
     newOrganization: "/new",
@@ -89,6 +95,12 @@ export const apiConfig = {
     deleteSubcategory: "/subcategories/:id",
     toggleSubcategoryStatus: "/subcategories/:id/toggle-status",
     getAllCategoriesByStatus: "/category/status",
+
+    getUnapprovedOrganisations:"/requested/all",
+    approveOrganization:"/approve/:id",
+    
+    
+
   },
   designation: {
     createDesignation: "/designations",

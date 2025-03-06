@@ -63,6 +63,8 @@ export const KitchenSchema: Schema = new Schema<IKitchen>({
     type: Boolean,
     default: false,
   },
+ 
+  
   is_deleted: {
     type: Boolean,
     default: false,

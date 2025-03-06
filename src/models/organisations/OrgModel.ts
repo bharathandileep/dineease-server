@@ -11,12 +11,12 @@ export interface IOrganization extends Document, CommonDBInterface {
   managerName: string;
   register_number: string;
   location: string;
+  isapproved: { type: boolean, required: true },
   contact_number: string;
   email: string;
   no_of_employees: number;
   organizationLogo: string;
   status:boolean  
-  isapproved: { type: boolean, required: true },
 }
 
 export const OrganizationSchema: Schema<IOrganization> =
