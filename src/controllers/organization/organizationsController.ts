@@ -973,59 +973,8 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
     );
   }
 };
+
  
- 
- 
-export const handleApproveOrganization = async (req: Request, res: Response): Promise<any> => {
-  try {
-    const { organizationId } = req.params;
 
-    // Validate that organizationId is provided
-    if (!organizationId) {
-      return sendErrorResponse(
-        res,
-        new Error('Organization ID is required'),
-        HTTP_STATUS_CODE.BAD_REQUEST,
-        ERROR_TYPES.VALIDATION_ERROR
-      );
-    }
-
-    // Find and update the organization
-    const updatedOrganization = await Organization.findByIdAndUpdate(
-      organizationId,
-      { 
-        isapproved: true,
-        approvedAt: new Date() // Optionally add a timestamp when approved
-      },
-      { new: true } // Return the updated document
-    );
-
-    // Check if organization was found and updated
-    if (!updatedOrganization) {
-      return sendErrorResponse(
-        res,
-        new Error('Organization not found'),
-        HTTP_STATUS_CODE.NOT_FOUND,
-        ERROR_TYPES.NOT_FOUND_ERROR
-      );
-    }
-
-    // Send success response
-    sendSuccessResponse(
-      res,
-      "Organization approved successfully!",
-      { organization: updatedOrganization },
-      HTTP_STATUS_CODE.OK
-    );
-  } catch (error) {
-    // Handle any unexpected errors
-    sendErrorResponse(
-      res,
-      error,
-      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-    );
-  }
-};
 
 

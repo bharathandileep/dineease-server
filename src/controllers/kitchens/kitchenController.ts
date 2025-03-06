@@ -1020,7 +1020,6 @@ export const handleGetUnapprovedKitchens = async (req: Request, res: Response): 
     );
   }
 };
-
 export const handleGetUserApprovedKitchens = async (req: Request, res: Response): Promise<any> => {
   try {
     const userId = "67a1fe128d946316957c42d8"; // Hardcoded user ID
@@ -1147,11 +1146,3 @@ export const handleGetUserApprovedKitchens = async (req: Request, res: Response)
     );
   }
 };
- 
-
-
-
-
-
-
-
