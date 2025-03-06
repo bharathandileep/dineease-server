@@ -1,4 +1,3 @@
-
 export const apiConfig = {
   baseAPIUrl: `/api/v1`,
   auth: {
