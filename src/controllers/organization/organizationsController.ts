@@ -867,14 +867,14 @@ export const handleGetUnapprovedOrganisations = async (req: Request, res: Respon
 
 export const handleGetUserApprovedOrganizations = async (req: Request, res: Response): Promise<any> => {
   try {
-    const userId = "67c83fb9332704ae5aa2cd63"; // Hardcoded user ID
- 
+    const userId = req.body.payload.id; 
+
     const organizations = await Organization.aggregate([
       {
         $match: {
-          user_id: new mongoose.Types.ObjectId(userId), // Match organizations for this user
+          user_id: new mongoose.Types.ObjectId(userId), 
           is_deleted: false,
-          isapproved: true, // Only approved organizations
+          isapproved: true, 
         },
       },
       {
@@ -944,7 +944,7 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
             ],
           },
           profilePic: "$organizationLogo",
-          rating: { $literal: 4.5 }, // Placeholder; replace with actual rating if available
+          rating: { $literal: 4.5 }, 
           employees: "$no_of_employees",
           industry: {
             $concatArrays: [
@@ -952,7 +952,7 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
               { $ifNull: [{ $arrayElemAt: ["$subcategoryDetails.name", 0] }, []] },
             ],
           },
-          yearFounded: { $literal: 2000 }, // Placeholder; replace with actual field if available
+          yearFounded: { $literal: 2000 }, 
         },
       },
     ]);

@@ -1,6 +1,3 @@
-import { get } from "sortablejs";
-import { getMenuItemsByKitchen } from "../controllers/kitchens/menuController";
-
 export const apiConfig = {
   baseAPIUrl: `/api/v1`,
   auth: {
@@ -134,7 +131,6 @@ kitchens: {
     getCitiesByState: "/cities/:stateName",
     getDistrictsByState:"/districts/:stateId",
   },
-
   kitchenMenu: {
     getKitchenMenu: "/kitchen-menu/:kitchenId",
     createkitchenMenu: "/kitchen-menu/:id",

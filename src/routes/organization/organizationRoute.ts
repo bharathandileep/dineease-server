@@ -29,6 +29,7 @@ import {
   orgToggleSubcategoryStatus,
   orgUpdateSubcategory,
 } from "../../controllers/organization/orgSubCategory";
+import { authorizationAccess } from "../../middleware/TokenValidation";
 
 const router = express.Router();
 router.post(
@@ -67,6 +68,7 @@ router.get(
 );
 router.get(
   `${apiConfig.organization.handleGetUserApprovedOrganizations}`,
+  authorizationAccess,
   handleGetUserApprovedOrganizations
 );
 
