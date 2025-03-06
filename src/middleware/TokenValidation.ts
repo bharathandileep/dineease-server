@@ -37,20 +37,21 @@ export const authorizationAccess = (
   req: Request,
   res: Response,
   next: NextFunction
-): void => {
+): void => { 
   const authHeader = req.headers.authorization;
+  console.log(authHeader)
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     throw new CustomError(
       "Authorization token not provided",
       HTTP_STATUS_CODE.UNAUTHORIZED,
       ERROR_TYPES.AUTHENTICATION_ERROR,
-      false
+      false 
     );
   }
- 
+
   const token = authHeader.split(" ")[1];
   const decode = verifyToken(token, accessTokenSecret);
- 
+
   if (!decode) {
     throw new CustomError(
       "Invalid access token",
@@ -59,9 +60,8 @@ export const authorizationAccess = (
       false
     );
   }
- 
+
   req.body.payload = decode;
   next();
 };
- 
- 
+

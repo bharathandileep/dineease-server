@@ -15,7 +15,7 @@ import {
 } from "../../controllers/kitchens/kitchenController";
 import {
   kitchenCreateCategory,
-  kitchenDeleteCategory,
+  kitchenDeleteCategory, 
   kitchenGetAllCategories,
   kitchenToggleCategoryStatus,
   kitchenUpdateCategory,

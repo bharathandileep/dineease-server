@@ -131,7 +131,6 @@ kitchens: {
     getCitiesByState: "/cities/:stateName",
     getDistrictsByState:"/districts/:stateId",
   },
-
   kitchenMenu: {
     getKitchenMenu: "/kitchen-menu/:kitchenId",
     createkitchenMenu: "/kitchen-menu/:id",

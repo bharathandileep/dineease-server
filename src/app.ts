@@ -48,9 +48,6 @@ app.use(`${apiConfig.baseAPIUrl}/addressDetails`,addressDetailsRoutes)
 
 
 
-
-
-
 app.get(`/`, (req, res) => {
   res.send(`
     <!DOCTYPE html>
