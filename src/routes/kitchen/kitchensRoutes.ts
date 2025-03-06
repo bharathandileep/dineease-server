@@ -3,6 +3,7 @@ import { apiConfig } from "../../config/endpoint ";
 import upload from "../../lib/helpers/uploadMiddleware";
 import {
  
+  handleApproveKitchen,
   handleCreateNewKitchens,
   handleDeleteKitchens,
   handleGetKitchens,
@@ -99,6 +100,8 @@ router.get(
 );
 
 router.get(`${apiConfig.kitchens. getUnapprovedKitchens}`,handleGetUnapprovedKitchens)
+
+router.patch(`${apiConfig.kitchens.getApprovedkitchens}`,handleApproveKitchen)
 
 
 export default router;

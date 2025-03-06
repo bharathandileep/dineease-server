@@ -36,6 +36,7 @@ kitchens: {
     updateCategory: "/categories/:id",
     deleteCategory: "/categories/:id",
     toggleCategoryStatus: "/categories/:id/toggle-status",
+    
 
     getAllSubCategories: "/subcategories/all",
     createSubcategory: "/subcategories",
@@ -46,7 +47,10 @@ kitchens: {
     toggleSubcategoryStatus: "/subcategories/:id/toggle-status",
     
     getUnapprovedKitchens:"/requested/all",
+    getApprovedkitchens:"/approve/:id",
+
   },
+
   menu: {
     createCategory: "/categories",
     getAllCategories: "/categories",
@@ -99,7 +103,7 @@ kitchens: {
     getAllCategoriesByStatus: "/category/status",
 
     getUnapprovedOrganisations:"/requested/all",
-    approveOrganization:"/approve/:id",
+    getApprovedOrganisations:"/approve/:id",
     
     
 

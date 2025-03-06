@@ -974,6 +974,47 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
   }
 };
 
+
+export const handleApproveorganisation=async (
+  req:Request,
+  res:Response
+):Promise<any>=>{
+  try{
+    const {id}=req.params;
+    const organization = await Organization.findById(id);
+
+    if(!organization){
+      throw new CustomError(
+        "Organization not found",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR,
+        false
+      );
+    }
+    if(organization.isapproved){
+      throw new CustomError(
+        "Organization already approved",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR,
+        false
+      );
+    }
+    const updatedOrganization=await Organization.findByIdAndUpdate(
+      id,
+      {isapproved:true},
+      {new:true}
+    );
+  }
+  catch(error){
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
  
 
 

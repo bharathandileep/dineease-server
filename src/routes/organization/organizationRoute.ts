@@ -2,6 +2,7 @@ import express, { Application, Router } from "express";
 import { apiConfig } from "../../config/endpoint ";
 import upload from "../../lib/helpers/uploadMiddleware";
 import {
+  handleApproveorganisation,
   // handleApproveOrganization,
   // handleApproveOrganization,
   handleCreateNewOrganisation,
@@ -110,5 +111,5 @@ router.get(
 );
 
 router.get(`${apiConfig.organization.getUnapprovedOrganisations}`,handleGetUnapprovedOrganisations)
-router.patch(`${apiConfig.organization.approveOrganization}`,handleGetUserApprovedOrganizations)
+router.patch(`${apiConfig.organization.getApprovedOrganisations}`, handleApproveorganisation);
 export default router;

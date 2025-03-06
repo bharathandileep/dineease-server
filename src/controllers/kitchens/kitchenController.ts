@@ -1146,3 +1146,54 @@ export const handleGetUserApprovedKitchens = async (req: Request, res: Response)
     );
   }
 };
+
+export const handleApproveKitchen = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const { id } = req.params;
+    
+    const kitchen = await Kitchen.findById(id);
+    
+    if (!kitchen) {
+      throw new CustomError(
+        "Kitchen not found",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR,
+        false
+      );
+    }
+    
+    // Check if kitchen is already approved
+    if (kitchen.isapproved) {
+      return sendSuccessResponse(
+        res,
+        "Kitchen is already approved",
+        kitchen,
+        HTTP_STATUS_CODE.OK
+      );
+    }
+    
+    // Update the kitchen to approved status
+    const updatedKitchen = await Kitchen.findByIdAndUpdate(
+      id,
+      { isapproved: true },
+      { new: true }
+    );
+    
+    sendSuccessResponse(
+      res,
+      "Kitchen approved successfully",
+      updatedKitchen,
+      HTTP_STATUS_CODE.OK
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
