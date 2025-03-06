@@ -195,7 +195,7 @@ export const createEmployee = async (req: Request, res: Response) => {
       files.aadhar_image?.[0]?.buffer
     );
 
-    // Create Employee with role_id from the Role model
+ 
     const newEmployee = new EmployeeManagement({
       entity_id,
       entity_type,

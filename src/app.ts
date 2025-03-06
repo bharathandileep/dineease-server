@@ -15,8 +15,8 @@ import organizationRoute from "./routes/organization/organizationRoute";
 import menuCategoryRoutes from "./routes/kitchen/categoryRoutes";
 import menuSubCategoryRoutes from "./routes/kitchen/subcategoryRoutes";
 import designationRoutes from "./routes/designation/designationRoutes";
-import EmployeeManagementRoutes from "./routes/empmanagment/EmployeeManagementRoutes";
-import OrgEmployeeManagementRoutes from "./routes/empmanagment/OrgEmployeeManagementRoutes";
+import EmployeeManagementRoutes from "./routes/empmanagment/employeeManagementRoutes";
+import OrgEmployeeManagementRoutes from "./routes/empmanagment/orgEmployeeManagementRoutes";
 import menuitemsRoutes from "./routes/menuitems/menuitemsRoutes";
 import kitchensMenuRoutes from "./routes/kitchen/kitchensMenuRoutes";
 import { clientOrigin } from "./config/environment";
@@ -41,18 +41,10 @@ app.use(`${apiConfig.baseAPIUrl}/sub-menu-category`, menuSubCategoryRoutes);
 app.use(`${apiConfig.baseAPIUrl}/designation`, designationRoutes);
 app.use(`${apiConfig.baseAPIUrl}/organization`, organizationRoute);
 app.use(`${apiConfig.baseAPIUrl}/employee`, EmployeeManagementRoutes);
-app.use(`${apiConfig.baseAPIUrl}/menu-items`, menuitemsRoutes);
-app.use(`${apiConfig.baseAPIUrl}/orgemployee`, OrgEmployeeManagementRoutes);
 app.use(`${apiConfig.baseAPIUrl}/kitchens-menu`, kitchensMenuRoutes);
 app.use(`${apiConfig.baseAPIUrl}/menu-items`, menuitemsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/org-employee`, OrgEmployeeManagementRoutes);
-app.use(`${apiConfig.baseAPIUrl}/menu-items`,menuitemsRoutes)
-app.use(`${apiConfig.baseAPIUrl}/orgemployee`,OrgEmployeeManagementRoutes)
 app.use(`${apiConfig.baseAPIUrl}/addressDetails`,addressDetailsRoutes)
-app.use(`${apiConfig.baseAPIUrl}/org-employee`,OrgEmployeeManagementRoutes)
-app.use(`${apiConfig.baseAPIUrl}/menu-items`, menuitemsRoutes);
-app.use(`${apiConfig.baseAPIUrl}/orgemployee`, OrgEmployeeManagementRoutes);
-app.use(`${apiConfig.baseAPIUrl}/kitchens-menu`, kitchensMenuRoutes);
 
 
 
