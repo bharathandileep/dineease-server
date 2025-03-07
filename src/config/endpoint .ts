@@ -1,6 +1,3 @@
-import { get } from "sortablejs";
-import { getMenuItemsByKitchen } from "../controllers/kitchens/menuController";
-
 export const apiConfig = {
   baseAPIUrl: `/api/v1`,
   auth: {
@@ -74,7 +71,6 @@ kitchens: {
     deleteItem: "/allmenuitems/:id",
     // changeItemStatus:"/allmenuitems/:id/status"
     changeItemStatus: "/allmenuitems/:id/status",
-
     getMenuItemsByKitchen: "/menu-items/kitchen/:kitchenId",
 
   },
@@ -138,7 +134,6 @@ kitchens: {
     getCitiesByState: "/cities/:stateName",
     getDistrictsByState:"/districts/:stateId",
   },
-
   kitchenMenu: {
     getKitchenMenu: "/kitchen-menu/:kitchenId",
     createkitchenMenu: "/kitchen-menu/:id",
