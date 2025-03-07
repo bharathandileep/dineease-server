@@ -16,11 +16,11 @@ import GstCertificateDetails from "../../models/documentations/GstModel";
 import mongoose from "mongoose";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
-
-
+ 
+ 
 const validateOrganizationDetails = (data: any) => {
   const errors: { field: string; message: string }[] = [];
-
+ 
   // PAN Card Validation
   if (!data.panNumber) {
     errors.push({
@@ -33,14 +33,14 @@ const validateOrganizationDetails = (data: any) => {
       message: "Invalid PAN card number.",
     });
   }
-
+ 
   if (!data.panCardUserName) {
     errors.push({
       field: "panCardUserName",
       message: "PAN card user name is required.",
     });
   }
-
+ 
   // GST Validation
   if (!data.gstNumber) {
     errors.push({ field: "gstNumber", message: "GST number is required." });
@@ -51,17 +51,17 @@ const validateOrganizationDetails = (data: any) => {
   ) {
     errors.push({ field: "gstNumber", message: "Invalid GST number." });
   }
-
+ 
   if (!data.expiryDate) {
     errors.push({
       field: "expiryDate",
       message: "GST expiry date is required.",
     });
   }
-
+ 
   return errors;
 };
-
+ 
 export const handleCreateNewOrganisation = async (
   req: Request,
   res: Response
@@ -98,19 +98,19 @@ export const handleCreateNewOrganisation = async (
       category,
       subcategoryName,
     } = req.body;
-
+ 
     const categoryId = category ? new mongoose.Types.ObjectId(category) : null;
     const subcategoryId = subcategoryName
       ? new mongoose.Types.ObjectId(subcategoryName)
       : null;
-
+ 
     // Handle file uploads safely
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-
+ 
     const organizationLogoUrl = files?.organizationLogo?.[0]?.buffer
       ? await uploadFileToCloudinary(files.organizationLogo[0].buffer)
       : null;
-
+ 
     // Create new organization with isapproved explicitly set to false
     const newOrg = await Organization.create({
       organizationName,
@@ -127,9 +127,9 @@ export const handleCreateNewOrganisation = async (
       is_deleted: false,
       isapproved: false, // Explicitly set to false since it's created by user
     });
-
+ 
     const newOrgId = newOrg._id;
-
+ 
     await createAddressAndUpdateModel(Organization, newOrgId, {
       street_address: streetAddress,
       city,
@@ -141,7 +141,7 @@ export const handleCreateNewOrganisation = async (
       prepared_by_id: newOrgId,
       entity_type: "Organization",
     });
-
+ 
     // Upload GST Certificate Image
     if (files?.gstCertificateImage?.[0]?.buffer) {
       const gstImageUrl = await uploadFileToCloudinary(
@@ -155,7 +155,7 @@ export const handleCreateNewOrganisation = async (
         expiry_date: expiryDate,
       });
     }
-
+ 
     // Upload PAN Card Image
     if (files?.panCardImage?.[0]?.buffer) {
       const panImageUrl = await uploadFileToCloudinary(
@@ -169,7 +169,7 @@ export const handleCreateNewOrganisation = async (
         pan_card_image: panImageUrl,
       });
     }
-
+ 
     return sendSuccessResponse(
       res,
       "Organization and associated details created successfully",
@@ -189,21 +189,21 @@ export const handleCreateNewOrganisation = async (
     );
   }
 };
-
+ 
 export const handleGetOrganisations = async (req: Request, res: Response): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 4;
     const skip = (page - 1) * limit;
     const { search } = req.query;
-
-    // Only get organizations that are approved
-    const matchQuery: any = { is_deleted: false, isapproved: true };
-
+ 
+   
+    const matchQuery: any = { is_deleted: false, isapproved: false };
+ 
     if (search) {
       matchQuery.organizationName = { $regex: new RegExp(search as string, "i") };
     }
-
+ 
     const organizations = await Organization.aggregate([
       { $match: matchQuery },
       { $skip: skip },
@@ -297,9 +297,9 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
         },
       }
     ]);
-
+ 
     const totalOrganizations = await Organization.countDocuments(matchQuery);
-
+ 
     sendSuccessResponse(
       res,
       "Organizations retrieved successfully!",
@@ -320,8 +320,8 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
     );
   }
 };
-
-
+ 
+ 
 export const handleGetByIdOrganisations = async (
   req: Request,
   res: Response
@@ -329,7 +329,7 @@ export const handleGetByIdOrganisations = async (
   try {
     const { orgId } = req.params;
     validateMogooseObjectId(orgId);
-
+ 
     const organization = await Organization.aggregate([
       {
         $match: {
@@ -377,7 +377,7 @@ export const handleGetByIdOrganisations = async (
               },
             },
           ],
-          as: "panDetails", 
+          as: "panDetails",
         },
       },
       {
@@ -475,7 +475,7 @@ export const handleGetByIdOrganisations = async (
         },
       },
     ]);
-
+ 
     if (!organization || organization.length === 0) {
       throw new CustomError(
         "Organization not found",
@@ -499,7 +499,7 @@ export const handleGetByIdOrganisations = async (
     );
   }
 };
-
+ 
 export const handleUpdateOrganisations = async (
   req: Request,
   res: Response
@@ -537,13 +537,13 @@ export const handleUpdateOrganisations = async (
       category,
       subcategoryName,
     } = req.body;
-
+ 
     validateMogooseObjectId(orgId);
     const existingOrg = await Organization.findOne({
       _id: orgId,
       is_deleted: false,
     });
-
+ 
     if (!existingOrg) {
       throw new CustomError(
         "Organization not found",
@@ -552,19 +552,19 @@ export const handleUpdateOrganisations = async (
         false
       );
     }
-
+ 
     const organizationLogoUrl = files.organizationLogo
       ? await uploadFileToCloudinary(files.organizationLogo[0].buffer)
       : existingOrg.organizationLogo;
-
+ 
     const panImageUrl = files.panCardImage
       ? await uploadFileToCloudinary(files.panCardImage[0].buffer)
       : req.body.panCardImage;
-
+ 
     const gstImageUrl = files.gstCertificateImage
       ? await uploadFileToCloudinary(files.gstCertificateImage[0].buffer)
       : req.body.gstCertificateImage;
-
+ 
     await Organization.findByIdAndUpdate(
       orgId,
       {
@@ -586,7 +586,7 @@ export const handleUpdateOrganisations = async (
       },
       { new: true }
     );
-
+ 
     await updateAddress(Organization, orgId, {
       street_address: streetAddress,
       city,
@@ -598,7 +598,7 @@ export const handleUpdateOrganisations = async (
       prepared_by_id: orgId,
       entity_type: "Organization",
     });
-
+ 
     // Update or create PAN details
     if (panNumber) {
       const panData = {
@@ -608,7 +608,7 @@ export const handleUpdateOrganisations = async (
         prepared_by_id: orgId,
         entity_type: "Organization",
       };
-
+ 
       await PanCardDetails.findOneAndUpdate(
         {
           prepared_by_id: orgId,
@@ -618,7 +618,7 @@ export const handleUpdateOrganisations = async (
         { upsert: true, new: true }
       );
     }
-
+ 
     // Update or create GST details
     if (gstNumber) {
       const gstData = {
@@ -628,7 +628,7 @@ export const handleUpdateOrganisations = async (
         prepared_by_id: orgId,
         entity_type: "Organization",
       };
-
+ 
       await GstCertificateDetails.findOneAndUpdate(
         {
           prepared_by_id: orgId,
@@ -638,11 +638,11 @@ export const handleUpdateOrganisations = async (
         { upsert: true, new: true }
       );
     }
-
+ 
     const updatedOrg = await Organization.findById(orgId)
       .populate("category")
       .populate("subcategoryName");
-
+ 
     sendSuccessResponse(
       res,
       "Organization updated successfully!",
@@ -658,7 +658,7 @@ export const handleUpdateOrganisations = async (
     );
   }
 };
-
+ 
 export const handledDeleteOrganisations = async (
   req: Request,
   res: Response
@@ -666,7 +666,7 @@ export const handledDeleteOrganisations = async (
   try {
     const { orgId } = req.params;
     validateMogooseObjectId(orgId);
-
+ 
     const updatedOrg = await Organization.findByIdAndUpdate(
       orgId,
       { $set: { is_deleted: true } },
@@ -695,7 +695,7 @@ export const handledDeleteOrganisations = async (
     );
   }
 };
-
+ 
 export const organizationToggleStatus = async (
   req: Request,
   res: Response
@@ -713,8 +713,8 @@ export const organizationToggleStatus = async (
     }
     const newStatus = !organization.status;
     const updatedOrganization = await Organization.findByIdAndUpdate(
-      id, 
-      { status: newStatus }, 
+      id,
+      { status: newStatus },
       { new: true }
     );
     sendSuccessResponse(
@@ -734,20 +734,20 @@ export const organizationToggleStatus = async (
     );
   }
 };
-
+ 
 export const handleGetUnapprovedOrganisations = async (req: Request, res: Response): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 4;
     const skip = (page - 1) * limit;
     const { search } = req.query;
-
+ 
     const matchQuery: any = { is_deleted: false, isapproved: false };
-
+ 
     if (search) {
       matchQuery.organizationName = { $regex: new RegExp(search as string, "i") };
     }
-
+ 
     const organizations = await Organization.aggregate([
       { $match: matchQuery },
       { $skip: skip },
@@ -841,9 +841,9 @@ export const handleGetUnapprovedOrganisations = async (req: Request, res: Respon
         },
       },
     ]);
-
+ 
     const totalOrganizations = await Organization.countDocuments(matchQuery);
-
+ 
     sendSuccessResponse(
       res,
       "Unapproved organizations retrieved successfully!",
@@ -864,17 +864,17 @@ export const handleGetUnapprovedOrganisations = async (req: Request, res: Respon
     );
   }
 };
-
+ 
 export const handleGetUserApprovedOrganizations = async (req: Request, res: Response): Promise<any> => {
   try {
-    const userId = "67c83fb9332704ae5aa2cd63"; // Hardcoded user ID
- 
+    const userId = req.body.payload.id;
+ console.log(userId)
     const organizations = await Organization.aggregate([
       {
         $match: {
-          user_id: new mongoose.Types.ObjectId(userId), // Match organizations for this user
+          user_id: new mongoose.Types.ObjectId(userId),
           is_deleted: false,
-          isapproved: true, // Only approved organizations
+          isapproved: true,
         },
       },
       {
@@ -944,7 +944,7 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
             ],
           },
           profilePic: "$organizationLogo",
-          rating: { $literal: 4.5 }, // Placeholder; replace with actual rating if available
+          rating: { $literal: 4.5 },
           employees: "$no_of_employees",
           industry: {
             $concatArrays: [
@@ -952,7 +952,7 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
               { $ifNull: [{ $arrayElemAt: ["$subcategoryDetails.name", 0] }, []] },
             ],
           },
-          yearFounded: { $literal: 2000 }, // Placeholder; replace with actual field if available
+          yearFounded: { $literal: 2000 },
         },
       },
     ]);
@@ -973,8 +973,4 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
     );
   }
 };
-
  
-
-
-

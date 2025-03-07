@@ -117,28 +117,3 @@ export const getDistrictsByState = async (
   }
 };
 
-// export const getcitiesByDistricts = async(req:Request,res:Response):Promise<void>=>{
-//     try{
-//         const{districtName}= req.params;
-//         const cities = await City.find({district_name:districtName});
-
-//         if(cities.length === 0 ){
-//             res.status(404).json({
-//                 success:false,
-//                 message:`No cities found for district :${districtName}`,
-//             });
-//             return;
-//         }
-//         res.status(200).json({
-//             success:true,
-//             data:cities,
-//         });
-//     }
-//     catch(error){
-//         console.error(error);
-//         res.status(500).json({
-//             success:false,
-//             message:"An error occured while fetching the cities"
-//         })
-//     }
-// }
