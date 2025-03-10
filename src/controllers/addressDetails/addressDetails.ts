@@ -13,7 +13,7 @@ import Country from "../../models/country/Country";
 import State from "../../models/state/StateModel";
 import City from "../../models/city/City";
 import District from "../../models/district/District";
-
+ 
 export const getAllCountries = async (
   req: Request,
   res: Response
@@ -32,7 +32,7 @@ export const getAllCountries = async (
     });
   }
 };
-
+ 
 export const getStatesByCountry = async (
   req: Request,
   res: Response
@@ -47,7 +47,7 @@ export const getStatesByCountry = async (
       });
       return;
     }
-
+ 
     res.status(200).json({
       success: true,
       data: states,
@@ -60,7 +60,7 @@ export const getStatesByCountry = async (
     });
   }
 };
-
+ 
 export const getCitiesByState = async (
   req: Request,
   res: Response
@@ -75,7 +75,7 @@ export const getCitiesByState = async (
       });
       return;
     }
-
+ 
     res.status(200).json({
       success: true,
       data: cities,
@@ -88,7 +88,7 @@ export const getCitiesByState = async (
     });
   }
 };
-
+ 
 export const getDistrictsByState = async (
   req: Request,
   res: Response
@@ -96,7 +96,7 @@ export const getDistrictsByState = async (
   try {
     const { stateId } = req.params;
     const districts = await District.find({ state_id: stateId });
-
+ 
     if (districts.length == 0) {
       res.status(404).json({
         success: false,
@@ -116,4 +116,4 @@ export const getDistrictsByState = async (
     });
   }
 };
-
+ 

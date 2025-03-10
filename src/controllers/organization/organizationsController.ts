@@ -94,7 +94,7 @@ export const handleCreateNewOrganisation = async (
       panCardUserName,
       gstNumber,
       expiryDate,
-      user_id,
+     payload,
       category,
       subcategoryName,
     } = req.body;
@@ -114,7 +114,7 @@ export const handleCreateNewOrganisation = async (
     // Create new organization with isapproved explicitly set to false
     const newOrg = await Organization.create({
       organizationName,
-      user_id: new mongoose.Types.ObjectId(user_id),
+      user_id: payload.id,
       managerName,
       register_number: registerNumber,
       contact_number: contactNumber,
@@ -197,8 +197,8 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
     const skip = (page - 1) * limit;
     const { search } = req.query;
  
-   
-    const matchQuery: any = { is_deleted: false, isapproved: false };
+    // Only get organizations that are approved
+    const matchQuery: any = { is_deleted: false, isapproved: true };
  
     if (search) {
       matchQuery.organizationName = { $regex: new RegExp(search as string, "i") };
@@ -868,7 +868,7 @@ export const handleGetUnapprovedOrganisations = async (req: Request, res: Respon
 export const handleGetUserApprovedOrganizations = async (req: Request, res: Response): Promise<any> => {
   try {
     const userId = req.body.payload.id;
- console.log(userId)
+ 
     const organizations = await Organization.aggregate([
       {
         $match: {
@@ -973,4 +973,10 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
     );
   }
 };
+ 
+ 
+ 
+ 
+ 
+ 
  

@@ -38,33 +38,30 @@ export const KitchenSchema: Schema = new Schema<IKitchen>({
     },
   ],
   isapproved: { type: Boolean, default: true },
-  
   kitchen_owner_name: { type: String, required: true },
   owner_email: { type: String, required: true },
-  category:{
-    type:mongoose.Schema.Types.ObjectId,
-    ref:"KitchenCategory",
-    required:true,
+  category: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "KitchenCategory",
+    required: true,
   },
-  subcategoryName:{
-     type:mongoose.Schema.Types.ObjectId,
-     ref:"KitchenSubcategory",
-     required:true,
+  subcategoryName: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "KitchenSubcategory",
+    required: true,
   },
   owner_phone_number: { type: String, required: true },
   restaurant_type: { type: String, required: true },
   kitchen_type: {
-    type: String, 
-    required: true,   
-    enum: ["Veg", "Non-Veg","Both"],
+    type: String,
+    required: true,
+    enum: ["Veg", "Non-Veg", "Both"],
   },
   kitchen_phone_number: { type: String, required: true },
   kitchen_document_verification: {
     type: Boolean,
     default: false,
   },
- 
-  
   is_deleted: {
     type: Boolean,
     default: false,
@@ -74,26 +71,26 @@ export const KitchenSchema: Schema = new Schema<IKitchen>({
     {
       day: { type: String, required: true },
       is_open: { type: Boolean, required: true, default: false },
-      open_time: { type: String },
-      close_time: { type: String },
+      open_time: { type: String }, // Optional
+      close_time: { type: String }, // Optional
+      status: { type: Boolean, required: true, default: true }, // Added default
     },
   ],
   pre_ordering_options: [
     {
-      meal_type: { type: String, required: true },
-      pre_order_start_time: { type: String, required: true },
-      pre_order_close_time: { type: String, required: true },
-      delivery_time: { type: String, required: true },
+      day: { type: String }, // Added day field, optional
+      meal_type: { type: String, required: false }, // Made optional
+      pre_order_start_time: { type: String, required: false }, // Made optional
+      pre_order_close_time: { type: String, required: false }, // Made optional
+      delivery_time: { type: String, required: false }, // Made optional
+      status: { type: Boolean, required: true, default: false },
     },
   ],
-  status:{
-    type:Boolean,
-    default:true
-  }
+  status: {
+    type: Boolean,
+    default: true,
+  },
 });
 
-const Kitchen: Model<IKitchen> = mongoose.model<IKitchen>(
-  "Kitchen",
-  KitchenSchema
-);
+const Kitchen: Model<IKitchen> = mongoose.model<IKitchen>("Kitchen", KitchenSchema);
 export default Kitchen;

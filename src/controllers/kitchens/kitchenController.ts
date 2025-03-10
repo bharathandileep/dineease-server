@@ -80,6 +80,7 @@ const validateKitchenDetails = (data: any) => {
   return errors;
 };
  
+
 export const handleCreateNewKitchens = async (
   req: Request,
   res: Response
@@ -95,11 +96,11 @@ export const handleCreateNewKitchens = async (
         ERROR_TYPES.BAD_REQUEST_ERROR
       );
     }
- 
-    // Extract fields from request
+
+    // Extract fields from request body
     const {
       kitchen_name,
-      user_id,
+      payload,
       kitchen_status,
       kitchen_owner_name,
       owner_email,
@@ -123,26 +124,103 @@ export const handleCreateNewKitchens = async (
       ffsai_certificate_number,
       ffsai_card_owner_name,
       ffsai_expiry_date,
+      working_days,
+      pre_ordering_options,
     } = req.body;
-    console.log(req.body);
- 
+
+    // Parse and validate working_days
+    let parsedWorkingDays = [];
+    if (typeof working_days === "string") {
+      try {
+        parsedWorkingDays = JSON.parse(working_days);
+        // Ensure all required fields are present
+        parsedWorkingDays = parsedWorkingDays.map((day: { day: any; is_open: undefined; open_time: any; close_time: any; status: undefined; }) => ({
+          day: day.day || "", // Ensure day is provided
+          is_open: day.is_open !== undefined ? day.is_open : false,
+          open_time: day.open_time || "",
+          close_time: day.close_time || "",
+          status: day.status !== undefined ? day.status : true,
+        }));
+        // Check if any day is missing
+        if (parsedWorkingDays.some((day: { day: any; }) => !day.day)) {
+          throw new Error("All working days must have a 'day' field");
+        }
+      } catch (e) {
+        return sendErrorResponse(
+          res,
+          `Invalid format for working_days: ${(e as Error).message}`,
+          HTTP_STATUS_CODE.BAD_REQUEST,
+          ERROR_TYPES.BAD_REQUEST_ERROR
+        );
+      }
+    } else if (Array.isArray(working_days)) {
+      parsedWorkingDays = working_days.map((day) => ({
+        day: day.day || "",
+        is_open: day.is_open !== undefined ? day.is_open : false,
+        open_time: day.open_time || "",
+        close_time: day.close_time || "",
+        status: day.status !== undefined ? day.status : true,
+      }));
+      if (parsedWorkingDays.some((day) => !day.day)) {
+        return sendErrorResponse(
+          res,
+          "All working days must have a 'day' field",
+          HTTP_STATUS_CODE.BAD_REQUEST,
+          ERROR_TYPES.BAD_REQUEST_ERROR
+        );
+      }
+    }
+
+    // Parse pre_ordering_options
+    let parsedPreOrderingOptions = [];
+    if (typeof pre_ordering_options === "string") {
+      try {
+        parsedPreOrderingOptions = JSON.parse(pre_ordering_options);
+        // Ensure all fields are present, with defaults for optional ones
+        parsedPreOrderingOptions = parsedPreOrderingOptions.map((option: { day: any; meal_type: any; pre_order_start_time: any; pre_order_close_time: any; delivery_time: any; status: undefined; }) => ({
+          day: option.day || "", // Optional
+          meal_type: option.meal_type || "",
+          pre_order_start_time: option.pre_order_start_time || "",
+          pre_order_close_time: option.pre_order_close_time || "",
+          delivery_time: option.delivery_time || "",
+          status: option.status !== undefined ? option.status : false,
+        }));
+      } catch (e) {
+        return sendErrorResponse(
+          res,
+          `Invalid format for pre_ordering_options: ${(e as Error).message}`,
+          HTTP_STATUS_CODE.BAD_REQUEST,
+          ERROR_TYPES.BAD_REQUEST_ERROR
+        );
+      }
+    } else if (Array.isArray(pre_ordering_options)) {
+      parsedPreOrderingOptions = pre_ordering_options.map((option) => ({
+        day: option.day || "",
+        meal_type: option.meal_type || "",
+        pre_order_start_time: option.pre_order_start_time || "",
+        pre_order_close_time: option.pre_order_close_time || "",
+        delivery_time: option.delivery_time || "",
+        status: option.status !== undefined ? option.status : false,
+      }));
+    }
+
     // Validate category and subcategory before converting to ObjectId
     const categoryId = category ? new mongoose.Types.ObjectId(category) : null;
     const subcategoryId = subcategoryName
       ? new mongoose.Types.ObjectId(subcategoryName)
       : null;
- 
+
     // Handle file uploads safely
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
- 
+
     const kitchenImageUrl = files?.kitchen_image?.[0]?.buffer
       ? await uploadFileToCloudinary(files.kitchen_image[0].buffer)
       : null;
- 
-    // Create new Kitchen entry with hardcoded "user" role and isapproved set to false
+
+    // Create new Kitchen entry with parsed arrays
     const newKitchen = await Kitchen.create({
       kitchen_name,
-      user_id: new mongoose.Types.ObjectId(user_id),
+      user_id: payload.id,
       kitchen_status,
       kitchen_owner_name,
       owner_email,
@@ -153,15 +231,15 @@ export const handleCreateNewKitchens = async (
       kitchen_type,
       kitchen_phone_number,
       kitchen_image: kitchenImageUrl,
-      role: "user", // Hardcoded role as "user"
+      role: "user",
       is_deleted: false,
-      isapproved: false, // Explicitly set to false since it's created by user
-      working_days: [],
-      pre_ordering_options: [],
+      isapproved: false,
+      working_days: parsedWorkingDays,
+      pre_ordering_options: parsedPreOrderingOptions,
     });
- 
+
     const kitchenId = newKitchen._id;
- 
+
     // Create Address
     await createAddressAndUpdateModel(Kitchen, kitchenId, {
       street_address,
@@ -174,21 +252,21 @@ export const handleCreateNewKitchens = async (
       prepared_by_id: kitchenId,
       entity_type: "Kitchen",
     });
- 
+
     // Upload FSSAI Certificate Image
     if (files?.ffsai_certificate_image?.[0]?.buffer) {
-      const FsssaiImageUrl = await uploadFileToCloudinary(
+      const fssaiImageUrl = await uploadFileToCloudinary(
         files.ffsai_certificate_image[0].buffer
       );
       await FssaiCertificateDetails.create({
         kitchen_id: kitchenId,
         ffsai_certificate_number,
         ffsai_card_owner_name,
-        ffsai_certificate_image: FsssaiImageUrl,
+        ffsai_certificate_image: fssaiImageUrl,
         expiry_date: ffsai_expiry_date,
       });
     }
- 
+
     // Upload GST Certificate Image
     if (files?.gst_certificate_image?.[0]?.buffer) {
       const gstImageUrl = await uploadFileToCloudinary(
@@ -202,7 +280,7 @@ export const handleCreateNewKitchens = async (
         expiry_date: gst_expiry_date,
       });
     }
- 
+
     // Upload PAN Card Image
     if (files?.pan_card_image?.[0]?.buffer) {
       const panImageUrl = await uploadFileToCloudinary(
@@ -216,19 +294,19 @@ export const handleCreateNewKitchens = async (
         pan_card_image: panImageUrl,
       });
     }
- 
+
     return sendSuccessResponse(
       res,
       "Kitchen and associated details created successfully",
       {
         kitchen: newKitchen,
-        role: "user", // Include role in the response
+        role: "user",
       },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
     console.error("Error creating kitchen:", error);
-    sendErrorResponse(
+  sendErrorResponse(
       res,
       error,
       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
@@ -634,6 +712,7 @@ export const handleUpdateKitchensById = async (
   res: Response
 ): Promise<void> => {
   try {
+    // Validate request body
     const errors = validateKitchenDetails(req.body);
     if (errors.length > 0) {
       return sendErrorResponse(
@@ -643,6 +722,7 @@ export const handleUpdateKitchensById = async (
         ERROR_TYPES.BAD_REQUEST_ERROR
       );
     }
+
     const kitchenId = req.params.id;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const {
@@ -670,18 +750,18 @@ export const handleUpdateKitchensById = async (
       ffsai_certificate_number,
       ffsai_card_owner_name,
       ffsai_expiry_date,
-      pan_card_image,
-      gst_certificate_image,
-      ffsai_certificate_image,
+      working_days,
+      pre_ordering_options,
     } = req.body;
-console.log(req.body);
- 
+
+    // Validate kitchen ID
     validateMogooseObjectId(kitchenId);
+
     const existingKitchen = await Kitchen.findOne({
       _id: kitchenId,
       is_deleted: false,
-    });
- 
+    }).populate("category").populate("subcategoryName");
+
     if (!existingKitchen) {
       throw new CustomError(
         "Kitchen not found",
@@ -690,21 +770,106 @@ console.log(req.body);
         false
       );
     }
- 
-    const kitchen_image = files.kitchen_image
+
+    // Parse and validate working_days
+    let parsedWorkingDays = [];
+    if (typeof working_days === "string") {
+      try {
+        parsedWorkingDays = JSON.parse(working_days);
+        parsedWorkingDays = parsedWorkingDays.map((day: { day: any; is_open: undefined; open_time: any; close_time: any; status: undefined; }) => ({
+          day: day.day || "",
+          is_open: day.is_open !== undefined ? day.is_open : false,
+          open_time: day.open_time || "",
+          close_time: day.close_time || "",
+          status: day.status !== undefined ? day.status : true,
+        }));
+        if (parsedWorkingDays.some((day: { day: any; }) => !day.day)) {
+          throw new Error("All working days must have a 'day' field");
+        }
+      } catch (e) {
+        return sendErrorResponse(
+          res,
+          `Invalid format for working_days: ${(e as Error).message}`,
+          HTTP_STATUS_CODE.BAD_REQUEST,
+          ERROR_TYPES.BAD_REQUEST_ERROR
+        );
+      }
+    } else if (Array.isArray(working_days)) {
+      parsedWorkingDays = working_days.map((day) => ({
+        day: day.day || "",
+        is_open: day.is_open !== undefined ? day.is_open : false,
+        open_time: day.open_time || "",
+        close_time: day.close_time || "",
+        status: day.status !== undefined ? day.status : true,
+      }));
+      if (parsedWorkingDays.some((day) => !day.day)) {
+        return sendErrorResponse(
+          res,
+          "All working days must have a 'day' field",
+          HTTP_STATUS_CODE.BAD_REQUEST,
+          ERROR_TYPES.BAD_REQUEST_ERROR
+        );
+      }
+    }
+
+    // Parse pre_ordering_options
+    let parsedPreOrderingOptions = [];
+    if (typeof pre_ordering_options === "string") {
+      try {
+        parsedPreOrderingOptions = JSON.parse(pre_ordering_options);
+        parsedPreOrderingOptions = parsedPreOrderingOptions.map((option: { day: any; meal_type: any; pre_order_start_time: any; pre_order_close_time: any; delivery_time: any; status: undefined; }) => ({
+          day: option.day || "",
+          meal_type: option.meal_type || "",
+          pre_order_start_time: option.pre_order_start_time || "",
+          pre_order_close_time: option.pre_order_close_time || "",
+          delivery_time: option.delivery_time || "",
+          status: option.status !== undefined ? option.status : false,
+        }));
+      } catch (e) {
+        return sendErrorResponse(
+          res,
+          `Invalid format for pre_ordering_options: ${(e as Error).message}`,
+          HTTP_STATUS_CODE.BAD_REQUEST,
+          ERROR_TYPES.BAD_REQUEST_ERROR
+        );
+      }
+    } else if (Array.isArray(pre_ordering_options)) {
+      parsedPreOrderingOptions = pre_ordering_options.map((option) => ({
+        day: option.day || "",
+        meal_type: option.meal_type || "",
+        pre_order_start_time: option.pre_order_start_time || "",
+        pre_order_close_time: option.pre_order_close_time || "",
+        delivery_time: option.delivery_time || "",
+        status: option.status !== undefined ? option.status : false,
+      }));
+    }
+
+    // Handle file uploads to Cloudinary
+    const kitchenImageUrl = files?.kitchen_image?.[0]?.buffer
       ? await uploadFileToCloudinary(files.kitchen_image[0].buffer)
       : existingKitchen.kitchen_image;
-    const pan_image = files.pan_card_image
+
+    const panImageUrl = files?.pan_card_image?.[0]?.buffer
       ? await uploadFileToCloudinary(files.pan_card_image[0].buffer)
-      : pan_card_image;
-    const gst_image = files.gst_certificate_image
+      : req.body.pan_card_image;
+
+    const gstImageUrl = files?.gst_certificate_image?.[0]?.buffer
       ? await uploadFileToCloudinary(files.gst_certificate_image[0].buffer)
-      : gst_certificate_image;
-    const fssai_image = files.ffsai_certificate_image
+      : req.body.gst_certificate_image;
+
+    const fssaiImageUrl = files?.ffsai_certificate_image?.[0]?.buffer
       ? await uploadFileToCloudinary(files.ffsai_certificate_image[0].buffer)
-      : ffsai_certificate_image;
- 
-    await Kitchen.findByIdAndUpdate(
+      : req.body.ffsai_certificate_image;
+
+      const categoryId = category && mongoose.Types.ObjectId.isValid(category)
+      ? new mongoose.Types.ObjectId(category)
+      : existingKitchen.category;
+    const subcategoryId = subcategoryName && mongoose.Types.ObjectId.isValid(subcategoryName)
+      ? new mongoose.Types.ObjectId(subcategoryName)
+      : existingKitchen.subcategoryName;
+
+      
+    const updatedKitchen = await Kitchen.findByIdAndUpdate(
       kitchenId,
       {
         $set: {
@@ -713,23 +878,22 @@ console.log(req.body);
           kitchen_owner_name,
           owner_email,
           owner_phone_number,
-          category: category
-            ? new mongoose.Types.ObjectId(category)
-            : existingKitchen.category,
-          subcategoryName: subcategoryName
-            ? new mongoose.Types.ObjectId(subcategoryName)
-            : existingKitchen.subcategoryName,
+          category: categoryId,
+          subcategoryName: subcategoryId,
           restaurant_type,
           kitchen_type,
           kitchen_phone_number,
-          kitchen_image,
+          kitchen_image: kitchenImageUrl,
+          working_days: parsedWorkingDays,
+          pre_ordering_options: parsedPreOrderingOptions,
         },
       },
       { new: true }
     );
- 
+
+    // Update address
     await updateAddress(Kitchen, kitchenId, {
-      street_address: street_address,
+      street_address,
       city,
       state,
       district,
@@ -739,72 +903,72 @@ console.log(req.body);
       prepared_by_id: kitchenId,
       entity_type: "Kitchen",
     });
- 
+
     // Update or create PAN details
     if (pan_card_number) {
       const panData = {
         pan_card_number,
         pan_card_user_name,
-        pan_card_image: pan_image,
+        pan_card_image: panImageUrl,
         prepared_by_id: kitchenId,
         entity_type: "Kitchen",
       };
- 
+
       await PanCardDetails.findOneAndUpdate(
-        {
-          prepared_by_id: kitchenId,
-          entity_type: "Kitchen",
-        },
+        { prepared_by_id: kitchenId, entity_type: "Kitchen" },
         panData,
         { upsert: true, new: true }
       );
     }
- 
+
     // Update or create GST details
     if (gst_number) {
       const gstData = {
         gst_number,
-        gst_certificate_image: gst_image,
+        gst_certificate_image: gstImageUrl,
         expiry_date: gst_expiry_date,
         prepared_by_id: kitchenId,
         entity_type: "Kitchen",
       };
- 
+
       await GstCertificateDetails.findOneAndUpdate(
-        {
-          prepared_by_id: kitchenId,
-          entity_type: "Kitchen",
-        },
+        { prepared_by_id: kitchenId, entity_type: "Kitchen" },
         gstData,
         { upsert: true, new: true }
       );
     }
- 
+
     // Update or create FSSAI details
     if (ffsai_certificate_number) {
       const fssaiData = {
         ffsai_certificate_number,
         ffsai_card_owner_name,
-        ffsai_certificate_image: fssai_image,
+        ffsai_certificate_image: fssaiImageUrl,
         expiry_date: ffsai_expiry_date,
         kitchen_id: kitchenId,
       };
- 
+
       await FssaiCertificateDetails.findOneAndUpdate(
         { kitchen_id: kitchenId },
         fssaiData,
         { upsert: true, new: true }
       );
     }
-    const updatedKitchen = await Kitchen.findById(kitchenId)
+    const populatedKitchen = await Kitchen.findById(kitchenId)
       .populate("category")
       .populate("subcategoryName");
+      console.log("Updated category:", populatedKitchen?.category);
+    console.log("Updated subcategoryName:", populatedKitchen?.subcategoryName);
+
+    // Send success response
     sendSuccessResponse(
       res,
       "Kitchen updated successfully!",
+      { kitchen: updatedKitchen },
       HTTP_STATUS_CODE.OK
     );
   } catch (error: any) {
+    console.error("Error updating kitchen:", error);
     sendErrorResponse(
       res,
       error,
@@ -1024,16 +1188,15 @@ export const handleGetUnapprovedKitchens = async (req: Request, res: Response): 
 export const handleGetUserApprovedKitchens = async (req: Request, res: Response): Promise<any> => {
   try {
     const userId = req.body.payload.id;
- 
+ console.log(userId);
     const kitchens = await Kitchen.aggregate([
       {
         $match: {
-          // Use this if user_id is an ObjectId in your schema
+         
           user_id: new mongoose.Types.ObjectId(userId),
-          // Uncomment this if user_id is a String in your schema
-          // user_id: userId,
+
           is_deleted: false,
-          isapproved: true, // Only approved kitchens
+          isapproved: true, 
         },
       },
       {
@@ -1109,14 +1272,14 @@ export const handleGetUserApprovedKitchens = async (req: Request, res: Response)
             },
           },
           profilePic: "$kitchen_image",
-          rating: { $literal: 4.5 }, 
+          rating: { $literal: 4.5 }, // Placeholder; replace with actual rating if available
           cuisine: {
             $concatArrays: [
               { $ifNull: [{ $arrayElemAt: ["$categoryDetails.name", 0] }, []] },
               { $ifNull: [{ $arrayElemAt: ["$subcategoryDetails.name", 0] }, []] },
             ],
           },
-          specialty: "$kitchen_type", 
+          specialty: "$kitchen_type", // Using kitchen_type as specialty; adjust if needed
         },
       },
     ]);
@@ -1128,7 +1291,7 @@ export const handleGetUserApprovedKitchens = async (req: Request, res: Response)
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
-    console.error("Error in handleGetUserApprovedKitchens:", error); 
+    console.error("Error in handleGetUserApprovedKitchens:", error); // Add logging for debugging
     sendErrorResponse(
       res,
       (error as any).message || "Failed to retrieve user's approved kitchens",
