@@ -29,6 +29,7 @@ import {
   kitchenUpdateSubcategory,
 } from "../../controllers/kitchens/kitchenSubCategory";
 import { getMenuItemsByKitchen } from "../../controllers/kitchens/menuController";
+import { authorizationAccess } from "../../middleware/TokenValidation";
 
 const router = express.Router();
 
@@ -52,12 +53,13 @@ router.put(
     { name: "gst_certificate_image", maxCount: 1 },
     { name: "ffsai_certificate_image", maxCount: 1 },
   ]),
+  authorizationAccess,
   handleUpdateKitchensById
 );
 
 router.delete(`${apiConfig.kitchens.deletekitchens}`, handleDeleteKitchens);
 router.get(`${apiConfig.kitchens.toggleKitchensStatus}`, kitchenToggleStatus);
-router.get(`${apiConfig.kitchens.handleGetUserApprovedKitchens}`, handleGetUserApprovedKitchens);
+router.get(`${apiConfig.kitchens.handleGetUserApprovedKitchens}`,authorizationAccess, handleGetUserApprovedKitchens);
 
 
 
@@ -98,7 +100,7 @@ router.get(
   kitchenGetAllSubCategories
 );
 
-router.get(`${apiConfig.kitchens. getUnapprovedKitchens}`,handleGetUnapprovedKitchens)
+router.get(`${apiConfig.kitchens.getUnapprovedKitchens}`,handleGetUnapprovedKitchens)
 
 
 export default router;

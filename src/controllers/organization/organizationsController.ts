@@ -94,10 +94,11 @@ export const handleCreateNewOrganisation = async (
       panCardUserName,
       gstNumber,
       expiryDate,
-      user_id,
+      payload,
       category,
       subcategoryName,
     } = req.body;
+    console.log(req.body)
 
     const categoryId = category ? new mongoose.Types.ObjectId(category) : null;
     const subcategoryId = subcategoryName
@@ -114,7 +115,7 @@ export const handleCreateNewOrganisation = async (
     // Create new organization with isapproved explicitly set to false
     const newOrg = await Organization.create({
       organizationName,
-      user_id: new mongoose.Types.ObjectId(user_id),
+      user_id: payload.id,
       managerName,
       register_number: registerNumber,
       contact_number: contactNumber,
@@ -123,9 +124,9 @@ export const handleCreateNewOrganisation = async (
       category: categoryId,
       subcategoryName: subcategoryId,
       organizationLogo: organizationLogoUrl,
-      role: "user", // Hardcoded role as "user"
+      role:payload.role ,
       is_deleted: false,
-      isapproved: false, // Explicitly set to false since it's created by user
+      isapproved: false, 
     });
 
     const newOrgId = newOrg._id;
@@ -870,7 +871,7 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
     const userId = req.body.payload.id; 
 
     const organizations = await Organization.aggregate([
-      {
+      { 
         $match: {
           user_id: new mongoose.Types.ObjectId(userId), 
           is_deleted: false,
