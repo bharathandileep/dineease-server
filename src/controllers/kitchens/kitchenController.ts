@@ -18,7 +18,6 @@ import FssaiCertificateDetails from "../../models/documentations/FfsaiModel";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
 
-
 const validateKitchenDetails = (data: any) => {
   const errors: { field: string; message: string }[] = [];
   if (!data.pan_card_number) {
@@ -99,7 +98,7 @@ export const handleCreateNewKitchens = async (
     // Extract fields from request
     const {
       kitchen_name,
-      user_id,
+      payload,
       kitchen_status,
       kitchen_owner_name,
       owner_email,
@@ -124,24 +123,18 @@ export const handleCreateNewKitchens = async (
       ffsai_card_owner_name,
       ffsai_expiry_date,
     } = req.body;
-
-    // Validate category and subcategory before converting to ObjectId
     const categoryId = category ? new mongoose.Types.ObjectId(category) : null;
     const subcategoryId = subcategoryName
       ? new mongoose.Types.ObjectId(subcategoryName)
       : null;
-
-    // Handle file uploads safely
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
     const kitchenImageUrl = files?.kitchen_image?.[0]?.buffer
       ? await uploadFileToCloudinary(files.kitchen_image[0].buffer)
       : null;
-
-    // Create new Kitchen entry with hardcoded "user" role and isapproved set to false
     const newKitchen = await Kitchen.create({
       kitchen_name,
-      user_id: new mongoose.Types.ObjectId(user_id),
+      user_id: payload.id,
       kitchen_status,
       kitchen_owner_name,
       owner_email,
@@ -152,9 +145,9 @@ export const handleCreateNewKitchens = async (
       kitchen_type,
       kitchen_phone_number,
       kitchen_image: kitchenImageUrl,
-      role: "user", // Hardcoded role as "user"
+      role: payload.role,
       is_deleted: false,
-      isapproved: false, // Explicitly set to false since it's created by user
+      isapproved: false,
       working_days: [],
       pre_ordering_options: [],
     });
@@ -236,7 +229,10 @@ export const handleCreateNewKitchens = async (
   }
 };
 
-export const handleGetKitchens = async (req: Request, res: Response): Promise<any> => {
+export const handleGetKitchens = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 4;
@@ -386,7 +382,8 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           },
           fssaiDetails: {
             $first: {
-              ffsai_certificate_number: "$fssaiDetails.ffsai_certificate_number",
+              ffsai_certificate_number:
+                "$fssaiDetails.ffsai_certificate_number",
               ffsai_card_owner_name: "$fssaiDetails.ffsai_card_owner_name",
               ffsai_certificate_image: "$fssaiDetails.ffsai_certificate_image",
               expiry_date: "$fssaiDetails.expiry_date",
@@ -433,7 +430,6 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
   }
 };
 
-
 export const handleGetKitchensById = async (
   req: Request,
   res: Response
@@ -441,7 +437,7 @@ export const handleGetKitchensById = async (
   try {
     const { kitchenId } = req.params;
     validateMogooseObjectId(kitchenId);
-     
+
     const kitchen = await Kitchen.aggregate([
       {
         $match: {
@@ -557,7 +553,7 @@ export const handleGetKitchensById = async (
           as: "countryInfo",
         },
       },
-  
+
       {
         $group: {
           _id: "$_id",
@@ -673,7 +669,7 @@ export const handleUpdateKitchensById = async (
       gst_certificate_image,
       ffsai_certificate_image,
     } = req.body;
-console.log(req.body);
+    console.log(req.body);
 
     validateMogooseObjectId(kitchenId);
     const existingKitchen = await Kitchen.findOne({
@@ -850,10 +846,7 @@ export const handleDeleteKitchens = async (
   }
 };
 
-export const kitchenToggleStatus = async (
-  req: Request,
-  res: Response
-) => {
+export const kitchenToggleStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const kitchen = await Kitchen.findById(id);
@@ -868,8 +861,8 @@ export const kitchenToggleStatus = async (
     }
     const newStatus = !kitchen.status;
     const updatedKitchen = await Kitchen.findByIdAndUpdate(
-      id, 
-      { status: newStatus }, 
+      id,
+      { status: newStatus },
       { new: true }
     );
 
@@ -891,7 +884,10 @@ export const kitchenToggleStatus = async (
   }
 };
 
-export const handleGetUnapprovedKitchens = async (req: Request, res: Response): Promise<any> => {
+export const handleGetUnapprovedKitchens = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 4;
@@ -1020,10 +1016,13 @@ export const handleGetUnapprovedKitchens = async (req: Request, res: Response): 
     );
   }
 };
-export const handleGetUserApprovedKitchens = async (req: Request, res: Response): Promise<any> => {
+export const handleGetUserApprovedKitchens = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   try {
-    const userId = "67a1fe128d946316957c42d8"; // Hardcoded user ID
- 
+    const userId = req.body.payload.id;
+
     // Validate the userId format
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return sendErrorResponse(
@@ -1033,7 +1032,7 @@ export const handleGetUserApprovedKitchens = async (req: Request, res: Response)
         ERROR_TYPES.BAD_REQUEST_ERROR
       );
     }
- 
+
     const kitchens = await Kitchen.aggregate([
       {
         $match: {
@@ -1122,14 +1121,19 @@ export const handleGetUserApprovedKitchens = async (req: Request, res: Response)
           cuisine: {
             $concatArrays: [
               { $ifNull: [{ $arrayElemAt: ["$categoryDetails.name", 0] }, []] },
-              { $ifNull: [{ $arrayElemAt: ["$subcategoryDetails.name", 0] }, []] },
+              {
+                $ifNull: [
+                  { $arrayElemAt: ["$subcategoryDetails.name", 0] },
+                  [],
+                ],
+              },
             ],
           },
           specialty: "$kitchen_type", // Using kitchen_type as specialty; adjust if needed
         },
       },
     ]);
- 
+
     sendSuccessResponse(
       res,
       "User's approved kitchens retrieved successfully!",

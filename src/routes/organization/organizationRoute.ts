@@ -39,6 +39,7 @@ router.post(
     { name: "panCardImage", maxCount: 1 },
     { name: "gstCertificateImage", maxCount: 1 },
   ]),
+  authorizationAccess,
   handleCreateNewOrganisation
 );
 router.get(
