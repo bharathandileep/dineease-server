@@ -71,19 +71,23 @@ export const KitchenSchema: Schema = new Schema<IKitchen>({
     {
       day: { type: String, required: true },
       is_open: { type: Boolean, required: true, default: false },
-      open_time: { type: String }, // Optional
-      close_time: { type: String }, // Optional
-      status: { type: Boolean, required: true, default: true }, // Added default
+      open_time: { type: String }, 
+      close_time: { type: String }, 
+      status: { type: Boolean, required: true, default: true },
     },
   ],
   pre_ordering_options: [
     {
-      day: { type: String }, // Added day field, optional
-      meal_type: { type: String, required: false }, // Made optional
-      pre_order_start_time: { type: String, required: false }, // Made optional
-      pre_order_close_time: { type: String, required: false }, // Made optional
-      delivery_time: { type: String, required: false }, // Made optional
-      status: { type: Boolean, required: true, default: false },
+      day: { type: String }, 
+      meal_type: {
+        type: String,
+        enum: ["breakfast", "lunch", "tea", "dinner"],
+        required: true,
+      },
+      pre_order_start_time: { type: String, required: true }, 
+      pre_order_close_time: { type: String, required: true }, 
+      delivery_time: { type: String, required: false }, 
+      status: { type: Boolean, required: true, default: true },
     },
   ],
   status: {

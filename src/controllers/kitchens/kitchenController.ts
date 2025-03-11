@@ -133,15 +133,13 @@ export const handleCreateNewKitchens = async (
     if (typeof working_days === "string") {
       try {
         parsedWorkingDays = JSON.parse(working_days);
-        // Ensure all required fields are present
         parsedWorkingDays = parsedWorkingDays.map((day: { day: any; is_open: undefined; open_time: any; close_time: any; status: undefined; }) => ({
-          day: day.day || "", // Ensure day is provided
+          day: day.day || "",
           is_open: day.is_open !== undefined ? day.is_open : false,
           open_time: day.open_time || "",
           close_time: day.close_time || "",
           status: day.status !== undefined ? day.status : true,
         }));
-        // Check if any day is missing
         if (parsedWorkingDays.some((day: { day: any; }) => !day.day)) {
           throw new Error("All working days must have a 'day' field");
         }
@@ -171,20 +169,32 @@ export const handleCreateNewKitchens = async (
       }
     }
 
-    // Parse pre_ordering_options
+    // Parse and validate pre_ordering_options
     let parsedPreOrderingOptions = [];
+    const validMealTypes = ["breakfast", "lunch", "tea", "dinner"]; // Define valid meal types
     if (typeof pre_ordering_options === "string") {
       try {
         parsedPreOrderingOptions = JSON.parse(pre_ordering_options);
-        // Ensure all fields are present, with defaults for optional ones
-        parsedPreOrderingOptions = parsedPreOrderingOptions.map((option: { day: any; meal_type: any; pre_order_start_time: any; pre_order_close_time: any; delivery_time: any; status: undefined; }) => ({
-          day: option.day || "", // Optional
-          meal_type: option.meal_type || "",
-          pre_order_start_time: option.pre_order_start_time || "",
-          pre_order_close_time: option.pre_order_close_time || "",
-          delivery_time: option.delivery_time || "",
-          status: option.status !== undefined ? option.status : false,
-        }));
+        parsedPreOrderingOptions = parsedPreOrderingOptions.map((option: { meal_type: string; day: any; pre_order_start_time: any; pre_order_close_time: any; delivery_time: any; status: undefined; }) => {
+          // Validate meal_type against enum
+          if (!option.meal_type || !validMealTypes.includes(option.meal_type)) {
+            throw new Error(
+              `Invalid meal_type. Must be one of: ${validMealTypes.join(", ")}`
+            );
+          }
+          return {
+            day: option.day || "",
+            meal_type: option.meal_type,
+            pre_order_start_time: option.pre_order_start_time || "",
+            pre_order_close_time: option.pre_order_close_time || "",
+            delivery_time: option.delivery_time || "",
+            status: option.status !== undefined ? option.status : false,
+          };
+        });
+        // Ensure at least one pre-ordering option is provided with a valid day
+        if (parsedPreOrderingOptions.some((option: { day: any; }) => !option.day)) {
+          throw new Error("All pre-ordering options must have a 'day' field");
+        }
       } catch (e) {
         return sendErrorResponse(
           res,
@@ -194,14 +204,29 @@ export const handleCreateNewKitchens = async (
         );
       }
     } else if (Array.isArray(pre_ordering_options)) {
-      parsedPreOrderingOptions = pre_ordering_options.map((option) => ({
-        day: option.day || "",
-        meal_type: option.meal_type || "",
-        pre_order_start_time: option.pre_order_start_time || "",
-        pre_order_close_time: option.pre_order_close_time || "",
-        delivery_time: option.delivery_time || "",
-        status: option.status !== undefined ? option.status : false,
-      }));
+      parsedPreOrderingOptions = pre_ordering_options.map((option) => {
+        if (!option.meal_type || !validMealTypes.includes(option.meal_type)) {
+          throw new Error(
+            `Invalid meal_type. Must be one of: ${validMealTypes.join(", ")}`
+          );
+        }
+        return {
+          day: option.day || "",
+          meal_type: option.meal_type,
+          pre_order_start_time: option.pre_order_start_time || "",
+          pre_order_close_time: option.pre_order_close_time || "",
+          delivery_time: option.delivery_time || "",
+          status: option.status !== undefined ? option.status : false,
+        };
+      });
+      if (parsedPreOrderingOptions.some((option) => !option.day)) {
+        return sendErrorResponse(
+          res,
+          "All pre-ordering options must have a 'day' field",
+          HTTP_STATUS_CODE.BAD_REQUEST,
+          ERROR_TYPES.BAD_REQUEST_ERROR
+        );
+      }
     }
 
     // Validate category and subcategory before converting to ObjectId
@@ -306,7 +331,7 @@ export const handleCreateNewKitchens = async (
     );
   } catch (error) {
     console.error("Error creating kitchen:", error);
-  sendErrorResponse(
+    sendErrorResponse(
       res,
       error,
       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
