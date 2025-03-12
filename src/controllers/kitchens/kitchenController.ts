@@ -535,8 +535,6 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
     );
   }
 };
- 
- 
 export const handleGetKitchensById = async (
   req: Request,
   res: Response
