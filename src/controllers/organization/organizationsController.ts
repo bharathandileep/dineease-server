@@ -123,9 +123,8 @@ export const handleCreateNewOrganisation = async (
       category: categoryId,
       subcategoryName: subcategoryId,
       organizationLogo: organizationLogoUrl,
-      role:payload.role ,
+      role: payload.role,
       is_deleted: false,
-      isapproved: false, 
     });
  
     const newOrgId = newOrg._id;
@@ -175,7 +174,7 @@ export const handleCreateNewOrganisation = async (
       "Organization and associated details created successfully",
       {
         organization: newOrg,
-        role: "user"
+        role: "user",
       },
       HTTP_STATUS_CODE.OK
     );
@@ -201,7 +200,9 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
     const matchQuery: any = { is_deleted: false, isapproved: true };
  
     if (search) {
-      matchQuery.organizationName = { $regex: new RegExp(search as string, "i") };
+      matchQuery.organizationName = {
+        $regex: new RegExp(search as string, "i"),
+      };
     }
  
     const organizations = await Organization.aggregate([
@@ -295,7 +296,7 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
             },
           },
         },
-      }
+      },
     ]);
  
     const totalOrganizations = await Organization.countDocuments(matchQuery);
@@ -741,11 +742,13 @@ export const handleGetUnapprovedOrganisations = async (req: Request, res: Respon
     const limit = parseInt(req.query.limit as string) || 4;
     const skip = (page - 1) * limit;
     const { search } = req.query;
- 
-    const matchQuery: any = { is_deleted: false, isapproved: false };
- 
+
+    const matchQuery: any = { is_deleted: false, isapproved: "processing" };
+
     if (search) {
-      matchQuery.organizationName = { $regex: new RegExp(search as string, "i") };
+      matchQuery.organizationName = {
+        $regex: new RegExp(search as string, "i"),
+      };
     }
  
     const organizations = await Organization.aggregate([
@@ -870,7 +873,7 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
     const userId = req.body.payload.id;
  
     const organizations = await Organization.aggregate([
-      { 
+      {
         $match: {
           user_id: new mongoose.Types.ObjectId(userId),
           is_deleted: false,
@@ -944,19 +947,29 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
             ],
           },
           profilePic: "$organizationLogo",
-          rating: { $literal: 4.5 },
           employees: "$no_of_employees",
+          isapproved: "$isapproved",
+          slug: "$slug",
           industry: {
             $concatArrays: [
-              { $ifNull: [{ $arrayElemAt: ["$categoryDetails.name", 0] }, []] },
-              { $ifNull: [{ $arrayElemAt: ["$subcategoryDetails.name", 0] }, []] },
+              {
+                $ifNull: [
+                  { $arrayElemAt: ["$categoryDetails.category", 0] },
+                  [],
+                ],
+              },
+              {
+                $ifNull: [
+                  { $arrayElemAt: ["$subcategoryDetails.subcategoryName", 0] },
+                  [],
+                ],
+              },
             ],
           },
-          yearFounded: { $literal: 2000 },
         },
       },
     ]);
- 
+
     sendSuccessResponse(
       res,
       "User's approved organizations retrieved successfully!",
@@ -964,7 +977,6 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
-    console.error("Error in handleGetUserApprovedOrganizations:", error);
     sendErrorResponse(
       res,
       error,
@@ -973,10 +985,48 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
     );
   }
 };
- 
- 
- 
- 
- 
- 
- 
+
+export const handleAdminApproveOgaisation = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const organization = await Organization.findById(id);
+    if (!organization) {
+      throw new CustomError(
+        "Organization not found",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR,
+        false
+      );
+    }
+    if (organization.isapproved === "approved") {
+      throw new CustomError(
+        "Organization already approved",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR,
+        false
+      );
+    }
+    await Organization.findByIdAndUpdate(
+      id,
+      { isapproved: "approved" },
+      { new: true }
+    );
+    sendSuccessResponse(
+      res,
+      "approve Organization created successfully",
+      HTTP_STATUS_CODE.CREATED
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
+

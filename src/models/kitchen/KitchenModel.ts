@@ -3,12 +3,12 @@ import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
 
 export interface IKitchen extends Document, CommonDBInterface {
   kitchen_name: string;
-  isapproved: { type: boolean, required: true },
+  isapproved: string;
   kitchen_owner_name: string;
   address_id: mongoose.Types.ObjectId;
   owner_email: string;
-  category:mongoose.Schema.Types.ObjectId;
-  subcategoryName:mongoose.Schema.Types.ObjectId;
+  category: mongoose.Schema.Types.ObjectId;
+  subcategoryName: mongoose.Schema.Types.ObjectId;
   owner_phone_number: string;
   restaurant_type: string;
   kitchen_type: "Veg" | "Non-Veg" | "Both";
@@ -20,11 +20,13 @@ export interface IKitchen extends Document, CommonDBInterface {
   kitchen_image: string;
   pre_ordering_options: string[];
   user_id: mongoose.Types.ObjectId;
-  status:boolean
+  status: boolean;
+  slug: string;
 }
 
 export const KitchenSchema: Schema = new Schema<IKitchen>({
   kitchen_name: { type: String, required: true },
+  slug: { type: String, unique: true },
   user_id: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
@@ -37,7 +39,11 @@ export const KitchenSchema: Schema = new Schema<IKitchen>({
       required: true,
     },
   ],
-  isapproved: { type: Boolean, default: true },
+  isapproved: {
+    type: String,
+    enum: ["processing", "rejected", "approved"],
+    default: "processing",
+  },
   kitchen_owner_name: { type: String, required: true },
   owner_email: { type: String, required: true },
   category: {
@@ -96,5 +102,42 @@ export const KitchenSchema: Schema = new Schema<IKitchen>({
   },
 });
 
-const Kitchen: Model<IKitchen> = mongoose.model<IKitchen>("Kitchen", KitchenSchema);
+
+KitchenSchema.pre<IKitchen>("save", async function(next) {
+  if (!this.isModified("kitchen_name") && this.slug) {
+    return next();
+  }
+  let baseSlug = this.kitchen_name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  
+  let slug = baseSlug;
+  let count = 0;
+  let slugExists = true;
+  
+  while (slugExists) {
+    const slugToCheck = count === 0 ? slug : `${baseSlug}-${count}`;
+    const Kitchen = mongoose.model("Kitchen");
+    const existing = await Kitchen.findOne({
+      slug: slugToCheck,
+      user_id: this.user_id,
+      _id: { $ne: this._id } 
+    });
+    
+    if (!existing) {
+      slug = slugToCheck;
+      slugExists = false;
+    } else {
+      count++;
+    }
+  } 
+  this.slug = slug;
+  next();
+});
+
+const Kitchen: Model<IKitchen> = mongoose.model<IKitchen>(
+  "Kitchen",
+  KitchenSchema
+);
 export default Kitchen;

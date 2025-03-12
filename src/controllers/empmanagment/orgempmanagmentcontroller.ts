@@ -18,7 +18,6 @@ import OrgEmployeeManagement from "../../models/empmanagment/OrgEmployeeManageme
 import { registerUser } from "../auth/loginsController";
 import Role from "../../models/users/RolesModels";
 
-
 export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -111,7 +110,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
   try {
     const {
       entity_id,
-      entity_type = "Admin",
+      entity_type = "Organization",
       designation,
       username,
       email,
@@ -159,7 +158,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
         HTTP_STATUS_CODE.NOT_FOUND,
         ERROR_TYPES.NOT_FOUND_ERROR,
         false
-      ); 
+      );
     }
 
     // Fetch and validate role based on designation
@@ -241,7 +240,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
 };
 
 export const getOrgEmployeeById = async (req: Request, res: Response) => {
-    try {
+  try {
     const { id } = req.params;
     validateMogooseObjectId(id);
 
@@ -289,12 +288,12 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
         ERROR_TYPES.NOT_FOUND_ERROR,
         false
       );
-    } 
+    }
 
     sendSuccessResponse(
       res,
       "Employee retrieved successfully",
-      employee[0], 
+      employee[0],
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -305,8 +304,6 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
     );
   }
-
-
 };
 
 // Update employee
@@ -314,7 +311,7 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] }; 
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     validateMogooseObjectId(id);
 
     // Check if designation exists
@@ -477,6 +474,156 @@ export const deleteOrgEmployee = async (req: Request, res: Response) => {
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
+export const handleGetEmployeeOrganizations = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const userEmail = req.query.email as string;
+    if (!userEmail) {
+      return sendErrorResponse(
+        res,
+        new Error("Email parameter is required"),
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
+    
+    const employeeOrganizations = await OrgEmployeeManagement.aggregate([
+      {
+        $match: {
+          email: userEmail, 
+          is_deleted: false
+        }
+      },
+      {
+        $lookup: {
+          from: "organizations",
+          localField: "entity_id",
+          foreignField: "_id",
+          as: "organizationDetails"
+        }
+      },
+      { $unwind: { path: "$organizationDetails", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "addresses",
+          localField: "organizationDetails.address_id", 
+          foreignField: "_id",
+          as: "addresses"
+        }
+      },
+      { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "states",
+          let: { stateId: { $toInt: "$addresses.state" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          as: "stateInfo",
+        }
+      },
+      {
+        $lookup: {
+          from: "cities",
+          let: { cityId: { $toInt: "$addresses.city" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
+          as: "cityInfo",
+        }
+      },
+      {
+        $lookup: {
+          from: "countries",
+          let: { countryId: { $toInt: "$addresses.country" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          as: "countryInfo",
+        }
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "organizationDetails.category",
+          foreignField: "_id",
+          as: "categoryDetails",
+        }
+      },
+      {
+        $lookup: {
+          from: "subcategories",
+          localField: "organizationDetails.subcategoryName",
+          foreignField: "_id",
+          as: "subcategoryDetails",
+        }
+      },
+      {
+        $project: {
+          _id: "$organizationDetails._id",
+          id: "$organizationDetails._id",
+          name: "$organizationDetails.organizationName",
+          address: {
+            $concat: [
+              { $ifNull: ["$addresses.street_address", ""] },
+              ", ",
+              { $ifNull: [{ $arrayElemAt: ["$cityInfo.name", 0] }, ""] },
+              ", ",
+              { $ifNull: [{ $arrayElemAt: ["$stateInfo.name", 0] }, ""] },
+              ", ",
+              { $ifNull: ["$addresses.pincode", ""] },
+              ", ",
+              { $ifNull: [{ $arrayElemAt: ["$countryInfo.name", 0] }, ""] },
+            ]
+          },
+          profilePic: "$organizationDetails.organizationLogo",
+          employees: "$organizationDetails.no_of_employees",
+          isapproved: "$organizationDetails.isapproved",
+          slug: "$organizationDetails.slug",
+          industry: {
+            $concatArrays: [
+              {
+                $ifNull: [
+                  { $arrayElemAt: ["$categoryDetails.category", 0] },
+                  [],
+                ],
+              },
+              {
+                $ifNull: [
+                  { $arrayElemAt: ["$subcategoryDetails.subcategoryName", 0] },
+                  [],
+                ],
+              },
+            ]
+          }
+        }
+      }
+    ]);
+
+    console.log("Found organizations count:", employeeOrganizations.length);
+
+    if (employeeOrganizations.length === 0) {
+      return sendSuccessResponse(
+        res,
+        "No organizations found for this email",
+        { organizations: [] },
+        HTTP_STATUS_CODE.OK
+      );
+    }
+
+    sendSuccessResponse(
+      res,
+      "User's approved organizations retrieved successfully!",
+      { organizations: employeeOrganizations },
+      HTTP_STATUS_CODE.OK
+    );
+  } catch (error) {
+    console.error("Error fetching employee organizations:", error);
     sendErrorResponse(
       res,
       error,

@@ -256,14 +256,12 @@ export const handleCreateNewKitchens = async (
       kitchen_image: kitchenImageUrl,
       role: payload.role,
       is_deleted: false,
-      isapproved: false,
-      working_days: parsedWorkingDays,
-      pre_ordering_options: parsedPreOrderingOptions,
+      working_days: [],
+      pre_ordering_options: [],
     });
 
     const kitchenId = newKitchen._id;
 
-    // Create Address
     await createAddressAndUpdateModel(Kitchen, kitchenId, {
       street_address,
       city,
@@ -275,8 +273,6 @@ export const handleCreateNewKitchens = async (
       prepared_by_id: kitchenId,
       entity_type: "Kitchen",
     });
-
-    // Upload FSSAI Certificate Image
     if (files?.ffsai_certificate_image?.[0]?.buffer) {
       const fssaiImageUrl = await uploadFileToCloudinary(
         files.ffsai_certificate_image[0].buffer
@@ -289,8 +285,6 @@ export const handleCreateNewKitchens = async (
         expiry_date: ffsai_expiry_date,
       });
     }
-
-    // Upload GST Certificate Image
     if (files?.gst_certificate_image?.[0]?.buffer) {
       const gstImageUrl = await uploadFileToCloudinary(
         files.gst_certificate_image[0].buffer
@@ -304,7 +298,6 @@ export const handleCreateNewKitchens = async (
       });
     }
 
-    // Upload PAN Card Image
     if (files?.pan_card_image?.[0]?.buffer) {
       const panImageUrl = await uploadFileToCloudinary(
         files.pan_card_image[0].buffer
@@ -795,7 +788,6 @@ export const handleUpdateKitchensById = async (
       working_days,
       pre_ordering_options,
     } = req.body;
-console.log(req.body);
 
     // Validate kitchen ID
     validateMogooseObjectId(kitchenId);
@@ -1098,7 +1090,6 @@ export const kitchenToggleStatus = async (
     );
   }
 };
-
 export const handleGetUnapprovedKitchens = async (
   req: Request,
   res: Response
@@ -1108,9 +1099,9 @@ export const handleGetUnapprovedKitchens = async (
     const limit = parseInt(req.query.limit as string) || 4;
     const skip = (page - 1) * limit;
     const { search } = req.query;
- 
-    const matchQuery: any = { is_deleted: false, isapproved: false };
- 
+
+    const matchQuery: any = { is_deleted: false, isapproved: "processing" };
+
     if (search) {
       matchQuery.kitchen_name = { $regex: new RegExp(search as string, "i") };
     }
@@ -1237,8 +1228,6 @@ export const handleGetUserApprovedKitchens = async (
 ): Promise<any> => {
   try {
     const userId = req.body.payload.id;
-
-    // Validate the userId format
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return sendErrorResponse(
         res,
@@ -1331,7 +1320,8 @@ export const handleGetUserApprovedKitchens = async (
             },
           },
           profilePic: "$kitchen_image",
-          rating: { $literal: 4.5 }, // Placeholder; replace with actual rating if available
+          slug: "$slug",
+          rating: { $literal: 4.5 }, 
           cuisine: {
             $concatArrays: [
               { $ifNull: [{ $arrayElemAt: ["$categoryDetails.name", 0] }, []] },
@@ -1343,7 +1333,7 @@ export const handleGetUserApprovedKitchens = async (
               },
             ],
           },
-          specialty: "$kitchen_type", // Using kitchen_type as specialty; adjust if needed
+          specialty: "$kitchen_type", 
         },
       },
     ]);
@@ -1364,5 +1354,45 @@ export const handleGetUserApprovedKitchens = async (
     );
   }
 };
- 
- 
+export const handleAdminApproveKitchen = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const kitchen = await Kitchen.findById(id);
+    if (!kitchen) {
+      throw new CustomError(
+        "kitchen not found",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR,
+        false
+      );
+    }
+    if (kitchen.isapproved === "approved") {
+      throw new CustomError(
+        "kitchen already approved",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR,
+        false
+      );
+    }
+    await Kitchen.findByIdAndUpdate(
+      id,
+      { isapproved: "approved" },
+      { new: true }
+    );
+    sendSuccessResponse(
+      res,
+      "approve Kitchen created successfully",
+      HTTP_STATUS_CODE.CREATED
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
