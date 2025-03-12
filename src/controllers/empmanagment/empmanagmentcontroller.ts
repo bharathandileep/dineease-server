@@ -8,7 +8,7 @@ import {
 } from "../../lib/helpers/responseHelper";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import EmployeeManagement from "../../models/empmanagment/EmployeeManagementModel";
-import Designation from "../../models/designation/DesignationModel";
+import Designation from "../../models/designation/designationModel";
 import Address from "../../models/address/AddressModel";
 import {
   createAddressAndUpdateModel,

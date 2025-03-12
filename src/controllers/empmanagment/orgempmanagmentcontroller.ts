@@ -7,7 +7,7 @@ import {
   sendSuccessResponse,
 } from "../../lib/helpers/responseHelper";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
-import Designation from "../../models/designation/DesignationModel";
+import Designation from "../../models/designation/designationModel";
 import {
   createAddressAndUpdateModel,
   updateAddress,
