@@ -613,6 +613,190 @@ export const handleGetKitchensById = async (
   }
 };
  
+// export const handleUpdateKitchensById = async (
+//   req: Request,
+//   res: Response
+// ): Promise<void> => {
+//   try {
+//     const errors = validateKitchenDetails(req.body);
+//     if (errors.length > 0) {
+//       return sendErrorResponse(
+//         res,
+//         errors,
+//         HTTP_STATUS_CODE.BAD_REQUEST,
+//         ERROR_TYPES.BAD_REQUEST_ERROR
+//       );
+//     }
+//     const kitchenId = req.params.id;
+//     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+//     const {
+//       kitchen_name,
+//       kitchen_status,
+//       kitchen_owner_name,
+//       owner_email,
+//       owner_phone_number,
+//       restaurant_type,
+//       kitchen_type,
+//       category,
+//       subcategoryName,
+//       kitchen_phone_number,
+//       address_type,
+//       street_address,
+//       district,
+//       city,
+//       state,
+//       pincode,
+//       country,
+//       pan_card_number,
+//       pan_card_user_name,
+//       gst_number,
+//       gst_expiry_date,
+//       ffsai_certificate_number,
+//       ffsai_card_owner_name,
+//       ffsai_expiry_date,
+//       pan_card_image,
+//       gst_certificate_image,
+//       ffsai_certificate_image,
+//     } = req.body;
+//     console.log(req.body);
+ 
+//     validateMogooseObjectId(kitchenId);
+//     const existingKitchen = await Kitchen.findOne({
+//       _id: kitchenId,
+//       is_deleted: false,
+//     });
+ 
+//     if (!existingKitchen) {
+//       throw new CustomError(
+//         "Kitchen not found",
+//         HTTP_STATUS_CODE.BAD_REQUEST,
+//         ERROR_TYPES.BAD_REQUEST_ERROR,
+//         false
+//       );
+//     }
+ 
+//     const kitchen_image = files.kitchen_image
+//       ? await uploadFileToCloudinary(files.kitchen_image[0].buffer)
+//       : existingKitchen.kitchen_image;
+//     const pan_image = files.pan_card_image
+//       ? await uploadFileToCloudinary(files.pan_card_image[0].buffer)
+//       : pan_card_image;
+//     const gst_image = files.gst_certificate_image
+//       ? await uploadFileToCloudinary(files.gst_certificate_image[0].buffer)
+//       : gst_certificate_image;
+//     const fssai_image = files.ffsai_certificate_image
+//       ? await uploadFileToCloudinary(files.ffsai_certificate_image[0].buffer)
+//       : ffsai_certificate_image;
+ 
+//     await Kitchen.findByIdAndUpdate(
+//       kitchenId,
+//       {
+//         $set: {
+//           kitchen_name,
+//           kitchen_status,
+//           kitchen_owner_name,
+//           owner_email,
+//           owner_phone_number,
+//           category: category
+//             ? new mongoose.Types.ObjectId(category)
+//             : existingKitchen.category,
+//           subcategoryName: subcategoryName
+//             ? new mongoose.Types.ObjectId(subcategoryName)
+//             : existingKitchen.subcategoryName,
+//           restaurant_type,
+//           kitchen_type,
+//           kitchen_phone_number,
+//           kitchen_image,
+//         },
+//       },
+//       { new: true }
+//     );
+ 
+//     await updateAddress(Kitchen, kitchenId, {
+//       street_address: street_address,
+//       city,
+//       state,
+//       district,
+//       pincode,
+//       country,
+//       address_type,
+//       prepared_by_id: kitchenId,
+//       entity_type: "Kitchen",
+//     });
+ 
+//     // Update or create PAN details
+//     if (pan_card_number) {
+//       const panData = {
+//         pan_card_number,
+//         pan_card_user_name,
+//         pan_card_image: pan_image,
+//         prepared_by_id: kitchenId,
+//         entity_type: "Kitchen",
+//       };
+ 
+//       await PanCardDetails.findOneAndUpdate(
+//         {
+//           prepared_by_id: kitchenId,
+//           entity_type: "Kitchen",
+//         },
+//         panData,
+//         { upsert: true, new: true }
+//       );
+//     }
+ 
+//     // Update or create GST details
+//     if (gst_number) {
+//       const gstData = {
+//         gst_number,
+//         gst_certificate_image: gst_image,
+//         expiry_date: gst_expiry_date,
+//         prepared_by_id: kitchenId,
+//         entity_type: "Kitchen",
+//       };
+ 
+//       await GstCertificateDetails.findOneAndUpdate(
+//         {
+//           prepared_by_id: kitchenId,
+//           entity_type: "Kitchen",
+//         },
+//         gstData,
+//         { upsert: true, new: true }
+//       );
+//     }
+ 
+//     // Update or create FSSAI details
+//     if (ffsai_certificate_number) {
+//       const fssaiData = {
+//         ffsai_certificate_number,
+//         ffsai_card_owner_name,
+//         ffsai_certificate_image: fssai_image,
+//         expiry_date: ffsai_expiry_date,
+//         kitchen_id: kitchenId,
+//       };
+ 
+//       await FssaiCertificateDetails.findOneAndUpdate(
+//         { kitchen_id: kitchenId },
+//         fssaiData,
+//         { upsert: true, new: true }
+//       );
+//     }
+//     const updatedKitchen = await Kitchen.findById(kitchenId)
+//       .populate("category")
+//       .populate("subcategoryName");
+//     sendSuccessResponse(
+//       res,
+//       "Kitchen updated successfully!",
+//       HTTP_STATUS_CODE.OK
+//     );
+//   } catch (error: any) {
+//     sendErrorResponse(
+//       res,
+//       error,
+//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+//     );
+//   }
+// };
 export const handleUpdateKitchensById = async (
   req: Request,
   res: Response
@@ -687,6 +871,15 @@ export const handleUpdateKitchensById = async (
     const fssai_image = files.ffsai_certificate_image
       ? await uploadFileToCloudinary(files.ffsai_certificate_image[0].buffer)
       : ffsai_certificate_image;
+    
+    // Fix for category and subcategory - preserve existing values if not provided
+    const categoryId = category 
+      ? new mongoose.Types.ObjectId(category) 
+      : existingKitchen.category;
+      
+    const subcategoryId = subcategoryName 
+      ? new mongoose.Types.ObjectId(subcategoryName) 
+      : existingKitchen.subcategoryName;
  
     await Kitchen.findByIdAndUpdate(
       kitchenId,
@@ -697,12 +890,8 @@ export const handleUpdateKitchensById = async (
           kitchen_owner_name,
           owner_email,
           owner_phone_number,
-          category: category
-            ? new mongoose.Types.ObjectId(category)
-            : existingKitchen.category,
-          subcategoryName: subcategoryName
-            ? new mongoose.Types.ObjectId(subcategoryName)
-            : existingKitchen.subcategoryName,
+          category: categoryId,
+          subcategoryName: subcategoryId,
           restaurant_type,
           kitchen_type,
           kitchen_phone_number,
@@ -797,7 +986,7 @@ export const handleUpdateKitchensById = async (
     );
   }
 };
- 
+
 export const handleDeleteKitchens = async (
   req: Request,
   res: Response

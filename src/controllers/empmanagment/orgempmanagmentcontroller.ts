@@ -241,7 +241,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
 };
 
 export const getOrgEmployeeById = async (req: Request, res: Response) => {
-    try {
+  try {
     const { id } = req.params;
     validateMogooseObjectId(id);
 
@@ -280,6 +280,65 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           preserveNullAndEmptyArrays: true,
         },
       },
+      {
+        $lookup: {
+          from: "states",
+          let: { stateId: { $toInt: "$address.state" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          as: "stateInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "cities",
+          let: { cityId: { $toInt: "$address.city" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
+          as: "cityInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "districts",
+          let: { districtId: { $toInt: "$address.district" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
+          as: "districtInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "countries",
+          let: { countryId: { $toInt: "$address.country" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          as: "countryInfo",
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          entity_id: 1,
+          entity_type: 1,
+          designation: 1,
+          username: 1,
+          email: 1,
+          phone_number: 1,
+          employee_status: 1,
+          aadhar_number: 1,
+          pan_number: 1,
+          profile_picture: 1,
+          pan_image: 1,
+          aadhar_image: 1,
+          address: {
+            _id: "$address._id",
+            street_address: "$address.street_address",
+            city: { $arrayElemAt: ["$cityInfo.name", 0] },
+            state: { $arrayElemAt: ["$stateInfo.name", 0] },
+            district: { $arrayElemAt: ["$districtInfo.name", 0] },
+            pincode: "$address.pincode",
+            country: { $arrayElemAt: ["$countryInfo.name", 0] },
+          },
+          designation_name: "$designation.designation_name",
+        },
+      },
     ]);
 
     if (!employee || employee.length === 0) {
@@ -289,12 +348,12 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
         ERROR_TYPES.NOT_FOUND_ERROR,
         false
       );
-    } 
+    }
 
     sendSuccessResponse(
       res,
       "Employee retrieved successfully",
-      employee[0], 
+      employee[0],
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -305,10 +364,7 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
     );
   }
-
-
 };
-
 // Update employee
 export const updateOrgEmployee = async (req: Request, res: Response) => {
   try {
