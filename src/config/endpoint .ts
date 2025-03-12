@@ -32,12 +32,12 @@ export const apiConfig = {
     handleGetUserApprovedKitchens: "/user/approved",
 
     createCategory: "/categories",
-    getAllCategories: "/categories/all",
+    getallCategories: "/categories/all",
     updateCategory: "/categories/:id",
     deleteCategory: "/categories/:id",
     toggleCategoryStatus: "/categories/:id/toggle-status",
 
-    getAllSubCategories: "/subcategories/all",
+    getallSubCategories: "/subcategories/all",
     createSubcategory: "/subcategories",
     getSubcategoriesByCategory: "/categories/:categoryId/subcategories",
     getSubcategoryById: "/subcategories/:id",

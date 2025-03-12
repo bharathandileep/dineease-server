@@ -2,9 +2,7 @@ import express, { Application, Router } from "express";
 import { apiConfig } from "../../config/endpoint ";
 import upload from "../../lib/helpers/uploadMiddleware";
 import {
-  handleAdminApproveOgaisation,
-  // handleApproveOrganization,
-  // handleApproveOrganization,
+
   handleCreateNewOrganisation,
   handledDeleteOrganisations,
   handleGetByIdOrganisations,

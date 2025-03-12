@@ -4,7 +4,7 @@ import { accessTokenSecret, refreshTokenSecret } from "../config/environment";
 import { CustomError } from "../lib/errors/customError";
 import { HTTP_STATUS_CODE } from "../lib/constants/httpStatusCodes";
 import { ERROR_TYPES } from "../lib/constants/errorType";
-
+ 
 export const refreshTokenMiddleware = (
   req: Request,
   res: Response,
@@ -19,7 +19,7 @@ export const refreshTokenMiddleware = (
       false
     );
   }
-
+ 
   const decode = verifyToken(refreshToken, refreshTokenSecret);
   if (!decode) {
     throw new CustomError(
@@ -32,22 +32,22 @@ export const refreshTokenMiddleware = (
   req.body.payload = decode;
   next();
 };
-
+ 
 export const authorizationAccess = (
   req: Request,
   res: Response,
   next: NextFunction
-): void => { 
+): void => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     throw new CustomError(
       "Authorization token not provided",
       HTTP_STATUS_CODE.UNAUTHORIZED,
       ERROR_TYPES.AUTHENTICATION_ERROR,
-      false 
+      false
     );
   }
-
+ 
   const token = authHeader.split(" ")[1];
   const decode = verifyToken(token, accessTokenSecret);
   if (!decode) {
@@ -58,8 +58,7 @@ export const authorizationAccess = (
       false
     );
   }
-
+ 
   req.body.payload = decode;
   next();
 };
-
