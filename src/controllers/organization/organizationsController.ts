@@ -736,7 +736,10 @@ export const organizationToggleStatus = async (
   }
 };
  
-export const handleGetUnapprovedOrganisations = async (req: Request, res: Response): Promise<any> => {
+export const handleGetUnapprovedOrganisations = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 4;
@@ -868,10 +871,12 @@ export const handleGetUnapprovedOrganisations = async (req: Request, res: Respon
   }
 };
  
-export const handleGetUserApprovedOrganizations = async (req: Request, res: Response): Promise<any> => {
+export const handleGetUserOrganizations = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   try {
     const userId = req.body.payload.id;
- 
     const organizations = await Organization.aggregate([
       {
         $match: {
