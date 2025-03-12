@@ -2,13 +2,15 @@ import Express, { Application, NextFunction } from "express";
 import { errorHandler } from "./middleware/globelErrorHandler";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import http from "http"; // Import http module
+import { Server } from "socket.io"; // Import socket.io
 
 import { apiConfig } from "./config/endpoint ";
 import { CustomError } from "./lib/errors/customError";
 import { HTTP_STATUS_CODE } from "./lib/constants/httpStatusCodes";
 import { ERROR_TYPES } from "./lib/constants/errorType";
 import { sendSuccessResponse } from "./lib/helpers/responseHelper";
-import addressDetailsRoutes from "./routes/addressdetails/addressDetailsRoutes"
+import addressDetailsRoutes from "./routes/addressdetails/addressDetailsRoutes";
 import authRoute from "./routes/auth/AuthRoute";
 import kitchensRoute from "./routes/kitchen/kitchensRoutes";
 import organizationRoute from "./routes/organization/organizationRoute";
@@ -21,18 +23,30 @@ import menuitemsRoutes from "./routes/menuitems/menuitemsRoutes";
 import kitchensMenuRoutes from "./routes/kitchen/kitchensMenuRoutes";
 import { clientOrigin } from "./config/environment";
 import userLoginsRoutes from "./routes/auth/loginsRoute";
-export const app: Application = Express();
+import notificationRoutes from "./routes/notification/notificationRoutes"
 
+export const app: Application = Express();
+const server = http.createServer(app); // Create an HTTP server
+const io = new Server(server, {
+  cors: {
+    origin: clientOrigin, // Allow frontend to connect
+    methods: ["GET", "POST"],
+    credentials: true,
+  },
+}); // Initialize socket.io
+
+// Middleware
 app.use(Express.json());
 app.use(Express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(
   cors({
-    origin:clientOrigin,
+    origin: clientOrigin,
     credentials: true,
   })
 );
 
+// Routes
 app.use(`${apiConfig.baseAPIUrl}/auth`, authRoute);
 app.use(`${apiConfig.baseAPIUrl}/user`, userLoginsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/kitchens`, kitchensRoute);
@@ -44,10 +58,10 @@ app.use(`${apiConfig.baseAPIUrl}/employee`, EmployeeManagementRoutes);
 app.use(`${apiConfig.baseAPIUrl}/kitchens-menu`, kitchensMenuRoutes);
 app.use(`${apiConfig.baseAPIUrl}/menu-items`, menuitemsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/org-employee`, OrgEmployeeManagementRoutes);
-app.use(`${apiConfig.baseAPIUrl}/addressDetails`,addressDetailsRoutes)
+app.use(`${apiConfig.baseAPIUrl}/addressDetails`, addressDetailsRoutes);
+app.use(`${apiConfig.baseAPIUrl}/notification`, notificationRoutes);
 
-
-
+// Root route
 app.get(`/`, (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -79,4 +93,18 @@ app.use("*", (req, res, next) => {
   );
 });
 
+// Error handler middleware
 app.use(errorHandler);
+
+// Socket.io connection handler
+io.on("connection", (socket) => {
+  console.log("A user connected:", socket.id);
+
+  // Handle disconnection
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
+
+// Export the server and io instance for use in other modules
+export { server, io };

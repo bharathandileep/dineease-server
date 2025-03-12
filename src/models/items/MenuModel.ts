@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
 import { boolean } from "joi";
+import slugify from "slugify";
 
 export interface IMenu extends Document, CommonDBInterface {
   kitchen_id: mongoose.Types.ObjectId;
@@ -8,12 +9,14 @@ export interface IMenu extends Document, CommonDBInterface {
     item_id: mongoose.Types.ObjectId;
     item_name: string;
     item_price?: string;
+    slug?: string;
     custom_image?: string;
     isAvailable: boolean;
     reviews_id: any[];
     description: string;
     ingredients?: string;
   }[];
+  slug: string; // Add slug field
   menu_image: string;
   // item_type: "vegetarian" | "non-vegetarian" | "vegan" | "mixed";
   delivery_time: number;
@@ -38,6 +41,8 @@ export const MenuSchema: Schema<IMenu> = new Schema(
         item_name: {
           type: String,
         },
+        slug: { type: String, unique: true }, // Slug field
+
         item_price: {
           type: String,
         },
@@ -73,6 +78,24 @@ export const MenuSchema: Schema<IMenu> = new Schema(
   },
   { timestamps: true }
 );
+MenuSchema.pre<IMenu>("save", async function (next) {
+  if (this.isModified("items_id")) {
+    for (const item of this.items_id) {
+      if (item.item_name) {
+        let slug = slugify(item.item_name, { lower: true, strict: true });
+
+        // Check if the slug already exists
+        const count = await (this.constructor as typeof mongoose.Model).countDocuments({ "items_id.slug": slug });
+        if (count > 0) {
+          slug = `${slug}-${Math.random().toString(36).substring(2, 7)}`; // Append a random string to make it unique
+        }
+
+        item.slug = slug;
+      }
+    }
+  }
+  next();
+});
 
 const Menu: Model<IMenu> = mongoose.model<IMenu>("Menu", MenuSchema);
 export default Menu;

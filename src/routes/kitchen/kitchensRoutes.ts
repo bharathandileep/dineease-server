@@ -1,9 +1,9 @@
+
 import express, { Application, Router } from "express";
 import { apiConfig } from "../../config/endpoint ";
 import upload from "../../lib/helpers/uploadMiddleware";
 import {
  
-  handleApproveKitchen,
   handleCreateNewKitchens,
   handleDeleteKitchens,
   handleGetKitchens,
@@ -16,7 +16,7 @@ import {
 } from "../../controllers/kitchens/kitchenController";
 import {
   kitchenCreateCategory,
-  kitchenDeleteCategory, 
+  kitchenDeleteCategory,
   kitchenGetAllCategories,
   kitchenToggleCategoryStatus,
   kitchenUpdateCategory,
@@ -30,9 +30,10 @@ import {
   kitchenUpdateSubcategory,
 } from "../../controllers/kitchens/kitchenSubCategory";
 import { getMenuItemsByKitchen } from "../../controllers/kitchens/menuController";
-
+import { authorizationAccess } from "../../middleware/TokenValidation";
+ 
 const router = express.Router();
-
+ 
 router.post(
   `${apiConfig.kitchens.newkitchens}`,
   upload.fields([
@@ -41,6 +42,7 @@ router.post(
     { name: "gst_certificate_image", maxCount: 1 },
     { name: "ffsai_certificate_image", maxCount: 1 },
   ]),
+  authorizationAccess,
   handleCreateNewKitchens
 );
 router.get(`${apiConfig.kitchens.getAllkitchens}`, handleGetKitchens);
@@ -53,17 +55,18 @@ router.put(
     { name: "gst_certificate_image", maxCount: 1 },
     { name: "ffsai_certificate_image", maxCount: 1 },
   ]),
+  authorizationAccess,
   handleUpdateKitchensById
 );
-
+ 
 router.delete(`${apiConfig.kitchens.deletekitchens}`, handleDeleteKitchens);
 router.get(`${apiConfig.kitchens.toggleKitchensStatus}`, kitchenToggleStatus);
-router.get(`${apiConfig.kitchens.handleGetUserApprovedKitchens}`, handleGetUserApprovedKitchens);
-
-
-
-
-
+router.get(`${apiConfig.kitchens.handleGetUserApprovedKitchens}`,authorizationAccess, handleGetUserApprovedKitchens);
+ 
+ 
+ 
+ 
+ 
 //kitchen category routes
 router.get(`${apiConfig.kitchens.getAllCategories}`, kitchenGetAllCategories);
 router.post(`${apiConfig.kitchens.createCategory}`, kitchenCreateCategory);
@@ -73,7 +76,7 @@ router.patch(
   `${apiConfig.menu.toggleCategoryStatus}`,
   kitchenToggleCategoryStatus
 );
-
+ 
 //kitchen subcategory
 router.get(
   `${apiConfig.kitchens.getSubcategoriesByCategory}`,
@@ -88,20 +91,21 @@ router.delete(
   `${apiConfig.kitchens.deleteSubcategory}`,
   kitchenDeleteSubcategory
 );
+
 router.patch(
   `${apiConfig.kitchens.toggleSubcategoryStatus}`,
   kitchenToggleSubcategoryStatus
 );
-
+ 
 router.patch(`${apiConfig.kitchens.toggleSubcategoryStatus}`);
 router.get(
   `${apiConfig.kitchens.getAllSubCategories}`,
   kitchenGetAllSubCategories
 );
-
-router.get(`${apiConfig.kitchens. getUnapprovedKitchens}`,handleGetUnapprovedKitchens)
-
-router.patch(`${apiConfig.kitchens.getApprovedkitchens}`,handleApproveKitchen)
-
-
-export default router;
+ 
+router.get(`${apiConfig.kitchens.getUnapprovedKitchens}`,handleGetUnapprovedKitchens)
+ 
+ 
+export default router; 
+ 
+ 

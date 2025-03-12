@@ -1,3 +1,6 @@
+import { get } from "sortablejs";
+import { getUserNotifications } from "../controllers/notification/notificationController";
+
 export const apiConfig = {
   baseAPIUrl: `/api/v1`,
   auth: {
@@ -26,6 +29,8 @@ kitchens: {
     getkitchensById: "/:kitchenId",
     toggleKitchensStatus: "/status/:id",
     handleGetUserApprovedKitchens: "/user/approved",
+   
+
 
 
     createCategory: "/categories",
@@ -45,6 +50,7 @@ kitchens: {
     
     getUnapprovedKitchens:"/requested/all",
     getApprovedkitchens:"/approve/:id",
+
 
   },
 
@@ -73,6 +79,7 @@ kitchens: {
     changeItemStatus: "/allmenuitems/:id/status",
     getMenuItemsByKitchen: "/menu-items/kitchen/:kitchenId",
 
+    
   },
   organization: {
     newOrganization: "/new",
@@ -134,6 +141,7 @@ kitchens: {
     getCitiesByState: "/cities/:stateName",
     getDistrictsByState:"/districts/:stateId",
   },
+
   kitchenMenu: {
     getKitchenMenu: "/kitchen-menu/:kitchenId",
     createkitchenMenu: "/kitchen-menu/:id",
@@ -143,4 +151,9 @@ kitchens: {
     deleteSubcategory: "/kitchen-menu/subcategories/:id",
     toggleSubcategoryStatus: "/kitchen-menu/subcategories/:id/toggle-status",
   },
-};
+   notification:{
+   getUserNotifications:"/get/:userId",
+   getNotificationById:"/get/:notificationId",
+   getAllNotifications:"/all", 
+  },  
+ }; 
