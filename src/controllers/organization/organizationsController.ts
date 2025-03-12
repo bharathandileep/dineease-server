@@ -123,9 +123,9 @@ export const handleCreateNewOrganisation = async (
       category: categoryId,
       subcategoryName: subcategoryId,
       organizationLogo: organizationLogoUrl,
-      role: "user", // Hardcoded role as "user"
+      role:payload.role ,
       is_deleted: false,
-      isapproved: false, // Explicitly set to false since it's created by user
+      isapproved: false, 
     });
  
     const newOrgId = newOrg._id;
@@ -870,11 +870,11 @@ export const handleGetUserApprovedOrganizations = async (req: Request, res: Resp
     const userId = req.body.payload.id;
  
     const organizations = await Organization.aggregate([
-      {
+      { 
         $match: {
           user_id: new mongoose.Types.ObjectId(userId),
           is_deleted: false,
-          isapproved: true,
+          isapproved: "approved",
         },
       },
       {

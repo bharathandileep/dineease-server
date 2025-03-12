@@ -17,8 +17,8 @@ import GstCertificateDetails from "../../models/documentations/GstModel";
 import FssaiCertificateDetails from "../../models/documentations/FfsaiModel";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
- 
- 
+
+
 const validateKitchenDetails = (data: any) => {
   const errors: { field: string; message: string }[] = [];
   if (!data.pan_card_number) {
@@ -234,15 +234,13 @@ export const handleCreateNewKitchens = async (
     const subcategoryId = subcategoryName
       ? new mongoose.Types.ObjectId(subcategoryName)
       : null;
-
-    // Handle file uploads safely
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
     const kitchenImageUrl = files?.kitchen_image?.[0]?.buffer
       ? await uploadFileToCloudinary(files.kitchen_image[0].buffer)
       : null;
 
-    // Create new Kitchen entry with parsed arrays
+    // Create new Kitchen entry with hardcoded "user" role and isapproved set to false
     const newKitchen = await Kitchen.create({
       kitchen_name,
       user_id: payload.id,
@@ -256,7 +254,7 @@ export const handleCreateNewKitchens = async (
       kitchen_type,
       kitchen_phone_number,
       kitchen_image: kitchenImageUrl,
-      role: "user",
+      role: payload.role,
       is_deleted: false,
       isapproved: false,
       working_days: parsedWorkingDays,
@@ -490,7 +488,8 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           },
           fssaiDetails: {
             $first: {
-              ffsai_certificate_number: "$fssaiDetails.ffsai_certificate_number",
+              ffsai_certificate_number:
+                "$fssaiDetails.ffsai_certificate_number",
               ffsai_card_owner_name: "$fssaiDetails.ffsai_card_owner_name",
               ffsai_certificate_image: "$fssaiDetails.ffsai_certificate_image",
               expiry_date: "$fssaiDetails.expiry_date",
@@ -545,7 +544,7 @@ export const handleGetKitchensById = async (
   try {
     const { kitchenId } = req.params;
     validateMogooseObjectId(kitchenId);
-     
+
     const kitchen = await Kitchen.aggregate([
       {
         $match: {
@@ -561,22 +560,25 @@ export const handleGetKitchensById = async (
           as: "addresses",
         },
       },
+      // Corrected category lookup
       {
         $lookup: {
-          from: "categories",
-          localField: "category",
-          foreignField: "_id",
+          from: "kitchencategories",
+          localField: "category",  // This should match the field in your Kitchen schema
+          foreignField: "_id",     // This should match the primary key in kitchencategories
           as: "categoryDetails",
         },
       },
+      // Corrected subcategory lookup
       {
         $lookup: {
-          from: "subcategories",
-          localField: "subcategoryName",
-          foreignField: "_id",
+          from: "kitchensubcategories",  // Corrected collection name
+          localField: "subcategoryName",  // This should match the field in your Kitchen schema
+          foreignField: "_id",           // This should match the primary key in kitchensubcategories
           as: "subcategoryDetails",
         },
       },
+      // Other lookups remain the same
       {
         $lookup: {
           from: "kitchenfssaicertificatedetails",
@@ -623,9 +625,7 @@ export const handleGetKitchensById = async (
           as: "gstDetails",
         },
       },
-      // Unwind addresses for easier processing
       { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
-      // Look up state information
       {
         $lookup: {
           from: "states",
@@ -634,7 +634,6 @@ export const handleGetKitchensById = async (
           as: "stateInfo",
         },
       },
-      // Look up city information
       {
         $lookup: {
           from: "cities",
@@ -643,7 +642,6 @@ export const handleGetKitchensById = async (
           as: "cityInfo",
         },
       },
-      // Look up district information
       {
         $lookup: {
           from: "districts",
@@ -652,7 +650,6 @@ export const handleGetKitchensById = async (
           as: "districtInfo",
         },
       },
-      // Look up country information
       {
         $lookup: {
           from: "countries",
@@ -661,7 +658,6 @@ export const handleGetKitchensById = async (
           as: "countryInfo",
         },
       },
- 
       {
         $group: {
           _id: "$_id",
@@ -672,15 +668,38 @@ export const handleGetKitchensById = async (
           status: { $first: "$status" },
           owner_phone_number: { $first: "$owner_phone_number" },
           restaurant_type: { $first: "$restaurant_type" },
-          category: { $first: { $arrayElemAt: ["$categoryDetails", 0] } },
-          subcategoryName: {
-            $first: { $arrayElemAt: ["$subcategoryDetails", 0] },
+          
+          // Get both ID and name for category
+          category: { 
+            $first: { 
+              $cond: {
+                if: { $gt: [{ $size: "$categoryDetails" }, 0] },
+                then: {
+                  _id: { $arrayElemAt: ["$categoryDetails._id", 0] },
+                  category_name: { $arrayElemAt: ["$categoryDetails.category", 0] }
+                },
+                else: { _id: "$category", category_name: null }  // Fall back to just the ID
+              }
+            } 
           },
+          
+          // Get both ID and name for subcategory
+          subcategoryName: { 
+            $first: { 
+              $cond: {
+                if: { $gt: [{ $size: "$subcategoryDetails" }, 0] },
+                then: {
+                  _id: { $arrayElemAt: ["$subcategoryDetails._id", 0] },
+                  subcategory_name: { $arrayElemAt: ["$subcategoryDetails.subcategoryName", 0] }
+                },
+                else: { _id: "$subcategoryName", subcategory_name: null }  // Fall back to just the ID
+              }
+            }
+          },
+          
           kitchen_type: { $first: "$kitchen_type" },
           kitchen_phone_number: { $first: "$kitchen_phone_number" },
-          kitchen_document_verification: {
-            $first: "$kitchen_document_verification",
-          },
+          kitchen_document_verification: { $first: "$kitchen_document_verification" },
           kitchen_image: { $first: "$kitchen_image" },
           working_days: { $first: "$working_days" },
           pre_ordering_options: { $first: "$pre_ordering_options" },
@@ -778,6 +797,7 @@ export const handleUpdateKitchensById = async (
       working_days,
       pre_ordering_options,
     } = req.body;
+console.log(req.body);
 
     // Validate kitchen ID
     validateMogooseObjectId(kitchenId);
@@ -1039,7 +1059,7 @@ export const handleDeleteKitchens = async (
     );
   }
 };
- 
+
 export const kitchenToggleStatus = async (
   req: Request,
   res: Response
@@ -1080,8 +1100,11 @@ export const kitchenToggleStatus = async (
     );
   }
 };
- 
-export const handleGetUnapprovedKitchens = async (req: Request, res: Response): Promise<any> => {
+
+export const handleGetUnapprovedKitchens = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 4;
@@ -1210,10 +1233,23 @@ export const handleGetUnapprovedKitchens = async (req: Request, res: Response): 
     );
   }
 };
-export const handleGetUserApprovedKitchens = async (req: Request, res: Response): Promise<any> => {
+export const handleGetUserApprovedKitchens = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   try {
     const userId = req.body.payload.id;
- console.log(userId);
+
+    // Validate the userId format
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return sendErrorResponse(
+        res,
+        "Invalid user ID format",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
+ 
     const kitchens = await Kitchen.aggregate([
       {
         $match: {
@@ -1221,7 +1257,7 @@ export const handleGetUserApprovedKitchens = async (req: Request, res: Response)
           user_id: new mongoose.Types.ObjectId(userId),
 
           is_deleted: false,
-          isapproved: true, 
+          isapproved: "approved", 
         },
       },
       {
@@ -1301,14 +1337,19 @@ export const handleGetUserApprovedKitchens = async (req: Request, res: Response)
           cuisine: {
             $concatArrays: [
               { $ifNull: [{ $arrayElemAt: ["$categoryDetails.name", 0] }, []] },
-              { $ifNull: [{ $arrayElemAt: ["$subcategoryDetails.name", 0] }, []] },
+              {
+                $ifNull: [
+                  { $arrayElemAt: ["$subcategoryDetails.name", 0] },
+                  [],
+                ],
+              },
             ],
           },
           specialty: "$kitchen_type", // Using kitchen_type as specialty; adjust if needed
         },
       },
     ]);
- 
+
     sendSuccessResponse(
       res,
       "User's approved kitchens retrieved successfully!",

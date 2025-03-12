@@ -53,6 +53,7 @@ router.put(
     { name: "gst_certificate_image", maxCount: 1 },
     { name: "ffsai_certificate_image", maxCount: 1 },
   ]),
+  authorizationAccess,
   handleUpdateKitchensById
 );
  
@@ -65,7 +66,7 @@ router.get(`${apiConfig.kitchens.handleGetUserApprovedKitchens}`, authorizationA
  
  
 //kitchen category routes
-router.get(`${apiConfig.kitchens.getAllCategories}`, kitchenGetAllCategories);
+router.get(`${apiConfig.kitchens.getallCategories}`, kitchenGetAllCategories);
 router.post(`${apiConfig.kitchens.createCategory}`, kitchenCreateCategory);
 router.put(`${apiConfig.kitchens.updateCategory}`, kitchenUpdateCategory);
 router.delete(`${apiConfig.kitchens.deleteCategory}`, kitchenDeleteCategory);
@@ -95,7 +96,7 @@ router.patch(
  
 router.patch(`${apiConfig.kitchens.toggleSubcategoryStatus}`);
 router.get(
-  `${apiConfig.kitchens.getAllSubCategories}`,
+  `${apiConfig.kitchens.getallSubCategories}`,
   kitchenGetAllSubCategories
 );
  

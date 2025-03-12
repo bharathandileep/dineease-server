@@ -19,7 +19,7 @@ export const getAllCountries = async (
   res: Response
 ): Promise<void> => {
   try {
-    const countries = await Country.find();
+    const countries = await Country.find(); 
     res.status(200).json({
       success: true,
       data: countries,
