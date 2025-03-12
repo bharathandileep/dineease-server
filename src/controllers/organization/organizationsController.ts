@@ -16,11 +16,11 @@ import GstCertificateDetails from "../../models/documentations/GstModel";
 import mongoose from "mongoose";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
-
-
+ 
+ 
 const validateOrganizationDetails = (data: any) => {
   const errors: { field: string; message: string }[] = [];
-
+ 
   // PAN Card Validation
   if (!data.panNumber) {
     errors.push({
@@ -33,14 +33,14 @@ const validateOrganizationDetails = (data: any) => {
       message: "Invalid PAN card number.",
     });
   }
-
+ 
   if (!data.panCardUserName) {
     errors.push({
       field: "panCardUserName",
       message: "PAN card user name is required.",
     });
   }
-
+ 
   // GST Validation
   if (!data.gstNumber) {
     errors.push({ field: "gstNumber", message: "GST number is required." });
@@ -51,17 +51,17 @@ const validateOrganizationDetails = (data: any) => {
   ) {
     errors.push({ field: "gstNumber", message: "Invalid GST number." });
   }
-
+ 
   if (!data.expiryDate) {
     errors.push({
       field: "expiryDate",
       message: "GST expiry date is required.",
     });
   }
-
+ 
   return errors;
 };
-
+ 
 export const handleCreateNewOrganisation = async (
   req: Request,
   res: Response
@@ -94,27 +94,27 @@ export const handleCreateNewOrganisation = async (
       panCardUserName,
       gstNumber,
       expiryDate,
-      user_id,
+     payload,
       category,
       subcategoryName,
     } = req.body;
-
+ 
     const categoryId = category ? new mongoose.Types.ObjectId(category) : null;
     const subcategoryId = subcategoryName
       ? new mongoose.Types.ObjectId(subcategoryName)
       : null;
-
+ 
     // Handle file uploads safely
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-
+ 
     const organizationLogoUrl = files?.organizationLogo?.[0]?.buffer
       ? await uploadFileToCloudinary(files.organizationLogo[0].buffer)
       : null;
-
-    // Create new Organization entry
+ 
+    // Create new organization with isapproved explicitly set to false
     const newOrg = await Organization.create({
       organizationName,
-      user_id: new mongoose.Types.ObjectId(user_id),
+      user_id: payload.id,
       managerName,
       register_number: registerNumber,
       contact_number: contactNumber,
@@ -123,12 +123,12 @@ export const handleCreateNewOrganisation = async (
       category: categoryId,
       subcategoryName: subcategoryId,
       organizationLogo: organizationLogoUrl,
+      role: payload.role,
       is_deleted: false,
     });
-
+ 
     const newOrgId = newOrg._id;
-
-    // Create Address
+ 
     await createAddressAndUpdateModel(Organization, newOrgId, {
       street_address: streetAddress,
       city,
@@ -140,7 +140,7 @@ export const handleCreateNewOrganisation = async (
       prepared_by_id: newOrgId,
       entity_type: "Organization",
     });
-
+ 
     // Upload GST Certificate Image
     if (files?.gstCertificateImage?.[0]?.buffer) {
       const gstImageUrl = await uploadFileToCloudinary(
@@ -154,7 +154,7 @@ export const handleCreateNewOrganisation = async (
         expiry_date: expiryDate,
       });
     }
-
+ 
     // Upload PAN Card Image
     if (files?.panCardImage?.[0]?.buffer) {
       const panImageUrl = await uploadFileToCloudinary(
@@ -168,11 +168,14 @@ export const handleCreateNewOrganisation = async (
         pan_card_image: panImageUrl,
       });
     }
-
+ 
     return sendSuccessResponse(
       res,
       "Organization and associated details created successfully",
-      null,
+      {
+        organization: newOrg,
+        role: "user",
+      },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -185,20 +188,23 @@ export const handleCreateNewOrganisation = async (
     );
   }
 };
-
+ 
 export const handleGetOrganisations = async (req: Request, res: Response): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 4;
     const skip = (page - 1) * limit;
     const { search } = req.query;
-
-    const matchQuery: any = { is_deleted: false };
-
+ 
+    // Only get organizations that are approved
+    const matchQuery: any = { is_deleted: false, isapproved: true };
+ 
     if (search) {
-      matchQuery.organizationName = { $regex: new RegExp(search as string, "i") };
+      matchQuery.organizationName = {
+        $regex: new RegExp(search as string, "i"),
+      };
     }
-
+ 
     const organizations = await Organization.aggregate([
       { $match: matchQuery },
       { $skip: skip },
@@ -292,9 +298,9 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
         },
       },
     ]);
-
+ 
     const totalOrganizations = await Organization.countDocuments(matchQuery);
-
+ 
     sendSuccessResponse(
       res,
       "Organizations retrieved successfully!",
@@ -315,8 +321,8 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
     );
   }
 };
-
-
+ 
+ 
 export const handleGetByIdOrganisations = async (
   req: Request,
   res: Response
@@ -324,7 +330,7 @@ export const handleGetByIdOrganisations = async (
   try {
     const { orgId } = req.params;
     validateMogooseObjectId(orgId);
-
+ 
     const organization = await Organization.aggregate([
       {
         $match: {
@@ -372,7 +378,7 @@ export const handleGetByIdOrganisations = async (
               },
             },
           ],
-          as: "panDetails", 
+          as: "panDetails",
         },
       },
       {
@@ -470,7 +476,7 @@ export const handleGetByIdOrganisations = async (
         },
       },
     ]);
-
+ 
     if (!organization || organization.length === 0) {
       throw new CustomError(
         "Organization not found",
@@ -494,7 +500,7 @@ export const handleGetByIdOrganisations = async (
     );
   }
 };
-
+ 
 export const handleUpdateOrganisations = async (
   req: Request,
   res: Response
@@ -532,13 +538,13 @@ export const handleUpdateOrganisations = async (
       category,
       subcategoryName,
     } = req.body;
-
+ 
     validateMogooseObjectId(orgId);
     const existingOrg = await Organization.findOne({
       _id: orgId,
       is_deleted: false,
     });
-
+ 
     if (!existingOrg) {
       throw new CustomError(
         "Organization not found",
@@ -547,19 +553,19 @@ export const handleUpdateOrganisations = async (
         false
       );
     }
-
+ 
     const organizationLogoUrl = files.organizationLogo
       ? await uploadFileToCloudinary(files.organizationLogo[0].buffer)
       : existingOrg.organizationLogo;
-
+ 
     const panImageUrl = files.panCardImage
       ? await uploadFileToCloudinary(files.panCardImage[0].buffer)
       : req.body.panCardImage;
-
+ 
     const gstImageUrl = files.gstCertificateImage
       ? await uploadFileToCloudinary(files.gstCertificateImage[0].buffer)
       : req.body.gstCertificateImage;
-
+ 
     await Organization.findByIdAndUpdate(
       orgId,
       {
@@ -581,7 +587,7 @@ export const handleUpdateOrganisations = async (
       },
       { new: true }
     );
-
+ 
     await updateAddress(Organization, orgId, {
       street_address: streetAddress,
       city,
@@ -593,7 +599,7 @@ export const handleUpdateOrganisations = async (
       prepared_by_id: orgId,
       entity_type: "Organization",
     });
-
+ 
     // Update or create PAN details
     if (panNumber) {
       const panData = {
@@ -603,7 +609,7 @@ export const handleUpdateOrganisations = async (
         prepared_by_id: orgId,
         entity_type: "Organization",
       };
-
+ 
       await PanCardDetails.findOneAndUpdate(
         {
           prepared_by_id: orgId,
@@ -613,7 +619,7 @@ export const handleUpdateOrganisations = async (
         { upsert: true, new: true }
       );
     }
-
+ 
     // Update or create GST details
     if (gstNumber) {
       const gstData = {
@@ -623,7 +629,7 @@ export const handleUpdateOrganisations = async (
         prepared_by_id: orgId,
         entity_type: "Organization",
       };
-
+ 
       await GstCertificateDetails.findOneAndUpdate(
         {
           prepared_by_id: orgId,
@@ -633,11 +639,11 @@ export const handleUpdateOrganisations = async (
         { upsert: true, new: true }
       );
     }
-
+ 
     const updatedOrg = await Organization.findById(orgId)
       .populate("category")
       .populate("subcategoryName");
-
+ 
     sendSuccessResponse(
       res,
       "Organization updated successfully!",
@@ -653,7 +659,7 @@ export const handleUpdateOrganisations = async (
     );
   }
 };
-
+ 
 export const handledDeleteOrganisations = async (
   req: Request,
   res: Response
@@ -661,7 +667,7 @@ export const handledDeleteOrganisations = async (
   try {
     const { orgId } = req.params;
     validateMogooseObjectId(orgId);
-
+ 
     const updatedOrg = await Organization.findByIdAndUpdate(
       orgId,
       { $set: { is_deleted: true } },
@@ -690,7 +696,7 @@ export const handledDeleteOrganisations = async (
     );
   }
 };
-
+ 
 export const organizationToggleStatus = async (
   req: Request,
   res: Response
@@ -708,8 +714,8 @@ export const organizationToggleStatus = async (
     }
     const newStatus = !organization.status;
     const updatedOrganization = await Organization.findByIdAndUpdate(
-      id, 
-      { status: newStatus }, 
+      id,
+      { status: newStatus },
       { new: true }
     );
     sendSuccessResponse(
@@ -729,5 +735,303 @@ export const organizationToggleStatus = async (
     );
   }
 };
+ 
+export const handleGetUnapprovedOrganisations = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 4;
+    const skip = (page - 1) * limit;
+    const { search } = req.query;
 
-  
+    const matchQuery: any = { is_deleted: false, isapproved: "processing" };
+
+    if (search) {
+      matchQuery.organizationName = {
+        $regex: new RegExp(search as string, "i"),
+      };
+    }
+ 
+    const organizations = await Organization.aggregate([
+      { $match: matchQuery },
+      { $skip: skip },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "addresses",
+          localField: "address_id",
+          foreignField: "_id",
+          as: "addresses",
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "categoryDetails",
+        },
+      },
+      {
+        $lookup: {
+          from: "subcategories",
+          localField: "subcategoryName",
+          foreignField: "_id",
+          as: "subcategoryDetails",
+        },
+      },
+      { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "states",
+          let: { stateId: { $toInt: "$addresses.state" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          as: "stateInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "cities",
+          let: { cityId: { $toInt: "$addresses.city" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
+          as: "cityInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "districts",
+          let: { districtId: { $toInt: "$addresses.district" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
+          as: "districtInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "countries",
+          let: { countryId: { $toInt: "$addresses.country" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          as: "countryInfo",
+        },
+      },
+      {
+        $group: {
+          _id: "$_id",
+          organizationName: { $first: "$organizationName" },
+          managerName: { $first: "$managerName" },
+          register_number: { $first: "$register_number" },
+          contact_number: { $first: "$contact_number" },
+          email: { $first: "$email" },
+          organizationLogo: { $first: "$organizationLogo" },
+          no_of_employees: { $first: "$no_of_employees" },
+          categoryDetails: { $first: "$categoryDetails" },
+          subcategoryDetails: { $first: "$subcategoryDetails" },
+          addresses: {
+            $push: {
+              _id: "$addresses._id",
+              street_address: "$addresses.street_address",
+              city_id: "$addresses.city",
+              city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
+              state_id: "$addresses.state",
+              state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
+              district_id: "$addresses.district",
+              district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
+              pincode: "$addresses.pincode",
+              country_id: "$addresses.country",
+              country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
+              landmark: "$addresses.landmark",
+              address_type: "$addresses.address_type",
+            },
+          },
+        },
+      },
+    ]);
+ 
+    const totalOrganizations = await Organization.countDocuments(matchQuery);
+ 
+    sendSuccessResponse(
+      res,
+      "Unapproved organizations retrieved successfully!",
+      {
+        organizations,
+        totalPages: Math.ceil(totalOrganizations / limit),
+        currentPage: page,
+        totalOrganizations,
+      },
+      HTTP_STATUS_CODE.OK
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+ 
+export const handleGetUserOrganizations = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const userId = req.body.payload.id;
+    const organizations = await Organization.aggregate([
+      {
+        $match: {
+          user_id: new mongoose.Types.ObjectId(userId),
+          is_deleted: false,
+          isapproved: "approved",
+        },
+      },
+      {
+        $lookup: {
+          from: "addresses",
+          localField: "address_id",
+          foreignField: "_id",
+          as: "addresses",
+        },
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "category",
+          foreignField: "_id",
+          as: "categoryDetails",
+        },
+      },
+      {
+        $lookup: {
+          from: "subcategories",
+          localField: "subcategoryName",
+          foreignField: "_id",
+          as: "subcategoryDetails",
+        },
+      },
+      { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "states",
+          let: { stateId: { $toInt: "$addresses.state" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          as: "stateInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "cities",
+          let: { cityId: { $toInt: "$addresses.city" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
+          as: "cityInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "countries",
+          let: { countryId: { $toInt: "$addresses.country" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          as: "countryInfo",
+        },
+      },
+      {
+        $project: {
+          id: "$_id",
+          name: "$organizationName",
+          address: {
+            $concat: [
+              { $ifNull: ["$addresses.street_address", ""] },
+              ", ",
+              { $ifNull: [{ $arrayElemAt: ["$cityInfo.name", 0] }, ""] },
+              ", ",
+              { $ifNull: [{ $arrayElemAt: ["$stateInfo.name", 0] }, ""] },
+              ", ",
+              { $ifNull: ["$addresses.pincode", ""] },
+              ", ",
+              { $ifNull: [{ $arrayElemAt: ["$countryInfo.name", 0] }, ""] },
+            ],
+          },
+          profilePic: "$organizationLogo",
+          employees: "$no_of_employees",
+          isapproved: "$isapproved",
+          slug: "$slug",
+          industry: {
+            $concatArrays: [
+              {
+                $ifNull: [
+                  { $arrayElemAt: ["$categoryDetails.category", 0] },
+                  [],
+                ],
+              },
+              {
+                $ifNull: [
+                  { $arrayElemAt: ["$subcategoryDetails.subcategoryName", 0] },
+                  [],
+                ],
+              },
+            ],
+          },
+        },
+      },
+    ]);
+
+    sendSuccessResponse(
+      res,
+      "User's approved organizations retrieved successfully!",
+      { organizations },
+      HTTP_STATUS_CODE.OK
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
+export const handleAdminApproveOgaisation = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const organization = await Organization.findById(id);
+    if (!organization) {
+      throw new CustomError(
+        "Organization not found",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR,
+        false
+      );
+    }
+    if (organization.isapproved === "approved") {
+      throw new CustomError(
+        "Organization already approved",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR,
+        false
+      );
+    }
+    await Organization.findByIdAndUpdate(
+      id,
+      { isapproved: "approved" },
+      { new: true }
+    );
+    sendSuccessResponse(
+      res,
+      "approve Organization created successfully",
+      HTTP_STATUS_CODE.CREATED
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
+

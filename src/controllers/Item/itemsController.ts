@@ -66,16 +66,30 @@ export const createItem = async (req: Request, res: Response) => {
     }
   };
 
-
-export const listItems = async (req: Request, res: Response) => {
-    try {
-      
-      const items = await Item.find({ is_deleted: false })
-      .populate("category", "category") 
-      .populate("subcategory", "subcategoryName"); 
-      
   
-      if (!items.length) {
+  export const listItems = async (req: Request, res: Response) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 4; // Default limit to 4
+      const search = (req.query.search as string)?.trim() || '';
+      const startIndex = (page - 1) * limit;
+  
+      const query: any = { is_deleted: false };
+      if (search) {
+        query.item_name = { $regex: search, $options: "i" }; // Case-insensitive search on item_name
+      }
+  
+
+  
+      const total = await Item.countDocuments(query);
+      const items = await Item.find(query)
+        .populate("category", "category")
+        .populate("subcategory", "subcategoryName")
+        .skip(startIndex)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+  
+      if (!items.length && page === 1) {
         throw new CustomError(
           "No items found",
           HTTP_STATUS_CODE.NOT_FOUND,
@@ -84,11 +98,17 @@ export const listItems = async (req: Request, res: Response) => {
         );
       }
   
-      
+      const pagination = {
+        currentPage: page,
+        totalItems: total,
+        totalPages: Math.ceil(total / limit),
+        itemsPerPage: limit,
+      };
+  
       sendSuccessResponse(
         res,
         "Items fetched successfully",
-        items,
+        { items, pagination },
         HTTP_STATUS_CODE.OK
       );
     } catch (error) {
@@ -193,7 +213,7 @@ export const deleteItem = async (req: Request, res: Response) => {
         HTTP_STATUS_CODE.OK
       );
     } catch (error) {
-      sendErrorResponse(
+      sendErrorResponse( 
         res,
         error,
         HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,

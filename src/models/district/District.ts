@@ -1,12 +1,12 @@
 import mongoose, {Document,Model,Schema} from "mongoose";
-
+ 
 export interface IDistrict extends Document{
     id:number;
     name:string;
     country_name:string;
     state_id:number;
 }
-
+ 
 const districtSchema: Schema<IDistrict> = new Schema<IDistrict>(
     {
         id:{type:Number,unique:true},
@@ -18,3 +18,4 @@ const districtSchema: Schema<IDistrict> = new Schema<IDistrict>(
 );
 const District: Model<IDistrict> = mongoose.model<IDistrict>("District",districtSchema)
 export default District;
+ 

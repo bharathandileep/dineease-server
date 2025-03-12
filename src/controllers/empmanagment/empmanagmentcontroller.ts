@@ -8,7 +8,7 @@ import {
 } from "../../lib/helpers/responseHelper";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import EmployeeManagement from "../../models/empmanagment/EmployeeManagementModel";
-import Designation from "../../models/designation/designationModel";
+import Designation from "../../models/designation/DesignationModel";
 import Address from "../../models/address/AddressModel";
 import {
   createAddressAndUpdateModel,
@@ -195,7 +195,7 @@ export const createEmployee = async (req: Request, res: Response) => {
       files.aadhar_image?.[0]?.buffer
     );
 
-    // Create Employee with role_id from the Role model
+ 
     const newEmployee = new EmployeeManagement({
       entity_id,
       entity_type,

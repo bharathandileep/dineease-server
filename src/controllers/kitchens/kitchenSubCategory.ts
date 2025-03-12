@@ -130,8 +130,6 @@ export const kitchenGetSubcategoriesByCategory = async (
   req: Request,
   res: Response
 ) => {
-
-  
   try {
     
     const { categoryId } = req.params;
