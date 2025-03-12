@@ -103,7 +103,7 @@ export const handleUserLogin = async (req: Request, res: Response) => {
       );
     }
 
-    const payload = { id: admin._id, email: admin.email, role:"Admin"};
+    const payload = { id: admin._id, email: admin.email, role:"Employee"};
     appendRefreshTokenCookies(res, payload);
     const accessToken = generateJWTToken(
       accessTokenSecret,

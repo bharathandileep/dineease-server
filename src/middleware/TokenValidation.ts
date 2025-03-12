@@ -50,7 +50,6 @@ export const authorizationAccess = (
 
   const token = authHeader.split(" ")[1];
   const decode = verifyToken(token, accessTokenSecret);
-  console.log(decode)
   if (!decode) {
     throw new CustomError(
       "Invalid access token",
