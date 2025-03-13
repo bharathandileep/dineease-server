@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import {
+import { 
   sendErrorResponse,
   sendSuccessResponse,
 } from "../../lib/helpers/responseHelper";
@@ -17,8 +17,9 @@ import GstCertificateDetails from "../../models/documentations/GstModel";
 import FssaiCertificateDetails from "../../models/documentations/FfsaiModel";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
-
-
+import NotificationModel from "../../models/notification/Notification"; // Add this line to import the Notification model
+import { generateKitchenNotification } from "../notification/notificationController";
+ 
 const validateKitchenDetails = (data: any) => {
   const errors: { field: string; message: string }[] = [];
   if (!data.pan_card_number) {
@@ -86,7 +87,6 @@ export const handleCreateNewKitchens = async (
   res: Response
 ): Promise<any> => {
   try {
-    // Validate request body
     const errors = validateKitchenDetails(req.body);
     if (errors.length > 0) {
       return sendErrorResponse(
@@ -239,8 +239,6 @@ export const handleCreateNewKitchens = async (
     const kitchenImageUrl = files?.kitchen_image?.[0]?.buffer
       ? await uploadFileToCloudinary(files.kitchen_image[0].buffer)
       : null;
-
-    // Create new Kitchen entry with hardcoded "user" role and isapproved set to false
     const newKitchen = await Kitchen.create({
       kitchen_name,
       user_id: payload.id,
@@ -256,6 +254,7 @@ export const handleCreateNewKitchens = async (
       kitchen_image: kitchenImageUrl,
       role: payload.role,
       is_deleted: false,
+      // isapproved: "approved",
       working_days: [],
       pre_ordering_options: [],
     });
@@ -273,6 +272,7 @@ export const handleCreateNewKitchens = async (
       prepared_by_id: kitchenId,
       entity_type: "Kitchen",
     });
+
     if (files?.ffsai_certificate_image?.[0]?.buffer) {
       const fssaiImageUrl = await uploadFileToCloudinary(
         files.ffsai_certificate_image[0].buffer
@@ -285,6 +285,7 @@ export const handleCreateNewKitchens = async (
         expiry_date: ffsai_expiry_date,
       });
     }
+
     if (files?.gst_certificate_image?.[0]?.buffer) {
       const gstImageUrl = await uploadFileToCloudinary(
         files.gst_certificate_image[0].buffer
@@ -310,7 +311,11 @@ export const handleCreateNewKitchens = async (
         pan_card_image: panImageUrl,
       });
     }
-
+    console.log("kitchen created successfully");
+    
+    // Pass the user ID (not kitchen ID) to the notification function
+    await generateKitchenNotification(payload.id, kitchen_name);
+    
     return sendSuccessResponse(
       res,
       "Kitchen and associated details created successfully",
@@ -353,7 +358,6 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
       { $match: matchQuery },
       { $skip: skip },
       { $limit: limit },
-      // Lookup for addresses
       {
         $lookup: {
           from: "addresses",
@@ -362,7 +366,6 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           as: "addresses",
         },
       },
-      // Lookup for categories
       {
         $lookup: {
           from: "categories",
@@ -371,7 +374,6 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           as: "categoryDetails",
         },
       },
-      // Lookup for subcategories
       {
         $lookup: {
           from: "subcategories",
@@ -380,7 +382,6 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           as: "subcategoryDetails",
         },
       },
-      // Lookup for FSSAI certificate details
       {
         $lookup: {
           from: "fssaicertificatedetails",
@@ -389,7 +390,6 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           as: "fssaiDetails",
         },
       },
-      // Lookup for GST certificate details
       {
         $lookup: {
           from: "gstcertificatedetails",
@@ -398,7 +398,6 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           as: "gstDetails",
         },
       },
-      // Lookup for PAN card details
       {
         $lookup: {
           from: "pancarddetails",
@@ -408,7 +407,6 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
         },
       },
       { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
-      // Lookup for states
       {
         $lookup: {
           from: "states",
@@ -417,7 +415,6 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           as: "stateInfo",
         },
       },
-      // Lookup for cities
       {
         $lookup: {
           from: "cities",
@@ -426,7 +423,6 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           as: "cityInfo",
         },
       },
-      // Lookup for districts
       {
         $lookup: {
           from: "districts",
@@ -435,7 +431,6 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           as: "districtInfo",
         },
       },
-      // Lookup for countries
       {
         $lookup: {
           from: "countries",
@@ -535,7 +530,6 @@ export const handleGetKitchensById = async (
   try {
     const { kitchenId } = req.params;
     validateMogooseObjectId(kitchenId);
-
     const kitchen = await Kitchen.aggregate([
       {
         $match: {
@@ -925,6 +919,7 @@ export const handleUpdateKitchensById = async (
       },
       { new: true }
     );
+ 
 
     // Update address
     await updateAddress(Kitchen, kitchenId, {
@@ -938,7 +933,7 @@ export const handleUpdateKitchensById = async (
       prepared_by_id: kitchenId,
       entity_type: "Kitchen",
     });
-
+ 
     // Update or create PAN details
     if (pan_card_number) {
       const panData = {
@@ -948,14 +943,14 @@ export const handleUpdateKitchensById = async (
         prepared_by_id: kitchenId,
         entity_type: "Kitchen",
       };
-
+ 
       await PanCardDetails.findOneAndUpdate(
         { prepared_by_id: kitchenId, entity_type: "Kitchen" },
         panData,
         { upsert: true, new: true }
       );
     }
-
+ 
     // Update or create GST details
     if (gst_number) {
       const gstData = {
@@ -965,14 +960,14 @@ export const handleUpdateKitchensById = async (
         prepared_by_id: kitchenId,
         entity_type: "Kitchen",
       };
-
+ 
       await GstCertificateDetails.findOneAndUpdate(
         { prepared_by_id: kitchenId, entity_type: "Kitchen" },
         gstData,
         { upsert: true, new: true }
       );
     }
-
+ 
     // Update or create FSSAI details
     if (ffsai_certificate_number) {
       const fssaiData = {
@@ -982,7 +977,7 @@ export const handleUpdateKitchensById = async (
         expiry_date: ffsai_expiry_date,
         kitchen_id: kitchenId,
       };
-
+ 
       await FssaiCertificateDetails.findOneAndUpdate(
         { kitchen_id: kitchenId },
         fssaiData,
@@ -1049,11 +1044,8 @@ export const handleDeleteKitchens = async (
     );
   }
 };
-
-export const kitchenToggleStatus = async (
-  req: Request,
-  res: Response
-) => {
+ 
+export const kitchenToggleStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const kitchen = await Kitchen.findById(id);
@@ -1090,6 +1082,7 @@ export const kitchenToggleStatus = async (
     );
   }
 };
+ 
 export const handleGetUnapprovedKitchens = async (
   req: Request,
   res: Response
@@ -1240,11 +1233,8 @@ export const handleGetUserApprovedKitchens = async (
     const kitchens = await Kitchen.aggregate([
       {
         $match: {
-         
           user_id: new mongoose.Types.ObjectId(userId),
-
           is_deleted: false,
-          isapproved: "approved", 
         },
       },
       {
@@ -1396,3 +1386,8 @@ export const handleAdminApproveKitchen = async (
     );
   }
 };
+
+
+
+
+

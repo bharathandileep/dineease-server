@@ -1,3 +1,4 @@
+
 export const apiConfig = {
   baseAPIUrl: `/api/v1`,
   auth: {
@@ -30,12 +31,15 @@ export const apiConfig = {
     getkitchensById: "/:kitchenId",
     toggleKitchensStatus: "/status/:id",
     handleGetUserApprovedKitchens: "/user/approved",
+   
+
 
     createCategory: "/categories",
     getallCategories: "/categories/all",
     updateCategory: "/categories/:id",
     deleteCategory: "/categories/:id",
     toggleCategoryStatus: "/categories/:id/toggle-status",
+    
 
     getallSubCategories: "/subcategories/all",
     createSubcategory: "/subcategories",
@@ -46,6 +50,7 @@ export const apiConfig = {
     toggleSubcategoryStatus: "/subcategories/:id/toggle-status",
     getUnapprovedKitchens: "/requested/all",
   },
+
   menu: {
     createCategory: "/categories",
     getAllCategories: "/categories",
@@ -69,8 +74,9 @@ export const apiConfig = {
     deleteItem: "/allmenuitems/:id",
     // changeItemStatus:"/allmenuitems/:id/status"
     changeItemStatus: "/allmenuitems/:id/status",
-
     getMenuItemsByKitchen: "/menu-items/kitchen/:kitchenId",
+
+    
   },
   organization: {
     newOrganization: "/new",
@@ -130,6 +136,7 @@ export const apiConfig = {
     getCitiesByState: "/cities/:stateName",
     getDistrictsByState: "/districts/:stateId",
   },
+
   kitchenMenu: {
     getKitchenMenu: "/kitchen-menu/:kitchenId",
     createkitchenMenu: "/kitchen-menu/:id",
@@ -139,4 +146,9 @@ export const apiConfig = {
     deleteSubcategory: "/kitchen-menu/subcategories/:id",
     toggleSubcategoryStatus: "/kitchen-menu/subcategories/:id/toggle-status",
   },
-};
+   notification:{
+   getUserNotifications:"/get/:userId",
+   getNotificationById:"/get/:notificationId",
+   getAllNotifications:"/all", 
+  },  
+ }; 
