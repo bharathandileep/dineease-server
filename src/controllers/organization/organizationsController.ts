@@ -16,10 +16,8 @@ import GstCertificateDetails from "../../models/documentations/GstModel";
 import mongoose from "mongoose";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
-import { generateOrganizationNotification } from "../notification/notificationController";
-// import { generateOrganizationNotification } from "../notification/notificationController";
-
-
+ 
+ 
 const validateOrganizationDetails = (data: any) => {
   const errors: { field: string; message: string }[] = [];
  
@@ -63,8 +61,6 @@ const validateOrganizationDetails = (data: any) => {
  
   return errors;
 };
-
-
  
 export const handleCreateNewOrganisation = async (
   req: Request,
@@ -105,21 +101,19 @@ export const handleCreateNewOrganisation = async (
       category,
       subcategoryName,
     } = req.body;
-    
-
-    
+ 
     const categoryId = category ? new mongoose.Types.ObjectId(category) : null;
     const subcategoryId = subcategoryName
       ? new mongoose.Types.ObjectId(subcategoryName)
       : null;
-    
+ 
     // Handle file uploads safely
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    
+ 
     const organizationLogoUrl = files?.organizationLogo?.[0]?.buffer
       ? await uploadFileToCloudinary(files.organizationLogo[0].buffer)
       : null;
-    
+ 
     // Create new organization with isapproved explicitly set to false
     const newOrg = await Organization.create({
       organizationName,
@@ -132,12 +126,12 @@ export const handleCreateNewOrganisation = async (
       category: categoryId,
       subcategoryName: subcategoryId,
       organizationLogo: organizationLogoUrl,
-      role: payload.role || "user", // Provide a default if payload.role is undefined
+      role: payload.role,
       is_deleted: false,
     });
-    
+ 
     const newOrgId = newOrg._id;
-    
+ 
     await createAddressAndUpdateModel(Organization, newOrgId, {
       street_address: streetAddress,
       city,
@@ -149,7 +143,6 @@ export const handleCreateNewOrganisation = async (
       prepared_by_id: newOrgId,
       entity_type: "Organization",
     });
-    
  
     // Upload GST Certificate Image
     if (files?.gstCertificateImage?.[0]?.buffer) {
@@ -164,7 +157,6 @@ export const handleCreateNewOrganisation = async (
         expiry_date: expiryDate,
       });
     }
-    
  
     // Upload PAN Card Image
     if (files?.panCardImage?.[0]?.buffer) {
@@ -179,41 +171,13 @@ export const handleCreateNewOrganisation = async (
         pan_card_image: panImageUrl,
       });
     }
-    
-    // Add notification here
-//     if (payload && payload.id) {
-//       await generateOrganizationNotification(payload.id, organizationName);
-//     }
-    
-//     return sendSuccessResponse(
-//       res,
-//       "Organization and associated details created successfully",
-//       {
-//         organization: newOrg,
-//         role: payload.role || "user"
-//       },
-//       HTTP_STATUS_CODE.OK
-//     );
-//   } catch (error) {
-//     console.error("Error creating organization:", error);
-//     sendErrorResponse(
-//       res,
-//       error,
-//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-//     );
-//   }
-// };
-    console.log("org created successfully");
-    
-    // Pass the user ID (not kitchen ID) to the notification function
-    await generateOrganizationNotification(payload.id, organizationName);
-    
+ 
     return sendSuccessResponse(
       res,
       "Organization and associated details created successfully",
       {
-        kitchen: newOrg,
+        organization: newOrg,
+        role: "user",
       },
       HTTP_STATUS_CODE.OK
     );
@@ -228,8 +192,6 @@ export const handleCreateNewOrganisation = async (
   }
 };
  
- 
-
 export const handleGetOrganisations = async (req: Request, res: Response): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -1074,8 +1036,5 @@ export const handleAdminApproveOgaisation = async (
     );
   }
 };
-
- 
-
 
 

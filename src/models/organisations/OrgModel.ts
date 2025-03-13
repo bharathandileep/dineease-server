@@ -42,11 +42,10 @@ export const OrganizationSchema: Schema<IOrganization> =
         ref: "OrgCategory",
         required: true,
       },
-
-      subcategoryName:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"OrgSubcategory",
-        required:true,
+      subcategoryName: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "OrgSubcategory",
+        required: true,
       },
       organizationName: {
         type: String,

@@ -30,8 +30,6 @@ export const apiConfig = {
     getkitchensById: "/:kitchenId",
     toggleKitchensStatus: "/status/:id",
     handleGetUserApprovedKitchens: "/user/approved",
-   
-
 
     createCategory: "/categories",
     getallCategories: "/categories/all",
@@ -73,9 +71,8 @@ export const apiConfig = {
     deleteItem: "/allmenuitems/:id",
     // changeItemStatus:"/allmenuitems/:id/status"
     changeItemStatus: "/allmenuitems/:id/status",
-    getMenuItemsByKitchen: "/menu-items/kitchen/:kitchenId",
 
-    
+    getMenuItemsByKitchen: "/menu-items/kitchen/:kitchenId",
   },
   organization: {
     newOrganization: "/new",
@@ -135,7 +132,6 @@ export const apiConfig = {
     getCitiesByState: "/cities/:stateName",
     getDistrictsByState: "/districts/:stateId",
   },
-
   kitchenMenu: {
     getKitchenMenu: "/kitchen-menu/:kitchenId",
     createkitchenMenu: "/kitchen-menu/:id",
