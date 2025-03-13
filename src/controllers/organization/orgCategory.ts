@@ -55,15 +55,31 @@ export const orgCreateCategory = async (req: Request, res: Response) => {
   }
 };
 
-// Get all categories
+
+
 export const orgGetAllCategories = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string)?.trim() || '';
+    const status = req.query.status as string;
     const startIndex = (page - 1) * limit;
-    const total = await OrgCategory.countDocuments({});
-    const categories = await OrgCategory.find().skip(startIndex).limit(limit);
 
+    // Build query object
+    const query: any = {};
+    if (search) {
+      query.category = { $regex: search, $options: "i" }; 
+    }
+    if (status && status !== "all") {
+      query.status = status === "active" ? true : false; 
+    }
+
+    const total = await OrgCategory.countDocuments(query);
+    const categories = await OrgCategory.find(query)
+      .skip(startIndex)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+  
     const pagination = {
       currentPage: page,
       totalItems: total,
@@ -71,9 +87,20 @@ export const orgGetAllCategories = async (req: Request, res: Response) => {
       itemsPerPage: limit,
     };
 
-    sendSuccessResponse(res, "Categories retrieved successfully", { categories, pagination }, HTTP_STATUS_CODE.OK);
+    sendSuccessResponse(
+      res,
+      "Categories retrieved successfully",
+      { categories, pagination },
+      HTTP_STATUS_CODE.OK
+    );
   } catch (error) {
-    sendErrorResponse(res, error, HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR, ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE);
+    console.error("Backend error:", error);
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
   }
 };
 

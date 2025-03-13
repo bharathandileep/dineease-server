@@ -7,8 +7,7 @@ import {
   sendSuccessResponse,
 } from "../../lib/helpers/responseHelper";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
-import Designation from "../../models/designation/DesignationModel";
-import Address from "../../models/address/AddressModel";
+import Designation from "../../models/designation/designationModel";
 import {
   createAddressAndUpdateModel,
   updateAddress,
@@ -19,26 +18,15 @@ import OrgEmployeeManagement from "../../models/empmanagment/OrgEmployeeManageme
 import { registerUser } from "../auth/loginsController";
 import Role from "../../models/users/RolesModels";
 
-
 export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
   try {
-   
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 8; 
+    const limit = parseInt(req.query.limit as string) || 8;
     const skip = (page - 1) * limit;
 
     const matchQuery: any = { is_deleted: false };
 
-    // Add search functionality
-    if (req.query.search) {
-      const searchRegex = new RegExp(req.query.search as string, 'i');
-      matchQuery.$or = [
-        { username: searchRegex },
-        { email: searchRegex },
-        { phone_number: searchRegex }
-      ];
-    }
-
+    // Optional filters for designation and status
     if (req.query.designation) {
       matchQuery.designation = req.query.designation;
     }
@@ -46,10 +34,8 @@ export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
       matchQuery.status = req.query.status;
     }
 
-    const orgEmployees = await OrgEmployeeManagement.aggregate([
+    const pipeline: any[] = [
       { $match: matchQuery },
-      { $skip: skip },
-      { $limit: limit },
       {
         $lookup: {
           from: "designations",
@@ -67,9 +53,36 @@ export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
           as: "address",
         },
       },
-    ]);
+    ];
 
-    const totalEmployees = await OrgEmployeeManagement.countDocuments(matchQuery);
+    // Add search functionality
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search as string, "i");
+      pipeline.push({
+        $match: {
+          $or: [
+            { username: searchRegex },
+            { email: searchRegex },
+            { phone_number: searchRegex },
+            { "designation.designation_name": searchRegex },
+          ],
+        },
+      });
+    }
+
+    // Pagination stages
+    pipeline.push({ $skip: skip }, { $limit: limit });
+
+    const orgEmployees = await OrgEmployeeManagement.aggregate(pipeline);
+
+    // Count total employees with the same search criteria
+    const totalPipeline = [...pipeline];
+    totalPipeline.pop(); // Remove $limit
+    totalPipeline.pop(); // Remove $skip
+    totalPipeline.push({ $count: "total" });
+
+    const totalDocs = await OrgEmployeeManagement.aggregate(totalPipeline);
+    const totalEmployees = totalDocs.length > 0 ? totalDocs[0].total : 0;
 
     sendSuccessResponse(
       res,
@@ -97,7 +110,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
   try {
     const {
       entity_id,
-      entity_type = "Admin",
+      entity_type = "Organization",
       designation,
       username,
       email,
@@ -227,7 +240,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
 };
 
 export const getOrgEmployeeById = async (req: Request, res: Response) => {
-    try {
+  try {
     const { id } = req.params;
     validateMogooseObjectId(id);
 
@@ -266,6 +279,65 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           preserveNullAndEmptyArrays: true,
         },
       },
+      {
+        $lookup: {
+          from: "states",
+          let: { stateId: { $toInt: "$address.state" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          as: "stateInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "cities",
+          let: { cityId: { $toInt: "$address.city" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
+          as: "cityInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "districts",
+          let: { districtId: { $toInt: "$address.district" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
+          as: "districtInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "countries",
+          let: { countryId: { $toInt: "$address.country" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          as: "countryInfo",
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          entity_id: 1,
+          entity_type: 1,
+          designation: 1,
+          username: 1,
+          email: 1,
+          phone_number: 1,
+          employee_status: 1,
+          aadhar_number: 1,
+          pan_number: 1,
+          profile_picture: 1,
+          pan_image: 1,
+          aadhar_image: 1,
+          address: {
+            _id: "$address._id",
+            street_address: "$address.street_address",
+            city: { $arrayElemAt: ["$cityInfo.name", 0] },
+            state: { $arrayElemAt: ["$stateInfo.name", 0] },
+            district: { $arrayElemAt: ["$districtInfo.name", 0] },
+            pincode: "$address.pincode",
+            country: { $arrayElemAt: ["$countryInfo.name", 0] },
+          },
+          designation_name: "$designation.designation_name",
+        },
+      },
     ]);
 
     if (!employee || employee.length === 0) {
@@ -275,12 +347,12 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
         ERROR_TYPES.NOT_FOUND_ERROR,
         false
       );
-    } 
+    }
 
     sendSuccessResponse(
       res,
       "Employee retrieved successfully",
-      employee[0], 
+      employee[0],
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -291,17 +363,13 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
     );
   }
-
-
 };
-
 // Update employee
 export const updateOrgEmployee = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
-    const files = req.files as { [fieldname: string]: Express.Multer.File[] }; // Handle file uploads
-    console.log(req.body);
+    const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     validateMogooseObjectId(id);
 
     // Check if designation exists
@@ -464,6 +532,156 @@ export const deleteOrgEmployee = async (req: Request, res: Response) => {
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
+export const handleGetEmployeeOrganizations = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const userEmail = req.query.email as string;
+    if (!userEmail) {
+      return sendErrorResponse(
+        res,
+        new Error("Email parameter is required"),
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
+    
+    const employeeOrganizations = await OrgEmployeeManagement.aggregate([
+      {
+        $match: {
+          email: userEmail, 
+          is_deleted: false
+        }
+      },
+      {
+        $lookup: {
+          from: "organizations",
+          localField: "entity_id",
+          foreignField: "_id",
+          as: "organizationDetails"
+        }
+      },
+      { $unwind: { path: "$organizationDetails", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "addresses",
+          localField: "organizationDetails.address_id", 
+          foreignField: "_id",
+          as: "addresses"
+        }
+      },
+      { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "states",
+          let: { stateId: { $toInt: "$addresses.state" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          as: "stateInfo",
+        }
+      },
+      {
+        $lookup: {
+          from: "cities",
+          let: { cityId: { $toInt: "$addresses.city" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
+          as: "cityInfo",
+        }
+      },
+      {
+        $lookup: {
+          from: "countries",
+          let: { countryId: { $toInt: "$addresses.country" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          as: "countryInfo",
+        }
+      },
+      {
+        $lookup: {
+          from: "categories",
+          localField: "organizationDetails.category",
+          foreignField: "_id",
+          as: "categoryDetails",
+        }
+      },
+      {
+        $lookup: {
+          from: "subcategories",
+          localField: "organizationDetails.subcategoryName",
+          foreignField: "_id",
+          as: "subcategoryDetails",
+        }
+      },
+      {
+        $project: {
+          _id: "$organizationDetails._id",
+          id: "$organizationDetails._id",
+          name: "$organizationDetails.organizationName",
+          address: {
+            $concat: [
+              { $ifNull: ["$addresses.street_address", ""] },
+              ", ",
+              { $ifNull: [{ $arrayElemAt: ["$cityInfo.name", 0] }, ""] },
+              ", ",
+              { $ifNull: [{ $arrayElemAt: ["$stateInfo.name", 0] }, ""] },
+              ", ",
+              { $ifNull: ["$addresses.pincode", ""] },
+              ", ",
+              { $ifNull: [{ $arrayElemAt: ["$countryInfo.name", 0] }, ""] },
+            ]
+          },
+          profilePic: "$organizationDetails.organizationLogo",
+          employees: "$organizationDetails.no_of_employees",
+          isapproved: "$organizationDetails.isapproved",
+          slug: "$organizationDetails.slug",
+          industry: {
+            $concatArrays: [
+              {
+                $ifNull: [
+                  { $arrayElemAt: ["$categoryDetails.category", 0] },
+                  [],
+                ],
+              },
+              {
+                $ifNull: [
+                  { $arrayElemAt: ["$subcategoryDetails.subcategoryName", 0] },
+                  [],
+                ],
+              },
+            ]
+          }
+        }
+      }
+    ]);
+
+    console.log("Found organizations count:", employeeOrganizations.length);
+
+    if (employeeOrganizations.length === 0) {
+      return sendSuccessResponse(
+        res,
+        "No organizations found for this email",
+        { organizations: [] },
+        HTTP_STATUS_CODE.OK
+      );
+    }
+
+    sendSuccessResponse(
+      res,
+      "User's approved organizations retrieved successfully!",
+      { organizations: employeeOrganizations },
+      HTTP_STATUS_CODE.OK
+    );
+  } catch (error) {
+    console.error("Error fetching employee organizations:", error);
     sendErrorResponse(
       res,
       error,

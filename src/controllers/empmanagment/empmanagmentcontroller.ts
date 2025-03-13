@@ -8,7 +8,7 @@ import {
 } from "../../lib/helpers/responseHelper";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import EmployeeManagement from "../../models/empmanagment/EmployeeManagementModel";
-import Designation from "../../models/designation/DesignationModel";
+import Designation from "../../models/designation/designationModel";
 import Address from "../../models/address/AddressModel";
 import {
   createAddressAndUpdateModel,
@@ -23,21 +23,12 @@ import { registerUser } from "../auth/loginsController";
 export const getAllEmployees = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 8; 
+    const limit = parseInt(req.query.limit as string) || 8;
     const skip = (page - 1) * limit;
 
     const matchQuery: any = { is_deleted: false };
 
-    // Add search functionality
-    if (req.query.search) {
-      const searchRegex = new RegExp(req.query.search as string, 'i');
-      matchQuery.$or = [
-        { username: searchRegex },
-        { email: searchRegex },
-        { phone_number: searchRegex }
-      ];
-    }
-
+    // Optional filters for designation and status
     if (req.query.designation) {
       matchQuery.designation = req.query.designation;
     }
@@ -45,10 +36,8 @@ export const getAllEmployees = async (req: Request, res: Response) => {
       matchQuery.status = req.query.status;
     }
 
-    const employees = await EmployeeManagement.aggregate([
+    const pipeline: any[] = [
       { $match: matchQuery },
-      { $skip: skip },
-      { $limit: limit },
       {
         $lookup: {
           from: "designations",
@@ -66,9 +55,36 @@ export const getAllEmployees = async (req: Request, res: Response) => {
           as: "address",
         },
       },
-    ]);
-    
-    const totalEmployees = await EmployeeManagement.countDocuments(matchQuery);
+    ];
+
+    // Add search functionality
+    if (req.query.search) {
+      const searchRegex = new RegExp(req.query.search as string, "i");
+      pipeline.push({
+        $match: {
+          $or: [
+            { username: searchRegex },
+            { email: searchRegex },
+            { phone_number: searchRegex },
+            { "designation.designation_name": searchRegex },
+          ],
+        },
+      });
+    }
+
+    // Pagination stages
+    pipeline.push({ $skip: skip }, { $limit: limit });
+
+    const employees = await EmployeeManagement.aggregate(pipeline);
+
+    // Count total employees with the same search criteria
+    const totalPipeline = [...pipeline];
+    totalPipeline.pop(); // Remove $limit
+    totalPipeline.pop(); // Remove $skip
+    totalPipeline.push({ $count: "total" });
+
+    const totalDocs = await EmployeeManagement.aggregate(totalPipeline);
+    const totalEmployees = totalDocs.length > 0 ? totalDocs[0].total : 0;
 
     sendSuccessResponse(
       res,
@@ -179,7 +195,7 @@ export const createEmployee = async (req: Request, res: Response) => {
       files.aadhar_image?.[0]?.buffer
     );
 
-    // Create Employee with role_id from the Role model
+ 
     const newEmployee = new EmployeeManagement({
       entity_id,
       entity_type,
@@ -263,6 +279,64 @@ export const getEmployeeById = async (req: Request, res: Response) => {
           preserveNullAndEmptyArrays: true,
         },
       },
+      {
+        $lookup: {
+          from: "states",
+          let: { stateId: { $toInt: "$address.state" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          as: "stateInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "cities",
+          let: { cityId: { $toInt: "$address.city" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
+          as: "cityInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "districts",
+          let: { districtId: { $toInt: "$address.district" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
+          as: "districtInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "countries",
+          let: { countryId: { $toInt: "$address.country" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          as: "countryInfo",
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          entity_id: 1,
+          entity_type: 1,
+          designation: "$designation.designation_name",
+          username: 1,
+          email: 1,
+          phone_number: 1,
+          employee_status: 1,
+          aadhar_number: 1,
+          pan_number: 1,
+          profile_picture: 1,
+          pan_image: 1,
+          aadhar_image: 1,
+          address: {
+            _id: "$address._id",
+            street_address: "$address.street_address",
+            city: { $arrayElemAt: ["$cityInfo.name", 0] },
+            state: { $arrayElemAt: ["$stateInfo.name", 0] },
+            district: { $arrayElemAt: ["$districtInfo.name", 0] },
+            pincode: "$address.pincode",
+            country: { $arrayElemAt: ["$countryInfo.name", 0] },
+          },
+        },
+      },
     ]);
 
     if (!employee || employee.length === 0) {
@@ -296,11 +370,10 @@ export const updateEmployee = async (req: Request, res: Response) => {
     const updateData = req.body;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     validateMogooseObjectId(id);
+
+    // Check if designation exists
     if (updateData.designation) {
-      // validateMogooseObjectId(updateData.designation);
-      const designationExists = await Designation.findById(
-        updateData.designation
-      );
+      const designationExists = await Designation.findById(updateData.designation);
       if (!designationExists) {
         throw new CustomError(
           "Designation not found",
@@ -324,9 +397,7 @@ export const updateEmployee = async (req: Request, res: Response) => {
 
     // Handle profile picture upload (if updated)
     if (files && files.profile_picture) {
-      const profile_picture = await uploadFileToCloudinary(
-        files.profile_picture[0].buffer
-      );
+      const profile_picture = await uploadFileToCloudinary(files.profile_picture[0].buffer);
       updateData.profile_picture = profile_picture;
     }
     if (files && files.pan_image) {
@@ -334,9 +405,7 @@ export const updateEmployee = async (req: Request, res: Response) => {
       updateData.pan_image = pan_image;
     }
     if (files && files.aadhar_image) {
-      const aadhar_image = await uploadFileToCloudinary(
-        files.aadhar_image[0].buffer
-      );
+      const aadhar_image = await uploadFileToCloudinary(files.aadhar_image[0].buffer);
       updateData.aadhar_image = aadhar_image;
     }
 
@@ -366,9 +435,102 @@ export const updateEmployee = async (req: Request, res: Response) => {
       { new: true }
     )
       .populate("designation", "designation_name")
-      .populate("address_id", "street city state country");
+      .populate({
+        path: "address_id",
+        select: "street_address city state district pincode country",
+      });
 
     if (!updatedEmployee) {
+      throw new CustomError(
+        "Employee not found",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR,
+        false
+      );
+    }
+
+    // Fetch address details with names for city, state, district, and country
+    const employeeWithAddress = await EmployeeManagement.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(id),
+        },
+      },
+      {
+        $lookup: {
+          from: "addresses",
+          localField: "address_id",
+          foreignField: "_id",
+          as: "address",
+        },
+      },
+      {
+        $unwind: {
+          path: "$address",
+          preserveNullAndEmptyArrays: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "states",
+          let: { stateId: { $toInt: "$address.state" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          as: "stateInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "cities",
+          let: { cityId: { $toInt: "$address.city" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
+          as: "cityInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "districts",
+          let: { districtId: { $toInt: "$address.district" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
+          as: "districtInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "countries",
+          let: { countryId: { $toInt: "$address.country" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          as: "countryInfo",
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          entity_id: 1,
+          entity_type: 1,
+          designation: 1,
+          username: 1,
+          email: 1,
+          phone_number: 1,
+          employee_status: 1,
+          aadhar_number: 1,
+          pan_number: 1,
+          profile_picture: 1,
+          pan_image: 1,
+          aadhar_image: 1,
+          address: {
+            _id: "$address._id",
+            street_address: "$address.street_address",
+            city: { $arrayElemAt: ["$cityInfo.name", 0] },
+            state: { $arrayElemAt: ["$stateInfo.name", 0] },
+            district: { $arrayElemAt: ["$districtInfo.name", 0] },
+            pincode: "$address.pincode",
+            country: { $arrayElemAt: ["$countryInfo.name", 0] },
+          },
+        },
+      },
+    ]);
+
+    if (!employeeWithAddress || employeeWithAddress.length === 0) {
       throw new CustomError(
         "Employee not found",
         HTTP_STATUS_CODE.NOT_FOUND,
@@ -380,7 +542,7 @@ export const updateEmployee = async (req: Request, res: Response) => {
     sendSuccessResponse(
       res,
       "Employee updated successfully",
-      updatedEmployee,
+      employeeWithAddress[0], // Send the first element of the array
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {

@@ -7,9 +7,8 @@ import {
   sendErrorResponse,
   sendSuccessResponse,
 } from "../../lib/helpers/responseHelper";
-import Designation from "../../models/designation/DesignationModel";
 import Role from "../../models/users/RolesModels";
-
+import Designation from "../../models/designation/designationModel";
 
 export const createDesignation = async (req: Request, res: Response) => {
   try {
@@ -79,13 +78,30 @@ export const createDesignation = async (req: Request, res: Response) => {
 
 
 
+// Backend controller
 export const getAllDesignations = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string)?.trim() || '';
+    const status = req.query.status as string;
+    
     const startIndex = (page - 1) * limit;
-    const total = await Designation.countDocuments({});
-    const designations = await Designation.find().skip(startIndex).limit(limit);
+    
+    // Build query object
+    const query: any = {};
+    if (search) {
+      query.designation_name = { $regex: search, $options: 'i' }; // Case-insensitive search
+    }
+    if (status && status !== 'all') {
+      query.status = status === 'active' ? true : false;
+    }
+
+    const total = await Designation.countDocuments(query);
+    const designations = await Designation.find(query)
+      .skip(startIndex)
+      .limit(limit)
+      .sort({ createdAt: -1 }); // Optional: sort by creation date
 
     const pagination = {
       currentPage: page,
@@ -184,62 +200,97 @@ export const toggleDesignationStatus = async (req: Request, res: Response) => {
     );
   }
 };
-export const updateDesignation = async (req: Request, res: Response) => {
+export const updateDesignation = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
     const { designation, created_by, updated_by } = req.body;
 
-    // Check if the designation exists
+
+ 
     const existingDesignation = await Designation.findById(id);
+    console.log("🔍 Existing Designation:", existingDesignation);
+
     if (!existingDesignation) {
-      throw new CustomError(
-        "Designation not found",
-        HTTP_STATUS_CODE.NOT_FOUND,
-        ERROR_TYPES.NOT_FOUND_ERROR,
-        false
-      );
+   
+      res.status(HTTP_STATUS_CODE.NOT_FOUND).json({
+        status: false,
+        message: "Designation not found",
+        errorType: ERROR_TYPES.NOT_FOUND_ERROR,
+        statusCode: HTTP_STATUS_CODE.NOT_FOUND,
+      });
+      return; 
     }
 
-    // Check for duplicate designation name (excluding the current one)
     if (designation) {
       const duplicateDesignation = await Designation.findOne({
-        designation,
+        designation_name: designation,
         _id: { $ne: id },
       });
 
+   
+
       if (duplicateDesignation) {
-        throw new CustomError(
-          "Designation name already exists",
-          HTTP_STATUS_CODE.BAD_REQUEST,
-          ERROR_TYPES.BAD_REQUEST_ERROR,
-          false
-        );
+        console.error("❌ Designation already exists:", designation);
+        res.status(HTTP_STATUS_CODE.BAD_REQUEST).json({
+          status: false,
+          message: "Designation name already exists",
+          errorType: ERROR_TYPES.BAD_REQUEST_ERROR,
+          statusCode: HTTP_STATUS_CODE.BAD_REQUEST,
+        });
+        return; 
       }
     }
 
-    // Update designation with new values
+
     const updatedDesignation = await Designation.findByIdAndUpdate(
       id,
       { designation_name: designation, created_by, updated_by },
-      { new: true } // Ensures the updated document is returned
+      { new: true }
     );
 
-    // Send success response
-    sendSuccessResponse(
-      res,
-      "Designation updated successfully",
-      updatedDesignation,
-      HTTP_STATUS_CODE.OK
-    );
-  } catch (error) {
-    sendErrorResponse(
-      res,
-      error,
-      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-    );
+  
+
+    if (!updatedDesignation) {
+      res.status(HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR).json({
+        status: false,
+        message: "Failed to update designation",
+        errorType: ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE,
+        statusCode: HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      });
+      return;
+    }
+
+    res.status(HTTP_STATUS_CODE.OK).json({
+      status: true,
+      message: "Designation updated successfully",
+      data: updatedDesignation,
+      statusCode: HTTP_STATUS_CODE.OK,
+    });
+  } catch (error: any) {
+    console.error("🔥 Error updating designation:", error);
+
+
+    if (error.code === 11000 || error.message.includes("E11000")) {
+     
+      res.status(HTTP_STATUS_CODE.BAD_REQUEST).json({
+        status: false,
+        message: "Designation name already exists",
+        errorType: ERROR_TYPES.BAD_REQUEST_ERROR,
+        statusCode: HTTP_STATUS_CODE.BAD_REQUEST,
+      });
+      return;
+    }
+
+
+    res.status(HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR).json({
+      status: false,
+      message: error?.message || "Internal Server Error",
+      errorType: ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE,
+      statusCode: HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+    });
   }
 };
+
 export const deleteDesignation = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
