@@ -1,3 +1,5 @@
+
+
 import mongoose, { Document, Model, Schema } from "mongoose";
 import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
 
@@ -5,11 +7,13 @@ export interface IOrgEmployeeManagement extends Document, CommonDBInterface {
   entity_id: mongoose.Types.ObjectId;
   employee_id: mongoose.Types.ObjectId;
   designation: mongoose.Types.ObjectId;
-  entity_type: String;
+  slug: string;
+
+  entity_type: string;
   username: string;
   email: string;
   phone_number: string;
-  address_id: mongoose.Types.ObjectId;
+  address_id: mongoose.Types.ObjectId[];
   role: string;
   employee_status: string;
   aadhar_number: string;
@@ -61,9 +65,44 @@ export const OrgEmployeeManagementSchema: Schema =
     { timestamps: true }
   );
 
-const OrgEmployeeManagement: Model<IOrgEmployeeManagement> =
-  mongoose.model<IOrgEmployeeManagement>(
-    "OrgEmployeeManagement",
-    OrgEmployeeManagementSchema
-  );
+OrgEmployeeManagementSchema.pre<IOrgEmployeeManagement>("save", async function (next) {
+  if (!this.isModified("username") && this.slug) {
+    return next();
+  }
+
+  let baseSlug = this.username
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  let slug = baseSlug;
+  let count = 0;
+  let slugExists = true;
+
+  while (slugExists) {
+    const slugToCheck = count === 0 ? slug : `${baseSlug}-${count}`;
+    const OrgEmployee = mongoose.model("OrgEmployeeManagement");
+    const existing = await OrgEmployee.findOne({
+      slug: slugToCheck,
+      _id: { $ne: this._id }, // Avoid checking against itself
+    });
+
+    if (!existing) {
+      slug = slugToCheck;
+      slugExists = false;
+    } else {
+      count++;
+    }
+  }
+
+  this.slug = slug;
+  next();
+});
+
+const OrgEmployeeManagement: Model<IOrgEmployeeManagement> = mongoose.model<IOrgEmployeeManagement>(
+  "OrgEmployeeManagement",
+  OrgEmployeeManagementSchema
+);
+
 export default OrgEmployeeManagement;
+
