@@ -1,5 +1,3 @@
-import { get } from "sortablejs";
-import { getUserNotifications } from "../controllers/notification/notificationController";
 
 export const apiConfig = {
   baseAPIUrl: `/api/v1`,

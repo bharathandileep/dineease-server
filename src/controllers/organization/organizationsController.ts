@@ -923,7 +923,6 @@ export const handleGetUserOrganizations = async (
         $match: {
           user_id: new mongoose.Types.ObjectId(userId),
           is_deleted: false,
-          isapproved: "approved",
         },
       },
       {

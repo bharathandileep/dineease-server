@@ -1,8 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
-import { string } from "joi";
-import { strict } from "assert";
-import slugify from "slugify";
 
 export interface IOrganization extends Document, CommonDBInterface {
   user_id: mongoose.Types.ObjectId;
