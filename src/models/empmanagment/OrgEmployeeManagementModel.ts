@@ -22,50 +22,48 @@ export interface IOrgEmployeeManagement extends Document, CommonDBInterface {
   pan_image: string;
   aadhar_image: string;
 }
-
-export const OrgEmployeeManagementSchema: Schema = new Schema<IOrgEmployeeManagement>(
-  {
-    entity_id: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      refPath: "entity_type",
-    },
-    entity_type: {
-      type: String,
-      required: true,
-      enum: ["Kitchen", "Organization", "admin"],
-    },
-    designation: {
-      type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      ref: "designation",
-    },
-    slug: { type: String, unique: true },
-
-    username: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    phone_number: { type: String, required: true },
-    address_id: [
-      {
+export const OrgEmployeeManagementSchema: Schema =
+  new Schema<IOrgEmployeeManagement>(
+    {
+      entity_id: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: "Address",
         required: true,
+        refPath: "entity_type",
       },
-    ],
-    role: { type: String },
-    employee_status: { type: String, required: true },
-    aadhar_number: { type: String, required: true },
-    pan_number: { type: String, required: true },
-    pan_image: { type: String, default: null },
-    aadhar_image: { type: String, required: true },
-    profile_picture: { type: String, default: null },
-    is_deleted: {
-      type: Boolean,
-      default: false,
+      entity_type: {
+        type: String,
+        required: true,
+        enum: ["Kitchen", "Organization", "Admin"],
+      },
+      designation: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: "designation",
+      },
+      username: { type: String, required: true },
+      email: { type: String, required: true, unique: true },
+      phone_number: { type: String, required: true },
+      address_id: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Address",
+          required: true,
+        },
+      ],
+      role: { type: String },
+      employee_status: { type: String, required: true },
+      aadhar_number: { type: String, required: true },
+      pan_number: { type: String, required: true },
+      pan_image: { type: String, default: null },
+      aadhar_image: { type: String, required: true },
+      profile_picture: { type: String, default: null },
+      is_deleted: {
+        type: Boolean,
+        default: false,
+      },
     },
-  },
-  { timestamps: true }
-);
+    { timestamps: true }
+  );
 
 OrgEmployeeManagementSchema.pre<IOrgEmployeeManagement>("save", async function (next) {
   if (!this.isModified("username") && this.slug) {

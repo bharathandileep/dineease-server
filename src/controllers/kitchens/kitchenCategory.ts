@@ -10,7 +10,7 @@ import kitchenCategory from "../../models/kitchen/KitchenCategoryModel";
 import mongoose from "mongoose";
 import kitchenSubcategory from "../../models/kitchen/KitchenSubCategorymodel";
 
-// Create a new category
+
 export const kitchenCreateCategory = async (req: Request, res: Response) => {
   try {
     const { category } = req.body;
@@ -65,13 +65,13 @@ export const kitchenGetAllCategories = async (req: Request, res: Response) => {
     const status = req.query.status as string;
     const startIndex = (page - 1) * limit;
 
-    // Build query object
+
     const query: any = {};
     if (search) {
-      query.category = { $regex: search, $options: "i" }; // Case-insensitive search on category field
+      query.category = { $regex: search, $options: "i" }; 
     }
     if (status && status !== "all") {
-      query.status = status === "active" ? true : false; // Boolean status filter
+      query.status = status === "active" ? true : false; 
     }
 
 
@@ -216,7 +216,7 @@ export const kitchenUpdateCategory = async (req: Request, res: Response) => {
   }
 };
 
-// Delete category
+
 export const kitchenDeleteCategory = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

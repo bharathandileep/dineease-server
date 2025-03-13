@@ -17,11 +17,15 @@ export const apiConfig = {
     forgotPassword: "/admin/forgot-password",
     verifyForgotOtp: "/admin/verify-password",
     updatePassword: "/admin/update-password",
-    
-    userLogins:"/access/login",
-    userRegister:"/access/register"
+
+    userLogins: "/access/login",
+    userRegister: "/access/register",
   },
-kitchens: {
+  admin: {
+    adminApproveOrganization: "/approve/organization/:id",
+    adminApproveKitchen: "/approve/kitchen/:id",
+  },
+  kitchens: {
     newkitchens: "/new",
     updatekitchens: "/update/:id",
     deletekitchens: "/delete/:kitchenId",
@@ -32,26 +36,21 @@ kitchens: {
    
 
 
-
     createCategory: "/categories",
-    getAllCategories: "/categories/all",
+    getallCategories: "/categories/all",
     updateCategory: "/categories/:id",
     deleteCategory: "/categories/:id",
     toggleCategoryStatus: "/categories/:id/toggle-status",
     
 
-    getAllSubCategories: "/subcategories/all",
+    getallSubCategories: "/subcategories/all",
     createSubcategory: "/subcategories",
     getSubcategoriesByCategory: "/categories/:categoryId/subcategories",
     getSubcategoryById: "/subcategories/:id",
     updateSubcategory: "/subcategories/:id",
     deleteSubcategory: "/subcategories/:id",
     toggleSubcategoryStatus: "/subcategories/:id/toggle-status",
-    
-    getUnapprovedKitchens:"/requested/all",
-    getApprovedkitchens:"/approve/:id",
-
-
+    getUnapprovedKitchens: "/requested/all",
   },
 
   menu: {
@@ -73,7 +72,7 @@ kitchens: {
     createItem: "/allmenuitems",
     getItemById: "/allmenuitems/:id",
     listItems: "/allmenuitems",
-    updateItem: "/allmenuitems/:id", 
+    updateItem: "/allmenuitems/:id",
     deleteItem: "/allmenuitems/:id",
     // changeItemStatus:"/allmenuitems/:id/status"
     changeItemStatus: "/allmenuitems/:id/status",
@@ -87,8 +86,8 @@ kitchens: {
     deleteOrganization: "/delete/:orgId",
     getAllOrganization: "/all",
     getOrganizationById: "/:orgId",
-    toggleOrganizationStatus:"/status/:id",
-    handleGetUserApprovedOrganizations: "/org/approved",
+    toggleOrganizationStatus: "/status/:id",
+    handleGetUserOrganizations: "/user/get-all",
 
     createCategory: "/categories",
     getAllCategories: "/categories/all",
@@ -105,11 +104,8 @@ kitchens: {
     toggleSubcategoryStatus: "/subcategories/:id/toggle-status",
     getAllCategoriesByStatus: "/category/status",
 
-    getUnapprovedOrganisations:"/requested/all",
-    getApprovedOrganisations:"/approve/:id",
-    
-    
-
+    getUnapprovedOrganisations: "/requested/all",
+    approveOrganization: "/approve/:id",
   },
   designation: {
     createDesignation: "/designations",
@@ -134,12 +130,13 @@ kitchens: {
     updateOrgEmployee: "/orgemployee/:id",
     deleteOrgEmployee: "/orgemployee/:id",
     toggleOrgEmployeeStatus: "/orgemployee/:id/toggle-status",
+    getEmployeesOrg: "/employee/org",
   },
-  addressDetails:{
-     getAllCountries: "/allcountries",
+  addressDetails: {
+    getAllCountries: "/allcountries",
     getStatesByCountry: "/states/:countryName",
     getCitiesByState: "/cities/:stateName",
-    getDistrictsByState:"/districts/:stateId",
+    getDistrictsByState: "/districts/:stateId",
   },
 
   kitchenMenu: {

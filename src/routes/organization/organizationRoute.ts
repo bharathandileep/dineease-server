@@ -2,7 +2,7 @@ import express, { Application, Router } from "express";
 import { apiConfig } from "../../config/endpoint ";
 import upload from "../../lib/helpers/uploadMiddleware";
 import {
-  handleApproveorganisation,
+ // handleApproveorganisation,
   // handleApproveOrganization,
   // handleApproveOrganization,
   handleCreateNewOrganisation,
@@ -10,7 +10,7 @@ import {
   handleGetByIdOrganisations,
   handleGetOrganisations,
   handleGetUnapprovedOrganisations,
-  handleGetUserApprovedOrganizations,
+  handleGetUserOrganizations,
   handleUpdateOrganisations,
   organizationToggleStatus,
 } from "../../controllers/organization/organizationsController";
@@ -39,7 +39,8 @@ router.post(
     { name: "organizationLogo", maxCount: 1 },
     { name: "panCardImage", maxCount: 1 },
     { name: "gstCertificateImage", maxCount: 1 },
-  ]),authorizationAccess,
+  ]),
+  authorizationAccess,
   handleCreateNewOrganisation
 );
 router.get(
@@ -68,9 +69,9 @@ router.get(
   organizationToggleStatus
 );
 router.get(
-  `${apiConfig.organization.handleGetUserApprovedOrganizations}`,
+  `${apiConfig.organization.handleGetUserOrganizations}`,
   authorizationAccess,
-  handleGetUserApprovedOrganizations
+  handleGetUserOrganizations
 );
 
 
@@ -113,5 +114,5 @@ router.get(
 );
 
 router.get(`${apiConfig.organization.getUnapprovedOrganisations}`,handleGetUnapprovedOrganisations)
-router.patch(`${apiConfig.organization.getApprovedOrganisations}`, handleApproveorganisation);
+//router.patch(`${apiConfig.organization.getApprovedOrganisations}`, handleApproveorganisation);
 export default router;

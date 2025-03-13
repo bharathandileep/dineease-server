@@ -17,13 +17,14 @@ import organizationRoute from "./routes/organization/organizationRoute";
 import menuCategoryRoutes from "./routes/kitchen/categoryRoutes";
 import menuSubCategoryRoutes from "./routes/kitchen/subcategoryRoutes";
 import designationRoutes from "./routes/designation/designationRoutes";
-import EmployeeManagementRoutes from "./routes/empmanagment/EmployeeManagementRoutes";
 import OrgEmployeeManagementRoutes from "./routes/empmanagment/OrgEmployeeManagementRoutes";
+import adminControlRoutes from "./routes/admin/adminRoute";
 import menuitemsRoutes from "./routes/menuitems/menuitemsRoutes";
 import kitchensMenuRoutes from "./routes/kitchen/kitchensMenuRoutes";
 import { clientOrigin } from "./config/environment";
 import userLoginsRoutes from "./routes/auth/loginsRoute";
 import notificationRoutes from "./routes/notification/notificationRoutes"
+import EmployeeManagementRoutes from "./routes/empmanagment/EmployeeManagementRoutes";
 
 export const app: Application = Express();
 const server = http.createServer(app); // Create an HTTP server
@@ -47,8 +48,10 @@ app.use(
 );
 
 // Routes
+ 
 app.use(`${apiConfig.baseAPIUrl}/auth`, authRoute);
 app.use(`${apiConfig.baseAPIUrl}/user`, userLoginsRoutes);
+app.use(`${apiConfig.baseAPIUrl}/admin`, adminControlRoutes);
 app.use(`${apiConfig.baseAPIUrl}/kitchens`, kitchensRoute);
 app.use(`${apiConfig.baseAPIUrl}/menu-category`, menuCategoryRoutes);
 app.use(`${apiConfig.baseAPIUrl}/sub-menu-category`, menuSubCategoryRoutes);
@@ -107,4 +110,4 @@ io.on("connection", (socket) => {
 });
 
 // Export the server and io instance for use in other modules
-export { server, io };
+export { server, io }; 
