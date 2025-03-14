@@ -2,7 +2,7 @@ import Express, { Application, NextFunction } from "express";
 import { errorHandler } from "./middleware/globelErrorHandler";
 import cors from "cors";
 import cookieParser from "cookie-parser";
- 
+
 import { apiConfig } from "./config/endpoint ";
 import { CustomError } from "./lib/errors/customError";
 import { HTTP_STATUS_CODE } from "./lib/constants/httpStatusCodes";
@@ -26,6 +26,7 @@ import EmployeeManagementRoutes from "./routes/empmanagment/employeeManagementRo
  
  
 export const app: Application = Express();
+
  
 // Middleware
 app.use(Express.json());
@@ -89,4 +90,5 @@ app.use("*", (req, res, next) => {
  
 // Error handler middleware
 app.use(errorHandler);
+
  

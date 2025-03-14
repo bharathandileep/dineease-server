@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
- 
+
 export interface IMenu extends Document, CommonDBInterface {
   kitchen_id: mongoose.Types.ObjectId;
   items_id: {
@@ -14,7 +14,7 @@ export interface IMenu extends Document, CommonDBInterface {
     description: string;
     ingredients?: string;
   }[];
-  slug: string;
+  slug: string; 
   menu_image: string;
   delivery_time: number;
   reviews_id: mongoose.Types.ObjectId[];
@@ -74,14 +74,14 @@ export const MenuSchema: Schema<IMenu> = new Schema(
   },
   { timestamps: true }
 );
- 
+
 MenuSchema.pre<IMenu>("save", async function (next) {
   if (this.isModified("items_id")) {
     for (const item of this.items_id) {
       if (item.item_name) {
         let slug = item.item_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
         let count = 0;
- 
+
         while (await mongoose.models.Menu.exists({ "items_id.slug": slug })) {
           count++;
           slug = `${item.item_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${count}`;
@@ -95,4 +95,3 @@ MenuSchema.pre<IMenu>("save", async function (next) {
  
 const Menu: Model<IMenu> = mongoose.model<IMenu>("Menu", MenuSchema);
 export default Menu;
- 

@@ -1,8 +1,6 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
 
-
-
 export interface IItem extends Document, CommonDBInterface {
   item_name: string;
   category: mongoose.Schema.Types.ObjectId;

@@ -1,7 +1,6 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
 
-
 export interface IOrganization extends Document, CommonDBInterface {
   user_id: mongoose.Types.ObjectId;
   address_id: mongoose.Types.ObjectId;

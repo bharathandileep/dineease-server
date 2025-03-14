@@ -17,6 +17,7 @@ import mongoose from "mongoose";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
 import { generateOrganizationNotification } from "../notification/notificationController";
+import Address from "../../models/address/AddressModel";
 // import { generateOrganizationNotification } from "../notification/notificationController";
 
 
@@ -180,33 +181,10 @@ export const handleCreateNewOrganisation = async (
       });
     }
     
-    // Add notification here
-//     if (payload && payload.id) {
-//       await generateOrganizationNotification(payload.id, organizationName);
-//     }
-    
-//     return sendSuccessResponse(
-//       res,
-//       "Organization and associated details created successfully",
-//       {
-//         organization: newOrg,
-//         role: payload.role || "user"
-//       },
-//       HTTP_STATUS_CODE.OK
-//     );
-//   } catch (error) {
-//     console.error("Error creating organization:", error);
-//     sendErrorResponse(
-//       res,
-//       error,
-//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-//     );
-//   }
-// };
+
     console.log("org created successfully");
     
-    // Pass the user ID (not kitchen ID) to the notification function
+   
     await generateOrganizationNotification(payload.id, organizationName);
     
     return sendSuccessResponse(
@@ -228,28 +206,91 @@ export const handleCreateNewOrganisation = async (
   }
 };
  
- 
+
+
 
 export const handleGetOrganisations = async (req: Request, res: Response): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 4;
+    const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
-    const { search } = req.query;
- 
-    // Only get organizations that are approved
-    const matchQuery: any = { is_deleted: false, isapproved: true };
- 
-    if (search) {
-      matchQuery.organizationName = {
-        $regex: new RegExp(search as string, "i"),
-      };
+    const { search, category, subcategory } = req.query;
+
+    console.log("Query Parameters:", { page, limit, search, category, subcategory });
+
+    const matchQuery: any = { 
+      is_deleted: false, 
+      isapproved: "approved"
+    };
+
+    if (category) {
+      matchQuery.category = new mongoose.Types.ObjectId(category as string);
     }
- 
+    if (subcategory) {
+      matchQuery.subcategoryName = new mongoose.Types.ObjectId(subcategory as string);
+    }
+
+    // Search organization fields
+    if (search && typeof search === "string" && search.trim() !== "") {
+      const searchRegex = new RegExp(search.trim(), "i");
+      const searchNumber = parseInt(search.trim(), 10);
+      matchQuery.$or = [
+        { organizationName: { $regex: searchRegex } },
+        { managerName: { $regex: searchRegex } },
+        { register_number: { $regex: searchRegex } },
+        { contact_number: { $regex: searchRegex } },
+        { email: { $regex: searchRegex } },
+      ];
+    
+    if (!isNaN(searchNumber)) {
+      matchQuery.$or.push({ no_of_employees: searchNumber });
+    }
+  }
+    // Search address fields by pre-querying Address
+    let addressIds: mongoose.Types.ObjectId[] = [];
+    if (search && typeof search === "string" && search.trim() !== "") {
+      const searchRegex = new RegExp(search.trim(), "i");
+
+      // Query Addresses directly with string fields
+      const addressMatch = await Address.find({
+        is_deleted: false, // Match your Address model's default
+        $or: [
+          { street_address: { $regex: searchRegex } },
+          { city: { $regex: searchRegex } },
+          { state: { $regex: searchRegex } },
+          { district: { $regex: searchRegex } },
+          { country: { $regex: searchRegex } },
+          { pincode: { $regex: searchRegex } },
+          { landmark: { $regex: searchRegex } },
+          { address_type: { $regex: searchRegex } },
+        ],
+      }).select("_id");
+
+      addressIds = addressMatch.map((addr) => addr._id as mongoose.Types.ObjectId);
+      console.log("Matching Address IDs:", addressIds);
+
+      if (addressIds.length > 0) {
+        if (matchQuery.$or) {
+          matchQuery.$or.push({ address_id: { $in: addressIds } });
+        } else {
+          matchQuery.address_id = { $in: addressIds };
+        }
+      }
+    }
+
+    console.log("Final Match Query:", matchQuery);
+
+    const totalOrganizationsBefore = await Organization.countDocuments({
+      is_deleted: false,
+      isapproved: "approved"
+    });
+    console.log("Total Organizations Count (before):", totalOrganizationsBefore);
+
+    const totalOrganizations = await Organization.countDocuments(matchQuery);
+    console.log("Total Organizations Count (after match):", totalOrganizations);
+
     const organizations = await Organization.aggregate([
       { $match: matchQuery },
-      { $skip: skip },
-      { $limit: limit },
       {
         $lookup: {
           from: "addresses",
@@ -260,7 +301,7 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
       },
       {
         $lookup: {
-          from: "categories",
+          from: "orgcategories",
           localField: "category",
           foreignField: "_id",
           as: "categoryDetails",
@@ -268,48 +309,52 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
       },
       {
         $lookup: {
-          from: "subcategories",
+          from: "orgsubcategories",
           localField: "subcategoryName",
           foreignField: "_id",
           as: "subcategoryDetails",
         },
       },
-      { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
+      {
+        $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true },
+      },
+   
+      {
+        $lookup: {
+          from: "countries",
+          let: { countryName: "$addresses.country" },
+          pipeline: [{ $match: { $expr: { $eq: ["$name", "$$countryName"] } } }],
+          as: "countryInfo",
+        },
+      },
       {
         $lookup: {
           from: "states",
-          let: { stateId: { $toInt: "$addresses.state" } },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          let: { stateName: "$addresses.state" },
+          pipeline: [{ $match: { $expr: { $eq: ["$name", "$$stateName"] } } }],
           as: "stateInfo",
         },
       },
       {
         $lookup: {
           from: "cities",
-          let: { cityId: { $toInt: "$addresses.city" } },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
+          let: { cityName: "$addresses.city" },
+          pipeline: [{ $match: { $expr: { $eq: ["$name", "$$cityName"] } } }],
           as: "cityInfo",
         },
       },
       {
         $lookup: {
           from: "districts",
-          let: { districtId: { $toInt: "$addresses.district" } },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
+          let: { districtName: "$addresses.district" },
+          pipeline: [{ $match: { $expr: { $eq: ["$name", "$$districtName"] } } }],
           as: "districtInfo",
-        },
-      },
-      {
-        $lookup: {
-          from: "countries",
-          let: { countryId: { $toInt: "$addresses.country" } },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
-          as: "countryInfo",
         },
       },
       {
         $group: {
           _id: "$_id",
+          user_id: { $first: "$user_id" },
           organizationName: { $first: "$organizationName" },
           managerName: { $first: "$managerName" },
           register_number: { $first: "$register_number" },
@@ -317,20 +362,36 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
           email: { $first: "$email" },
           organizationLogo: { $first: "$organizationLogo" },
           no_of_employees: { $first: "$no_of_employees" },
-          categoryDetails: { $first: "$categoryDetails" },
-          subcategoryDetails: { $first: "$subcategoryDetails" },
+          slug: { $first: "$slug" },
+          status: { $first: "$status" },
+          categoryDetails: { 
+            $first: { 
+              $mergeObjects: [
+                { $arrayElemAt: ["$categoryDetails", 0] },
+                { category_name: "$categoryDetails.category" }
+              ]
+            } 
+          },
+          subcategoryDetails: { 
+            $first: { 
+              $mergeObjects: [
+                { $arrayElemAt: ["$subcategoryDetails", 0] },
+                { subcategory_name: "$subcategoryDetails.subcategoryName" }
+              ]
+            } 
+          },
           addresses: {
             $push: {
               _id: "$addresses._id",
               street_address: "$addresses.street_address",
-              city_id: "$addresses.city",
+              city: "$addresses.city", // Keep as string
               city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
-              state_id: "$addresses.state",
+              state: "$addresses.state", // Keep as string
               state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
-              district_id: "$addresses.district",
+              district: "$addresses.district", // Keep as string
               district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
               pincode: "$addresses.pincode",
-              country_id: "$addresses.country",
+              country: "$addresses.country", // Keep as string
               country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
               landmark: "$addresses.landmark",
               address_type: "$addresses.address_type",
@@ -338,10 +399,12 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
           },
         },
       },
+      { $skip: skip },
+      { $limit: limit },
     ]);
- 
-    const totalOrganizations = await Organization.countDocuments(matchQuery);
- 
+
+    console.log("Organizations after aggregation:", JSON.stringify(organizations, null, 2));
+
     sendSuccessResponse(
       res,
       "Organizations retrieved successfully!",
@@ -350,10 +413,12 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
         totalPages: Math.ceil(totalOrganizations / limit),
         currentPage: page,
         totalOrganizations,
+        hasMore: organizations.length === limit && page < Math.ceil(totalOrganizations / limit),
       },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
+    console.error("Error in handleGetOrganisations:", error);
     sendErrorResponse(
       res,
       error,
@@ -923,7 +988,6 @@ export const handleGetUserOrganizations = async (
         $match: {
           user_id: new mongoose.Types.ObjectId(userId),
           is_deleted: false,
-          isapproved: "approved",
         },
       },
       {
