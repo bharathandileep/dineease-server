@@ -96,6 +96,5 @@ MenuSchema.pre<IMenu>("save", async function (next) {
   }
   next();
 });
-
 const Menu: Model<IMenu> = mongoose.model<IMenu>("Menu", MenuSchema);
 export default Menu;
