@@ -2,8 +2,6 @@ import Express, { Application, NextFunction } from "express";
 import { errorHandler } from "./middleware/globelErrorHandler";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import http from "http"; // Import http module
-import { Server } from "socket.io"; // Import socket.io
 
 import { apiConfig } from "./config/endpoint ";
 import { CustomError } from "./lib/errors/customError";
@@ -26,15 +24,8 @@ import userLoginsRoutes from "./routes/auth/loginsRoute";
 import notificationRoutes from "./routes/notification/notificationRoutes"
 import EmployeeManagementRoutes from "./routes/empmanagment/EmployeeManagementRoutes";
 
+
 export const app: Application = Express();
-const server = http.createServer(app); // Create an HTTP server
-const io = new Server(server, {
-  cors: {
-    origin: clientOrigin, // Allow frontend to connect
-    methods: ["GET", "POST"],
-    credentials: true,
-  },
-}); // Initialize socket.io
 
 // Middleware
 app.use(Express.json());
@@ -98,16 +89,3 @@ app.use("*", (req, res, next) => {
 
 // Error handler middleware
 app.use(errorHandler);
-
-// Socket.io connection handler
-io.on("connection", (socket) => {
-  console.log("A user connected:", socket.id);
-
-  // Handle disconnection
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
-});
-
-// Export the server and io instance for use in other modules
-export { server, io }; 

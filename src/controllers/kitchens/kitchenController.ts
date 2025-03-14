@@ -1221,8 +1221,6 @@ export const handleGetUserApprovedKitchens = async (
 ): Promise<any> => {
   try {
     const userId = req.body.payload.id;
- 
-    // Validate the userId format
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return sendErrorResponse(
         res,
@@ -1235,11 +1233,8 @@ export const handleGetUserApprovedKitchens = async (
     const kitchens = await Kitchen.aggregate([
       {
         $match: {
-         
           user_id: new mongoose.Types.ObjectId(userId),
-
           is_deleted: false,
-          isapproved: "approved", 
         },
       },
       {
