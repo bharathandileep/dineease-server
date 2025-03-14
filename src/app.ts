@@ -38,6 +38,8 @@ app.use(
   })
 );
  
+// Routes
+ 
 app.use(`${apiConfig.baseAPIUrl}/auth`, authRoute);
 app.use(`${apiConfig.baseAPIUrl}/user`, userLoginsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/admin`, adminControlRoutes);
@@ -46,14 +48,14 @@ app.use(`${apiConfig.baseAPIUrl}/menu-category`, menuCategoryRoutes);
 app.use(`${apiConfig.baseAPIUrl}/sub-menu-category`, menuSubCategoryRoutes);
 app.use(`${apiConfig.baseAPIUrl}/designation`, designationRoutes);
 app.use(`${apiConfig.baseAPIUrl}/organization`, organizationRoute);
-app.use(`${apiConfig.baseAPIUrl}/employee`, OrgEmployeeManagementRoutes);
+app.use(`${apiConfig.baseAPIUrl}/employee`, EmployeeManagementRoutes);
 app.use(`${apiConfig.baseAPIUrl}/kitchens-menu`, kitchensMenuRoutes);
 app.use(`${apiConfig.baseAPIUrl}/menu-items`, menuitemsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/org-employee`, OrgEmployeeManagementRoutes);
-app.use(`${apiConfig.baseAPIUrl}/addressDetails`,addressDetailsRoutes)
-
-
-
+app.use(`${apiConfig.baseAPIUrl}/addressDetails`, addressDetailsRoutes);
+app.use(`${apiConfig.baseAPIUrl}/notification`, notificationRoutes);
+ 
+// Root route
 app.get(`/`, (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -87,5 +89,4 @@ app.use("*", (req, res, next) => {
  
 // Error handler middleware
 app.use(errorHandler);
- 
  

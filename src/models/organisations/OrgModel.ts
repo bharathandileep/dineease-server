@@ -1,7 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
-import { string } from "joi";
-import { strict } from "assert";
 
 
 export interface IOrganization extends Document, CommonDBInterface {
@@ -42,10 +40,11 @@ export const OrganizationSchema: Schema<IOrganization> =
         ref: "OrgCategory",
         required: true,
       },
-      subcategoryName: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "OrgSubcategory",
-        required: true,
+
+      subcategoryName:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"OrgSubcategory",
+        required:true,
       },
       organizationName: {
         type: String,

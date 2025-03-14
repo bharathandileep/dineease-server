@@ -61,6 +61,11 @@ router.put(
 router.delete(`${apiConfig.kitchens.deletekitchens}`, handleDeleteKitchens);
 router.get(`${apiConfig.kitchens.toggleKitchensStatus}`, kitchenToggleStatus);
 router.get(`${apiConfig.kitchens.handleGetUserApprovedKitchens}`,authorizationAccess, handleGetUserApprovedKitchens);
+ 
+ 
+ 
+ 
+ 
 
 
 
@@ -101,10 +106,10 @@ router.get(
   `${apiConfig.kitchens.getallSubCategories}`,
   kitchenGetAllSubCategories
 );
-
+ 
 router.get(`${apiConfig.kitchens.getUnapprovedKitchens}`,handleGetUnapprovedKitchens)
-
-
-export default router;
+ 
+ 
+export default router; 
  
  
