@@ -103,14 +103,17 @@ export const handleCreateNewOrganisation = async (
       category,
       subcategoryName,
     } = req.body;
-
-    const user = await User.findOne({ email });
-    if (!user) {
-      throw new CustomError(
-        "User does not exist.",
-        HTTP_STATUS_CODE.NOT_FOUND,
-        ERROR_TYPES.NOT_FOUND_ERROR
-      );
+    let userId = payload.id;
+    if (payload.role === "Admin") {
+      const user = await User.findOne({ email });
+      userId = user?._id;
+      if (!user) {
+        throw new CustomError(
+          "User does not exist.",
+          HTTP_STATUS_CODE.NOT_FOUND,
+          ERROR_TYPES.NOT_FOUND_ERROR
+        );
+      }
     }
 
     const categoryId = category ? new mongoose.Types.ObjectId(category) : null;
@@ -128,7 +131,7 @@ export const handleCreateNewOrganisation = async (
     // Create new organization with isapproved explicitly set to false
     const newOrg = await Organization.create({
       organizationName,
-      user_id: user._id,
+      user_id: userId,
       managerName,
       register_number: registerNumber,
       contact_number: contactNumber,
@@ -214,18 +217,26 @@ export const handleGetOrganisations = async (
     const skip = (page - 1) * limit;
     const { search, category, subcategory } = req.query;
 
-    console.log("Query Parameters:", { page, limit, search, category, subcategory });
+    console.log("Query Parameters:", {
+      page,
+      limit,
+      search,
+      category,
+      subcategory,
+    });
 
-    const matchQuery: any = { 
-      is_deleted: false, 
-      isapproved: "approved"
+    const matchQuery: any = {
+      is_deleted: false,
+      isapproved: "approved",
     };
 
     if (category) {
       matchQuery.category = new mongoose.Types.ObjectId(category as string);
     }
     if (subcategory) {
-      matchQuery.subcategoryName = new mongoose.Types.ObjectId(subcategory as string);
+      matchQuery.subcategoryName = new mongoose.Types.ObjectId(
+        subcategory as string
+      );
     }
 
     // Search organization fields
@@ -239,11 +250,11 @@ export const handleGetOrganisations = async (
         { contact_number: { $regex: searchRegex } },
         { email: { $regex: searchRegex } },
       ];
-    
-    if (!isNaN(searchNumber)) {
-      matchQuery.$or.push({ no_of_employees: searchNumber });
+
+      if (!isNaN(searchNumber)) {
+        matchQuery.$or.push({ no_of_employees: searchNumber });
+      }
     }
-  }
     // Search address fields by pre-querying Address
     let addressIds: mongoose.Types.ObjectId[] = [];
     if (search && typeof search === "string" && search.trim() !== "") {
@@ -264,7 +275,9 @@ export const handleGetOrganisations = async (
         ],
       }).select("_id");
 
-      addressIds = addressMatch.map((addr) => addr._id as mongoose.Types.ObjectId);
+      addressIds = addressMatch.map(
+        (addr) => addr._id as mongoose.Types.ObjectId
+      );
       console.log("Matching Address IDs:", addressIds);
 
       if (addressIds.length > 0) {
@@ -280,9 +293,12 @@ export const handleGetOrganisations = async (
 
     const totalOrganizationsBefore = await Organization.countDocuments({
       is_deleted: false,
-      isapproved: "approved"
+      isapproved: "approved",
     });
-    console.log("Total Organizations Count (before):", totalOrganizationsBefore);
+    console.log(
+      "Total Organizations Count (before):",
+      totalOrganizationsBefore
+    );
 
     const totalOrganizations = await Organization.countDocuments(matchQuery);
     console.log("Total Organizations Count (after match):", totalOrganizations);
@@ -316,12 +332,14 @@ export const handleGetOrganisations = async (
       {
         $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true },
       },
-   
+
       {
         $lookup: {
           from: "countries",
           let: { countryName: "$addresses.country" },
-          pipeline: [{ $match: { $expr: { $eq: ["$name", "$$countryName"] } } }],
+          pipeline: [
+            { $match: { $expr: { $eq: ["$name", "$$countryName"] } } },
+          ],
           as: "countryInfo",
         },
       },
@@ -345,7 +363,9 @@ export const handleGetOrganisations = async (
         $lookup: {
           from: "districts",
           let: { districtName: "$addresses.district" },
-          pipeline: [{ $match: { $expr: { $eq: ["$name", "$$districtName"] } } }],
+          pipeline: [
+            { $match: { $expr: { $eq: ["$name", "$$districtName"] } } },
+          ],
           as: "districtInfo",
         },
       },
@@ -362,21 +382,21 @@ export const handleGetOrganisations = async (
           no_of_employees: { $first: "$no_of_employees" },
           slug: { $first: "$slug" },
           status: { $first: "$status" },
-          categoryDetails: { 
-            $first: { 
+          categoryDetails: {
+            $first: {
               $mergeObjects: [
                 { $arrayElemAt: ["$categoryDetails", 0] },
-                { category_name: "$categoryDetails.category" }
-              ]
-            } 
+                { category_name: "$categoryDetails.category" },
+              ],
+            },
           },
-          subcategoryDetails: { 
-            $first: { 
+          subcategoryDetails: {
+            $first: {
               $mergeObjects: [
                 { $arrayElemAt: ["$subcategoryDetails", 0] },
-                { subcategory_name: "$subcategoryDetails.subcategoryName" }
-              ]
-            } 
+                { subcategory_name: "$subcategoryDetails.subcategoryName" },
+              ],
+            },
           },
           addresses: {
             $push: {
@@ -401,7 +421,10 @@ export const handleGetOrganisations = async (
       { $limit: limit },
     ]);
 
-    console.log("Organizations after aggregation:", JSON.stringify(organizations, null, 2));
+    console.log(
+      "Organizations after aggregation:",
+      JSON.stringify(organizations, null, 2)
+    );
 
     sendSuccessResponse(
       res,
@@ -411,7 +434,9 @@ export const handleGetOrganisations = async (
         totalPages: Math.ceil(totalOrganizations / limit),
         currentPage: page,
         totalOrganizations,
-        hasMore: organizations.length === limit && page < Math.ceil(totalOrganizations / limit),
+        hasMore:
+          organizations.length === limit &&
+          page < Math.ceil(totalOrganizations / limit),
       },
       HTTP_STATUS_CODE.OK
     );
@@ -1133,7 +1158,10 @@ export const handleAdminApproveOgaisation = async (
   }
 };
 
-export const handleSelectKitchen = async (req: Request, res: Response): Promise<any> => {
+export const handleSelectKitchen = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   try {
     const { orgId, kitchenId } = req.body;
 
@@ -1183,8 +1211,10 @@ export const handleSelectKitchen = async (req: Request, res: Response): Promise<
   }
 };
 
-
-export const handleGetSelectedKitchen = async (req: Request, res: Response): Promise<any> => {
+export const handleGetSelectedKitchen = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   try {
     const { orgId } = req.params;
 
