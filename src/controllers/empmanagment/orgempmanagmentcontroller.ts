@@ -147,9 +147,9 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
         false
       );
     }
-
     validateMogooseObjectId(entity_id);
-
+    console.log(req.body)
+    
     // Fetch and validate designation
     const existingDesignation = await Designation.findById(designation);
     if (!existingDesignation) {
