@@ -8,11 +8,18 @@ import {
   generateLoginOtp,
   handleLoginOtpVerification,
   handleGenerateAccessToken,
+  checkUserExistence,
+  createUser,
 } from "../../controllers/auth/authController";
 import { otpRateLimiter } from "../../middleware/rateLimiter";
-import { generateForgotPassOtp, handleAdminLogin, handleForgotPasswordVerification, handleRegisterAdmin, handleUpdatePassword } from "../../controllers/auth/adminController";
+import {
+  generateForgotPassOtp,
+  handleAdminLogin,
+  handleForgotPasswordVerification,
+  handleRegisterAdmin,
+  handleUpdatePassword,
+} from "../../controllers/auth/adminController";
 import { refreshTokenMiddleware } from "../../middleware/TokenValidation";
-
 
 const router = express.Router();
 
@@ -27,11 +34,19 @@ router.post(`${apiConfig.auth.verifyOtp}`, handleAuthenticateOtp);
 router.post(`${apiConfig.auth.verifyLoginOtp}`, handleLoginOtpVerification);
 router.post(`${apiConfig.auth.adminRegister}`, handleRegisterAdmin);
 router.post(`${apiConfig.auth.adminLogin}`, handleAdminLogin);
-router.post(`${apiConfig.auth.accessToken}`, refreshTokenMiddleware, handleGenerateAccessToken);
+router.post(
+  `${apiConfig.auth.accessToken}`,
+  refreshTokenMiddleware,
+  handleGenerateAccessToken
+);
 router.post(`${apiConfig.auth.forgotPassword}`, generateForgotPassOtp);
-router.post(`${apiConfig.auth.verifyForgotOtp}`, handleForgotPasswordVerification);
+router.post(
+  `${apiConfig.auth.verifyForgotOtp}`,
+  handleForgotPasswordVerification
+);
 router.post(`${apiConfig.auth.updatePassword}`, handleUpdatePassword);
 
-
+router.post(`${apiConfig.auth.checkUserExistence}`, checkUserExistence);
+router.post(`${apiConfig.auth.createNewUser}`, createUser);
 
 export default router;

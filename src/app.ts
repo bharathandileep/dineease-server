@@ -21,9 +21,8 @@ import menuitemsRoutes from "./routes/menuitems/menuitemsRoutes";
 import kitchensMenuRoutes from "./routes/kitchen/kitchensMenuRoutes";
 import { clientOrigin } from "./config/environment";
 import userLoginsRoutes from "./routes/auth/loginsRoute";
-import notificationRoutes from "./routes/notification/notificationRoutes"
+import notificationRoutes from "./routes/notification/notificationRoutes";
 import EmployeeManagementRoutes from "./routes/empmanagment/EmployeeManagementRoutes";
-
 
 export const app: Application = Express();
 
@@ -39,7 +38,7 @@ app.use(
 );
 
 // Routes
- 
+
 app.use(`${apiConfig.baseAPIUrl}/auth`, authRoute);
 app.use(`${apiConfig.baseAPIUrl}/user`, userLoginsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/admin`, adminControlRoutes);

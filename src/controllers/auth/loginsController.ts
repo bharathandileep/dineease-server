@@ -69,7 +69,6 @@ export const handleRegisterUser = async (req: Request, res: Response) => {
     );
   }
 };
-
 export const handleUserLogin = async (req: Request, res: Response) => {
   try {
     const { username, password } = req.body;
@@ -125,7 +124,6 @@ export const handleUserLogin = async (req: Request, res: Response) => {
     );
   }
 };
-
 export const registerUser = async (
     email: string,
     username: string,
@@ -161,3 +159,4 @@ export const registerUser = async (
     });
     await newUser.save();
 }; 
+

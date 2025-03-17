@@ -29,11 +29,11 @@ router.get(
 );
 router.put(
   `${apiConfig.kitchenMenu.updateKitchenMenu}`,
-  upload.fields([{ name: "custom_image", maxCount: 1 }]),
+  upload.fields([{ name: "custom_image", maxCount: 1 }]), 
   updateMenuItem
 );
 //router.get("/kitchen/:kitchenId/menu-items", getMenuItemsByKitchen);
 
 
 export default router;
-              
+               
