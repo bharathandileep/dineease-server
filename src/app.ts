@@ -2,8 +2,6 @@ import Express, { Application, NextFunction } from "express";
 import { errorHandler } from "./middleware/globelErrorHandler";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import http from "http"; // Import http module
-import { Server } from "socket.io"; // Import socket.io
 
 import { apiConfig } from "./config/endpoint ";
 import { CustomError } from "./lib/errors/customError";
@@ -24,18 +22,12 @@ import kitchensMenuRoutes from "./routes/kitchen/kitchensMenuRoutes";
 import { clientOrigin } from "./config/environment";
 import userLoginsRoutes from "./routes/auth/loginsRoute";
 import notificationRoutes from "./routes/notification/notificationRoutes"
-import EmployeeManagementRoutes from "./routes/empmanagment/EmployeeManagementRoutes";
-
+import EmployeeManagementRoutes from "./routes/empmanagment/employeeManagementRoutes";
+ 
+ 
 export const app: Application = Express();
-const server = http.createServer(app); // Create an HTTP server
-const io = new Server(server, {
-  cors: {
-    origin: clientOrigin, // Allow frontend to connect
-    methods: ["GET", "POST"],
-    credentials: true,
-  },
-}); // Initialize socket.io
 
+ 
 // Middleware
 app.use(Express.json());
 app.use(Express.urlencoded({ extended: true }));
@@ -46,7 +38,7 @@ app.use(
     credentials: true,
   })
 );
-
+ 
 // Routes
  
 app.use(`${apiConfig.baseAPIUrl}/auth`, authRoute);
@@ -63,7 +55,7 @@ app.use(`${apiConfig.baseAPIUrl}/menu-items`, menuitemsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/org-employee`, OrgEmployeeManagementRoutes);
 app.use(`${apiConfig.baseAPIUrl}/addressDetails`, addressDetailsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/notification`, notificationRoutes);
-
+ 
 // Root route
 app.get(`/`, (req, res) => {
   res.send(`
@@ -85,7 +77,7 @@ app.get(`/`, (req, res) => {
     </html>
   `);
 });
-
+ 
 // 404 Error handler for all non-existing routes
 app.use("*", (req, res, next) => {
   throw new CustomError(
@@ -95,19 +87,8 @@ app.use("*", (req, res, next) => {
     false
   );
 });
-
+ 
 // Error handler middleware
 app.use(errorHandler);
 
-// Socket.io connection handler
-io.on("connection", (socket) => {
-  console.log("A user connected:", socket.id);
-
-  // Handle disconnection
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
-  });
-});
-
-// Export the server and io instance for use in other modules
-export { server, io }; 
+ 

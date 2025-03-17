@@ -1,7 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
-import { boolean } from "joi";
-import slugify from "slugify";
 
 export interface IMenu extends Document, CommonDBInterface {
   kitchen_id: mongoose.Types.ObjectId;
@@ -16,14 +14,13 @@ export interface IMenu extends Document, CommonDBInterface {
     description: string;
     ingredients?: string;
   }[];
-  slug: string; // Add slug field
+  slug: string; 
   menu_image: string;
-  // item_type: "vegetarian" | "non-vegetarian" | "vegan" | "mixed";
   delivery_time: number;
   reviews_id: mongoose.Types.ObjectId[];
   is_deleted: boolean;
 }
-
+ 
 export const MenuSchema: Schema<IMenu> = new Schema(
   {
     kitchen_id: {
@@ -41,8 +38,7 @@ export const MenuSchema: Schema<IMenu> = new Schema(
         item_name: {
           type: String,
         },
-        slug: { type: String, unique: true }, // Slug field
-
+        slug: { type: String, unique: true },
         item_price: {
           type: String,
         },
@@ -78,24 +74,24 @@ export const MenuSchema: Schema<IMenu> = new Schema(
   },
   { timestamps: true }
 );
+
 MenuSchema.pre<IMenu>("save", async function (next) {
   if (this.isModified("items_id")) {
     for (const item of this.items_id) {
       if (item.item_name) {
-        let slug = slugify(item.item_name, { lower: true, strict: true });
+        let slug = item.item_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        let count = 0;
 
-        // Check if the slug already exists
-        const count = await (this.constructor as typeof mongoose.Model).countDocuments({ "items_id.slug": slug });
-        if (count > 0) {
-          slug = `${slug}-${Math.random().toString(36).substring(2, 7)}`; // Append a random string to make it unique
+        while (await mongoose.models.Menu.exists({ "items_id.slug": slug })) {
+          count++;
+          slug = `${item.item_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${count}`;
         }
-
         item.slug = slug;
       }
     }
   }
   next();
 });
-
+ 
 const Menu: Model<IMenu> = mongoose.model<IMenu>("Menu", MenuSchema);
 export default Menu;
