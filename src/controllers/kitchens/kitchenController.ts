@@ -1341,7 +1341,7 @@ export const handleGetUserApprovedKitchens = async (
   res: Response
 ): Promise<any> => {
   try {
-    const userId = req.body.payload.id;
+    const userId = req.body.payload.id; 
     if (!mongoose.Types.ObjectId.isValid(userId)) {
       return sendErrorResponse(
         res,

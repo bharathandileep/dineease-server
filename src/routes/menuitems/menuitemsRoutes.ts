@@ -32,5 +32,4 @@ router.put("/allmenuitems/:id", upload.fields([
 router.delete(`${apiConfig.menu.deleteItem}`,deleteItem);
 router.patch(`${apiConfig.menu.changeItemStatus}`,changeItemStatus)
 router.get(`${apiConfig.menu.getMenuItemsByKitchen}`,getMenuItemsByKitchen)
-
 export default router;

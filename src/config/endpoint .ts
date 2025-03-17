@@ -99,6 +99,11 @@ export const apiConfig = {
 
     getUnapprovedOrganisations: "/requested/all",
     approveOrganization: "/approve/:id",
+
+    selectKitchen:"/select",
+    getSelectedKitchen:"/:orgId/selcted-kitchens",
+
+
   },
   designation: {
     createDesignation: "/designations",
