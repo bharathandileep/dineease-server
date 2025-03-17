@@ -1,13 +1,16 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
+import { number } from "joi";
 
 export interface IMenu extends Document, CommonDBInterface {
   kitchen_id: mongoose.Types.ObjectId;
   items_id: {
     item_id: mongoose.Types.ObjectId;
     item_name: string;
-    item_price?: string;
+    // item_price?: string;
     slug?: string;
+    price_user?:number;
+    price_organization?:number;
     custom_image?: string;
     isAvailable: boolean;
     reviews_id: any[];
@@ -39,9 +42,7 @@ export const MenuSchema: Schema<IMenu> = new Schema(
           type: String,
         },
         slug: { type: String, unique: true },
-        item_price: {
-          type: String,
-        },
+      
         isAvailable: {
           type: Boolean,
           default: true,
@@ -56,6 +57,15 @@ export const MenuSchema: Schema<IMenu> = new Schema(
         custom_image: {
           type: String,
         },
+        
+          price_user:{
+            type:Number,
+            default:0,
+          } ,
+          price_organization:{
+            type:Number,
+            default:0,
+          },
         reviews_id: [
           {
             type: mongoose.Schema.Types.ObjectId,

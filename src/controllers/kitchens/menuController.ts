@@ -14,6 +14,7 @@ import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
 import { Console } from "console";
 
 
+
 export const addMenuItems = async (req: Request, res: Response) => {
   try {
     const kitchen_id = req.params.id;
@@ -44,10 +45,14 @@ export const addMenuItems = async (req: Request, res: Response) => {
         kitchen_id,
         items_id: [],
         is_deleted: false,
+        menu_image: "", // Default value for menu_image
+        delivery_time: 0, // Default value for delivery_time
+        reviews_id: [], // Default value for reviews_id
       });
     }
+
     for (const item of items) {
-      const { itemId, image, description, name } = item;
+      const { itemId, image, description, name, price_user, price_organization, ingredients } = item;
 
       if (!itemId) {
         throw new CustomError(
@@ -68,7 +73,6 @@ export const addMenuItems = async (req: Request, res: Response) => {
         );
       }
 
-      // Check if item already exists in the menu
       const itemExists = existingMenu.items_id.some(
         (menuItem) => menuItem.item_id.toString() === itemId
       );
@@ -76,21 +80,25 @@ export const addMenuItems = async (req: Request, res: Response) => {
       if (!itemExists) {
         existingMenu.items_id.push({
           item_id: new mongoose.Types.ObjectId(itemId),
+          item_name: name,
           custom_image: image,
           isAvailable: true,
           description,
-          reviews_id: [],
-          item_name: name,
+          ingredients: ingredients || [],
+          price_user: price_user || 0, 
+          price_organization: price_organization || 0, 
+          reviews_id: [], 
         });
       }
     }
+
     await existingMenu.save();
 
     return sendSuccessResponse(
       res,
       "Items added to menu successfully",
       existingMenu,
-      HTTP_STATUS_CODE.OK 
+      HTTP_STATUS_CODE.OK
     );
   } catch (error) {
     sendErrorResponse(
@@ -273,9 +281,11 @@ export const getMenuItemDetails = async (req: Request, res: Response) => {
       message: "Item details retrieved successfully",
       data: {
         item_id: itemDetails.item_id,
-        item_price: itemDetails.item_price,
+        //item_price: itemDetails.item_price,
         item_name: itemDetails.item_name,
         isAvailable: itemDetails.isAvailable,
+        price_user:itemDetails.price_user,
+        price_organization:itemDetails.price_organization,
         description: itemDetails.description,
         ingredients: itemDetails.ingredients,
         custom_image: itemDetails.custom_image,
@@ -379,10 +389,69 @@ export const updateMenuItem = async (req: Request, res: Response) => {
   }
 };
 
+// export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
+//   try {
+//     const { kitchenId } = req.params;
+    
+//     // Validate kitchen ID
+//     if (!mongoose.Types.ObjectId.isValid(kitchenId)) {
+//       return sendErrorResponse(
+//         res,
+//         new Error("Invalid kitchen ID format"),
+//         HTTP_STATUS_CODE.BAD_REQUEST,
+//         ERROR_TYPES.BAD_REQUEST_ERROR
+//       );
+//     }
+
+//    const menu = await Menu.findOne({
+//       kitchen_id: new mongoose.Types.ObjectId(kitchenId),
+//       is_deleted: false,
+//     })
+//       .populate({
+//         path: "items_id.item_id",
+//         select: "item_name item_price description ingredients isAvailable custom_image reviews_id",
+//       })
+//       .lean();
+
+//     if (!menu) {
+//       return sendSuccessResponse(
+//         res,
+//         "No menu found for this kitchen",
+//         [],
+//         HTTP_STATUS_CODE.OK
+//       );
+//     }
+//    res.status(HTTP_STATUS_CODE.OK).json({
+//       status: true,
+//       message: "Menu items retrieved successfully",
+//       data: {
+//         _id: menu._id,
+//         kitchen_id: menu.kitchen_id,
+//         items_id: menu.items_id, 
+//         is_deleted: menu.is_deleted,
+//         createdAt: menu.createdAt,
+//         updatedAt: menu.updatedAt,
+//         __v: menu.__v,
+//       },
+//       statusCode: HTTP_STATUS_CODE.OK,
+//       timestamp: new Date().toISOString(),
+//     });
+//   } catch (error) {
+//     return sendErrorResponse(
+//       res,
+//       error,
+//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+//     );
+//   }
+// };
+
+
+
 export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
   try {
     const { kitchenId } = req.params;
-
+    
     // Validate kitchen ID
     if (!mongoose.Types.ObjectId.isValid(kitchenId)) {
       return sendErrorResponse(
@@ -393,7 +462,10 @@ export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
       );
     }
 
-   const menu = await Menu.findOne({
+   
+    const userType = (req as any).user?.type || 'User'; 
+
+    const menu = await Menu.findOne({
       kitchen_id: new mongoose.Types.ObjectId(kitchenId),
       is_deleted: false,
     })
@@ -412,6 +484,17 @@ export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
       );
     }
 
+    // Transform the items to include only the relevant price based on user type
+    const transformedItems = menu.items_id.map(item => {
+      const price = userType === 'Organization' ? item.price_organization : item.price_user;
+      
+      return {
+        ...item,
+        display_price: price, // Add a new field that contains the appropriate price
+        price_user: undefined,
+        price_organization: undefined
+      };
+    });
     
     res.status(HTTP_STATUS_CODE.OK).json({
       status: true,
@@ -419,7 +502,7 @@ export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
       data: {
         _id: menu._id,
         kitchen_id: menu.kitchen_id,
-        items_id: menu.items_id, 
+        items_id: transformedItems, // Use the transformed items
         is_deleted: menu.is_deleted,
         createdAt: menu.createdAt,
         updatedAt: menu.updatedAt,
@@ -437,3 +520,5 @@ export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
     );
   }
 };
+
+

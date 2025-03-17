@@ -9,8 +9,10 @@ import {
   handledDeleteOrganisations,
   handleGetByIdOrganisations,
   handleGetOrganisations,
+  handleGetSelectedKitchen,
   handleGetUnapprovedOrganisations,
   handleGetUserOrganizations,
+  handleSelectKitchen,
   handleUpdateOrganisations,
   organizationToggleStatus,
 } from "../../controllers/organization/organizationsController";
@@ -115,4 +117,8 @@ router.get(
 
 router.get(`${apiConfig.organization.getUnapprovedOrganisations}`,handleGetUnapprovedOrganisations)
 //router.patch(`${apiConfig.organization.getApprovedOrganisations}`, handleApproveorganisation);
+
+router.post(`${apiConfig.organization.selectKitchen}`,handleSelectKitchen);
+
+router.get(`${apiConfig.organization.getSelectedKitchen}`,handleGetSelectedKitchen)
 export default router;
