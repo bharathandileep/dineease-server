@@ -100,7 +100,7 @@ export const handleCreateNewKitchens = async (
       );
     }
 
-
+    // Extract fields from request body
     const {
       kitchen_name,
       payload,
@@ -131,7 +131,7 @@ export const handleCreateNewKitchens = async (
       pre_ordering_options,
     } = req.body;
 
-  
+    // Parse and validate working_days
     let parsedWorkingDays = [];
     if (typeof working_days === "string") {
       try {
@@ -171,13 +171,15 @@ export const handleCreateNewKitchens = async (
         );
       }
     }
+
+    // Parse and validate pre_ordering_options
     let parsedPreOrderingOptions = [];
-    const validMealTypes = ["breakfast", "lunch", "tea", "dinner"]; 
+    const validMealTypes = ["breakfast", "lunch", "tea", "dinner"]; // Define valid meal types
     if (typeof pre_ordering_options === "string") {
       try {
         parsedPreOrderingOptions = JSON.parse(pre_ordering_options);
         parsedPreOrderingOptions = parsedPreOrderingOptions.map((option: { meal_type: string; day: any; pre_order_start_time: any; pre_order_close_time: any; delivery_time: any; status: undefined; }) => {
-
+          // Validate meal_type against enum
           if (!option.meal_type || !validMealTypes.includes(option.meal_type)) {
             throw new Error(
               `Invalid meal_type. Must be one of: ${validMealTypes.join(", ")}`
@@ -192,7 +194,7 @@ export const handleCreateNewKitchens = async (
             status: option.status !== undefined ? option.status : false,
           };
         });
-       
+        // Ensure at least one pre-ordering option is provided with a valid day
         if (parsedPreOrderingOptions.some((option: { day: any; }) => !option.day)) {
           throw new Error("All pre-ordering options must have a 'day' field");
         }
@@ -230,7 +232,7 @@ export const handleCreateNewKitchens = async (
       }
     }
 
-  
+    // Validate category and subcategory before converting to ObjectId
     const categoryId = category ? new mongoose.Types.ObjectId(category) : null;
     const subcategoryId = subcategoryName
       ? new mongoose.Types.ObjectId(subcategoryName)
@@ -314,7 +316,7 @@ export const handleCreateNewKitchens = async (
     }
     console.log("kitchen created successfully");
     
-
+    // Pass the user ID (not kitchen ID) to the notification function
     await generateKitchenNotification(payload.id, kitchen_name);
     
     return sendSuccessResponse(
@@ -337,6 +339,8 @@ export const handleCreateNewKitchens = async (
   }
 };
  
+
+
 export const handleGetKitchens = async (req: Request, res: Response): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -357,9 +361,15 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
 
     if (kitchen_status) matchQuery.kitchen_status = kitchen_status;
     if (kitchen_type) matchQuery.kitchen_type = kitchen_type;
-    if (category) matchQuery.category = new mongoose.Types.ObjectId(category as string);
-    if (subcategory) matchQuery.subcategoryName = new mongoose.Types.ObjectId(subcategory as string);
 
+    if (category) {
+      matchQuery.category = new mongoose.Types.ObjectId(category as string);
+    }
+    if (subcategory) {
+      matchQuery.subcategoryName = new mongoose.Types.ObjectId(subcategory as string);
+    }
+
+    // Search kitchen fields
     if (search && typeof search === "string" && search.trim() !== "") {
       const searchRegex = new RegExp(search.trim(), "i");
       matchQuery.$or = [
@@ -371,9 +381,11 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
       ];
     }
 
+    // Search address fields by pre-querying Address
     let addressIds: mongoose.Types.ObjectId[] = [];
     if (search && typeof search === "string" && search.trim() !== "") {
       const searchRegex = new RegExp(search.trim(), "i");
+
       const addressMatch = await Address.find({
         is_deleted: false,
         $or: [
@@ -389,6 +401,8 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
       }).select("_id");
 
       addressIds = addressMatch.map((addr) => addr._id) as mongoose.Types.ObjectId[];
+      console.log("Matching Address IDs:", addressIds);
+
       if (addressIds.length > 0) {
         if (matchQuery.$or) {
           matchQuery.$or.push({ address_id: { $in: addressIds } });
@@ -400,14 +414,17 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
 
     console.log("Final Match Query:", matchQuery);
 
+    const totalKitchensBefore = await Kitchen.countDocuments({
+      is_deleted: false,
+      isapproved: "approved"
+    });
+    console.log("Total Kitchens Count (before):", totalKitchensBefore);
+
     const totalKitchens = await Kitchen.countDocuments(matchQuery);
-    console.log("Total Kitchens Count:", totalKitchens);
+    console.log("Total Kitchens Count (after match):", totalKitchens);
 
     const kitchens = await Kitchen.aggregate([
       { $match: matchQuery },
-      { $sort: { kitchen_name: 1, _id: 1 } }, // Sort by kitchen_name, then _id for consistency
-      { $skip: skip },
-      { $limit: limit },
       {
         $lookup: {
           from: "addresses",
@@ -562,6 +579,8 @@ export const handleGetKitchens = async (req: Request, res: Response): Promise<an
           },
         },
       },
+      { $skip: skip },
+      { $limit: limit },
     ]);
 
     console.log("Kitchens after aggregation:", JSON.stringify(kitchens, null, 2));

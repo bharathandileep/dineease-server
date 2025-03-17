@@ -64,14 +64,16 @@ const validateOrganizationDetails = (data: any) => {
  
   return errors;
 };
+
+
  
 export const handleCreateNewOrganisation = async (
   req: Request,
   res: Response
 ): Promise<any> => {
   try {
-    console.log("payload", req.body.payload);
-
+    console.log("payload",req.body.payload);
+    
     const errors = validateOrganizationDetails(req.body);
     if (errors.length > 0) {
       return sendErrorResponse(
@@ -81,7 +83,7 @@ export const handleCreateNewOrganisation = async (
         ERROR_TYPES.BAD_REQUEST_ERROR
       );
     }
-
+    
     const {
       organizationName,
       payload,
@@ -104,42 +106,22 @@ export const handleCreateNewOrganisation = async (
       category,
       subcategoryName,
     } = req.body;
+    
 
-    // Uniqueness checks for PAN and GST
-    if (panNumber) {
-      const existingPan = await PanCardDetails.findOne({ pan_card_number: panNumber });
-      if (existingPan) {
-        return sendErrorResponse(
-          res,
-          "PAN card number already exists",
-          HTTP_STATUS_CODE.BAD_REQUEST,
-          ERROR_TYPES.CONFLICT_ERROR
-        );
-      }
-    }
-
-    if (gstNumber) {
-      const existingGst = await GstCertificateDetails.findOne({ gst_number: gstNumber });
-      if (existingGst) {
-        return sendErrorResponse(
-          res,
-          "GST number already exists",
-          HTTP_STATUS_CODE.BAD_REQUEST,
-          ERROR_TYPES.CONFLICT_ERROR
-        );
-      }
-    }
-
+    
     const categoryId = category ? new mongoose.Types.ObjectId(category) : null;
-    const subcategoryId = subcategoryName ? new mongoose.Types.ObjectId(subcategoryName) : null;
-
+    const subcategoryId = subcategoryName
+      ? new mongoose.Types.ObjectId(subcategoryName)
+      : null;
+    
     // Handle file uploads safely
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+    
     const organizationLogoUrl = files?.organizationLogo?.[0]?.buffer
       ? await uploadFileToCloudinary(files.organizationLogo[0].buffer)
       : null;
-
-    // Create new organization
+    
+    // Create new organization with isapproved explicitly set to false
     const newOrg = await Organization.create({
       organizationName,
       user_id: payload.id,
@@ -151,12 +133,12 @@ export const handleCreateNewOrganisation = async (
       category: categoryId,
       subcategoryName: subcategoryId,
       organizationLogo: organizationLogoUrl,
-      role: payload.role || "user",
+      role: payload.role || "user", // Provide a default if payload.role is undefined
       is_deleted: false,
     });
-
+    
     const newOrgId = newOrg._id;
-
+    
     await createAddressAndUpdateModel(Organization, newOrgId, {
       street_address: streetAddress,
       city,
@@ -168,10 +150,13 @@ export const handleCreateNewOrganisation = async (
       prepared_by_id: newOrgId,
       entity_type: "Organization",
     });
-
+    
+ 
     // Upload GST Certificate Image
-    if (files?.gstCertificateImage?.[0]?.buffer && gstNumber) {
-      const gstImageUrl = await uploadFileToCloudinary(files.gstCertificateImage[0].buffer);
+    if (files?.gstCertificateImage?.[0]?.buffer) {
+      const gstImageUrl = await uploadFileToCloudinary(
+        files.gstCertificateImage[0].buffer
+      );
       await GstCertificateDetails.create({
         prepared_by_id: newOrgId,
         entity_type: "Organization",
@@ -180,10 +165,13 @@ export const handleCreateNewOrganisation = async (
         expiry_date: expiryDate,
       });
     }
-
+    
+ 
     // Upload PAN Card Image
-    if (files?.panCardImage?.[0]?.buffer && panNumber) {
-      const panImageUrl = await uploadFileToCloudinary(files.panCardImage[0].buffer);
+    if (files?.panCardImage?.[0]?.buffer) {
+      const panImageUrl = await uploadFileToCloudinary(
+        files.panCardImage[0].buffer
+      );
       await PanCardDetails.create({
         prepared_by_id: newOrgId,
         entity_type: "Organization",
@@ -192,15 +180,18 @@ export const handleCreateNewOrganisation = async (
         pan_card_image: panImageUrl,
       });
     }
+    
 
-    console.log("Organization created successfully");
+    console.log("org created successfully");
+    
+   
     await generateOrganizationNotification(payload.id, organizationName);
-
+    
     return sendSuccessResponse(
       res,
       "Organization and associated details created successfully",
       {
-        organization: newOrg, // Fixed response key to match "organization"
+        kitchen: newOrg,
       },
       HTTP_STATUS_CODE.OK
     );
@@ -215,6 +206,9 @@ export const handleCreateNewOrganisation = async (
   }
 };
  
+
+
+
 export const handleGetOrganisations = async (req: Request, res: Response): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
@@ -247,18 +241,19 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
         { contact_number: { $regex: searchRegex } },
         { email: { $regex: searchRegex } },
       ];
-      if (!isNaN(searchNumber)) {
-        matchQuery.$or.push({ no_of_employees: searchNumber });
-      }
+    
+    if (!isNaN(searchNumber)) {
+      matchQuery.$or.push({ no_of_employees: searchNumber });
     }
-
+  }
     // Search address fields by pre-querying Address
     let addressIds: mongoose.Types.ObjectId[] = [];
     if (search && typeof search === "string" && search.trim() !== "") {
       const searchRegex = new RegExp(search.trim(), "i");
 
+      // Query Addresses directly with string fields
       const addressMatch = await Address.find({
-        is_deleted: false,
+        is_deleted: false, // Match your Address model's default
         $or: [
           { street_address: { $regex: searchRegex } },
           { city: { $regex: searchRegex } },
@@ -285,14 +280,17 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
 
     console.log("Final Match Query:", matchQuery);
 
+    const totalOrganizationsBefore = await Organization.countDocuments({
+      is_deleted: false,
+      isapproved: "approved"
+    });
+    console.log("Total Organizations Count (before):", totalOrganizationsBefore);
+
     const totalOrganizations = await Organization.countDocuments(matchQuery);
-    console.log("Total Organizations Count:", totalOrganizations);
+    console.log("Total Organizations Count (after match):", totalOrganizations);
 
     const organizations = await Organization.aggregate([
       { $match: matchQuery },
-      { $sort: { organizationName: 1, _id: 1 } }, // Stable sort by organizationName, then _id
-      { $skip: skip },
-      { $limit: limit },
       {
         $lookup: {
           from: "addresses",
@@ -320,6 +318,7 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
       {
         $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true },
       },
+   
       {
         $lookup: {
           from: "countries",
@@ -385,14 +384,14 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
             $push: {
               _id: "$addresses._id",
               street_address: "$addresses.street_address",
-              city: "$addresses.city",
+              city: "$addresses.city", // Keep as string
               city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
-              state: "$addresses.state",
+              state: "$addresses.state", // Keep as string
               state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
-              district: "$addresses.district",
+              district: "$addresses.district", // Keep as string
               district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
               pincode: "$addresses.pincode",
-              country: "$addresses.country",
+              country: "$addresses.country", // Keep as string
               country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
               landmark: "$addresses.landmark",
               address_type: "$addresses.address_type",
@@ -400,6 +399,8 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
           },
         },
       },
+      { $skip: skip },
+      { $limit: limit },
     ]);
 
     console.log("Organizations after aggregation:", JSON.stringify(organizations, null, 2));
@@ -426,6 +427,7 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
     );
   }
 };
+ 
  
 export const handleGetByIdOrganisations = async (
   req: Request,
