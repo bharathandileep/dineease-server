@@ -6,18 +6,18 @@ export interface IMenu extends Document, CommonDBInterface {
   items_id: {
     item_id: mongoose.Types.ObjectId;
     item_name: string;
-    item_price?: string;
+    price_user?: string;
+    price_organization?: string;
     slug?: string;
     custom_image?: string;
     isAvailable: boolean;
-    reviews_id: any[];
+    reviews_id: mongoose.Types.ObjectId[];
     description: string;
-    ingredients?: string;
+    ingredients?: string[];
+    menu_for?: "organisation" | "User" | "Both";
   }[];
-  slug: string; 
+  slug: string;
   menu_image: string;
-  delivery_time: number;
-  reviews_id: mongoose.Types.ObjectId[];
   is_deleted: boolean;
 }
 
@@ -37,9 +37,13 @@ export const MenuSchema: Schema<IMenu> = new Schema(
         },
         item_name: {
           type: String,
+          required: true,
         },
         slug: { type: String, unique: true },
-        item_price: {
+        price_user: {
+          type: String,
+        },
+        price_organization: {
           type: String,
         },
         isAvailable: {
@@ -55,6 +59,11 @@ export const MenuSchema: Schema<IMenu> = new Schema(
         },
         custom_image: {
           type: String,
+        },
+        menu_for: {
+          type: String,
+          enum: ["organisation", "User", "Both"],
+          default: "Both",
         },
         reviews_id: [
           {
@@ -79,12 +88,16 @@ MenuSchema.pre<IMenu>("save", async function (next) {
   if (this.isModified("items_id")) {
     for (const item of this.items_id) {
       if (item.item_name) {
-        let slug = item.item_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        let baseSlug = item.item_name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
+        let slug = baseSlug;
         let count = 0;
 
         while (await mongoose.models.Menu.exists({ "items_id.slug": slug })) {
           count++;
-          slug = `${item.item_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}-${count}`;
+          slug = `${baseSlug}-${count}`;
         }
         item.slug = slug;
       }

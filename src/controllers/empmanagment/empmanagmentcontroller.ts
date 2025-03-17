@@ -9,7 +9,6 @@ import {
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import EmployeeManagement from "../../models/empmanagment/EmployeeManagementModel";
 import Designation from "../../models/designation/designationModel";
-import Address from "../../models/address/AddressModel";
 import {
   createAddressAndUpdateModel,
   updateAddress,
@@ -72,15 +71,12 @@ export const getAllEmployees = async (req: Request, res: Response) => {
       });
     }
 
-    // Pagination stages
     pipeline.push({ $skip: skip }, { $limit: limit });
 
     const employees = await EmployeeManagement.aggregate(pipeline);
-
-    // Count total employees with the same search criteria
     const totalPipeline = [...pipeline];
-    totalPipeline.pop(); // Remove $limit
-    totalPipeline.pop(); // Remove $skip
+    totalPipeline.pop();
+    totalPipeline.pop();
     totalPipeline.push({ $count: "total" });
 
     const totalDocs = await EmployeeManagement.aggregate(totalPipeline);
@@ -106,7 +102,6 @@ export const getAllEmployees = async (req: Request, res: Response) => {
     );
   }
 };
-// Create new employee
 export const createEmployee = async (req: Request, res: Response) => {
   try {
     const {
@@ -351,7 +346,7 @@ export const getEmployeeById = async (req: Request, res: Response) => {
     sendSuccessResponse(
       res,
       "Employee retrieved successfully",
-      employee[0], // Accessing the first element since aggregate returns an array
+      employee[0], 
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {

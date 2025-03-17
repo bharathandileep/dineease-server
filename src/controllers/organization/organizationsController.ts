@@ -17,12 +17,12 @@ import mongoose from "mongoose";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
 import { generateOrganizationNotification } from "../notification/notificationController";
+import User from "../../models/users/UserModel";
 // import { generateOrganizationNotification } from "../notification/notificationController";
-
 
 const validateOrganizationDetails = (data: any) => {
   const errors: { field: string; message: string }[] = [];
- 
+
   // PAN Card Validation
   if (!data.panNumber) {
     errors.push({
@@ -35,14 +35,14 @@ const validateOrganizationDetails = (data: any) => {
       message: "Invalid PAN card number.",
     });
   }
- 
+
   if (!data.panCardUserName) {
     errors.push({
       field: "panCardUserName",
       message: "PAN card user name is required.",
     });
   }
- 
+
   // GST Validation
   if (!data.gstNumber) {
     errors.push({ field: "gstNumber", message: "GST number is required." });
@@ -53,26 +53,22 @@ const validateOrganizationDetails = (data: any) => {
   ) {
     errors.push({ field: "gstNumber", message: "Invalid GST number." });
   }
- 
+
   if (!data.expiryDate) {
     errors.push({
       field: "expiryDate",
       message: "GST expiry date is required.",
     });
   }
- 
+
   return errors;
 };
 
-
- 
 export const handleCreateNewOrganisation = async (
   req: Request,
   res: Response
 ): Promise<any> => {
   try {
-    console.log("payload",req.body.payload);
-    
     const errors = validateOrganizationDetails(req.body);
     if (errors.length > 0) {
       return sendErrorResponse(
@@ -82,7 +78,7 @@ export const handleCreateNewOrganisation = async (
         ERROR_TYPES.BAD_REQUEST_ERROR
       );
     }
-    
+
     const {
       organizationName,
       payload,
@@ -105,39 +101,47 @@ export const handleCreateNewOrganisation = async (
       category,
       subcategoryName,
     } = req.body;
-    
 
-    
+    const user = await User.findOne({ email });
+    if (!user) {
+      throw new CustomError(
+        "User does not exist.",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR
+      );
+    }
+
     const categoryId = category ? new mongoose.Types.ObjectId(category) : null;
     const subcategoryId = subcategoryName
       ? new mongoose.Types.ObjectId(subcategoryName)
       : null;
-    
+
     // Handle file uploads safely
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    
+
     const organizationLogoUrl = files?.organizationLogo?.[0]?.buffer
       ? await uploadFileToCloudinary(files.organizationLogo[0].buffer)
       : null;
-    
+
     // Create new organization with isapproved explicitly set to false
     const newOrg = await Organization.create({
       organizationName,
-      user_id: payload.id,
+      user_id: user._id,
       managerName,
       register_number: registerNumber,
       contact_number: contactNumber,
       email,
+      isapproved: payload.role === "Admin" ? "approved" : "processing",
       no_of_employees: Number(numberOfEmployees),
       category: categoryId,
       subcategoryName: subcategoryId,
       organizationLogo: organizationLogoUrl,
-      role: payload.role || "user", // Provide a default if payload.role is undefined
+      role: "user",
       is_deleted: false,
     });
-    
+
     const newOrgId = newOrg._id;
-    
+
     await createAddressAndUpdateModel(Organization, newOrgId, {
       street_address: streetAddress,
       city,
@@ -149,8 +153,7 @@ export const handleCreateNewOrganisation = async (
       prepared_by_id: newOrgId,
       entity_type: "Organization",
     });
-    
- 
+
     // Upload GST Certificate Image
     if (files?.gstCertificateImage?.[0]?.buffer) {
       const gstImageUrl = await uploadFileToCloudinary(
@@ -164,8 +167,7 @@ export const handleCreateNewOrganisation = async (
         expiry_date: expiryDate,
       });
     }
-    
- 
+
     // Upload PAN Card Image
     if (files?.panCardImage?.[0]?.buffer) {
       const panImageUrl = await uploadFileToCloudinary(
@@ -179,36 +181,8 @@ export const handleCreateNewOrganisation = async (
         pan_card_image: panImageUrl,
       });
     }
-    
-    // Add notification here
-//     if (payload && payload.id) {
-//       await generateOrganizationNotification(payload.id, organizationName);
-//     }
-    
-//     return sendSuccessResponse(
-//       res,
-//       "Organization and associated details created successfully",
-//       {
-//         organization: newOrg,
-//         role: payload.role || "user"
-//       },
-//       HTTP_STATUS_CODE.OK
-//     );
-//   } catch (error) {
-//     console.error("Error creating organization:", error);
-//     sendErrorResponse(
-//       res,
-//       error,
-//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-//     );
-//   }
-// };
-    console.log("org created successfully");
-    
-    // Pass the user ID (not kitchen ID) to the notification function
     await generateOrganizationNotification(payload.id, organizationName);
-    
+
     return sendSuccessResponse(
       res,
       "Organization and associated details created successfully",
@@ -227,25 +201,26 @@ export const handleCreateNewOrganisation = async (
     );
   }
 };
- 
- 
 
-export const handleGetOrganisations = async (req: Request, res: Response): Promise<any> => {
+export const handleGetOrganisations = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 4;
     const skip = (page - 1) * limit;
     const { search } = req.query;
- 
+
     // Only get organizations that are approved
-    const matchQuery: any = { is_deleted: false, isapproved: true };
- 
+    const matchQuery: any = { is_deleted: false, isapproved: "approved" };
+
     if (search) {
       matchQuery.organizationName = {
         $regex: new RegExp(search as string, "i"),
       };
     }
- 
+
     const organizations = await Organization.aggregate([
       { $match: matchQuery },
       { $skip: skip },
@@ -339,9 +314,9 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
         },
       },
     ]);
- 
+
     const totalOrganizations = await Organization.countDocuments(matchQuery);
- 
+
     sendSuccessResponse(
       res,
       "Organizations retrieved successfully!",
@@ -362,8 +337,7 @@ export const handleGetOrganisations = async (req: Request, res: Response): Promi
     );
   }
 };
- 
- 
+
 export const handleGetByIdOrganisations = async (
   req: Request,
   res: Response
@@ -371,7 +345,7 @@ export const handleGetByIdOrganisations = async (
   try {
     const { orgId } = req.params;
     validateMogooseObjectId(orgId);
- 
+
     const organization = await Organization.aggregate([
       {
         $match: {
@@ -517,7 +491,7 @@ export const handleGetByIdOrganisations = async (
         },
       },
     ]);
- 
+
     if (!organization || organization.length === 0) {
       throw new CustomError(
         "Organization not found",
@@ -541,7 +515,7 @@ export const handleGetByIdOrganisations = async (
     );
   }
 };
- 
+
 export const handleUpdateOrganisations = async (
   req: Request,
   res: Response
@@ -579,13 +553,13 @@ export const handleUpdateOrganisations = async (
       category,
       subcategoryName,
     } = req.body;
- 
+
     validateMogooseObjectId(orgId);
     const existingOrg = await Organization.findOne({
       _id: orgId,
       is_deleted: false,
     });
- 
+
     if (!existingOrg) {
       throw new CustomError(
         "Organization not found",
@@ -594,19 +568,19 @@ export const handleUpdateOrganisations = async (
         false
       );
     }
- 
+
     const organizationLogoUrl = files.organizationLogo
       ? await uploadFileToCloudinary(files.organizationLogo[0].buffer)
       : existingOrg.organizationLogo;
- 
+
     const panImageUrl = files.panCardImage
       ? await uploadFileToCloudinary(files.panCardImage[0].buffer)
       : req.body.panCardImage;
- 
+
     const gstImageUrl = files.gstCertificateImage
       ? await uploadFileToCloudinary(files.gstCertificateImage[0].buffer)
       : req.body.gstCertificateImage;
- 
+
     await Organization.findByIdAndUpdate(
       orgId,
       {
@@ -628,7 +602,7 @@ export const handleUpdateOrganisations = async (
       },
       { new: true }
     );
- 
+
     await updateAddress(Organization, orgId, {
       street_address: streetAddress,
       city,
@@ -640,7 +614,7 @@ export const handleUpdateOrganisations = async (
       prepared_by_id: orgId,
       entity_type: "Organization",
     });
- 
+
     // Update or create PAN details
     if (panNumber) {
       const panData = {
@@ -650,7 +624,7 @@ export const handleUpdateOrganisations = async (
         prepared_by_id: orgId,
         entity_type: "Organization",
       };
- 
+
       await PanCardDetails.findOneAndUpdate(
         {
           prepared_by_id: orgId,
@@ -660,7 +634,7 @@ export const handleUpdateOrganisations = async (
         { upsert: true, new: true }
       );
     }
- 
+
     // Update or create GST details
     if (gstNumber) {
       const gstData = {
@@ -670,7 +644,7 @@ export const handleUpdateOrganisations = async (
         prepared_by_id: orgId,
         entity_type: "Organization",
       };
- 
+
       await GstCertificateDetails.findOneAndUpdate(
         {
           prepared_by_id: orgId,
@@ -680,11 +654,11 @@ export const handleUpdateOrganisations = async (
         { upsert: true, new: true }
       );
     }
- 
+
     const updatedOrg = await Organization.findById(orgId)
       .populate("category")
       .populate("subcategoryName");
- 
+
     sendSuccessResponse(
       res,
       "Organization updated successfully!",
@@ -700,7 +674,7 @@ export const handleUpdateOrganisations = async (
     );
   }
 };
- 
+
 export const handledDeleteOrganisations = async (
   req: Request,
   res: Response
@@ -708,7 +682,7 @@ export const handledDeleteOrganisations = async (
   try {
     const { orgId } = req.params;
     validateMogooseObjectId(orgId);
- 
+
     const updatedOrg = await Organization.findByIdAndUpdate(
       orgId,
       { $set: { is_deleted: true } },
@@ -737,11 +711,8 @@ export const handledDeleteOrganisations = async (
     );
   }
 };
- 
-export const organizationToggleStatus = async (
-  req: Request,
-  res: Response
-) => {
+
+export const organizationToggleStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const organization = await Organization.findById(id);
@@ -776,7 +747,7 @@ export const organizationToggleStatus = async (
     );
   }
 };
- 
+
 export const handleGetUnapprovedOrganisations = async (
   req: Request,
   res: Response
@@ -794,7 +765,7 @@ export const handleGetUnapprovedOrganisations = async (
         $regex: new RegExp(search as string, "i"),
       };
     }
- 
+
     const organizations = await Organization.aggregate([
       { $match: matchQuery },
       { $skip: skip },
@@ -888,9 +859,9 @@ export const handleGetUnapprovedOrganisations = async (
         },
       },
     ]);
- 
+
     const totalOrganizations = await Organization.countDocuments(matchQuery);
- 
+
     sendSuccessResponse(
       res,
       "Unapproved organizations retrieved successfully!",
@@ -911,7 +882,7 @@ export const handleGetUnapprovedOrganisations = async (
     );
   }
 };
- 
+
 export const handleGetUserOrganizations = async (
   req: Request,
   res: Response
@@ -1073,8 +1044,3 @@ export const handleAdminApproveOgaisation = async (
     );
   }
 };
-
- 
-
-
-
