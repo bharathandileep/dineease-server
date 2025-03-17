@@ -20,7 +20,7 @@ export interface IMenu extends Document, CommonDBInterface {
   menu_image: string;
   is_deleted: boolean;
 }
-
+ 
 export const MenuSchema: Schema<IMenu> = new Schema(
   {
     kitchen_id: {
@@ -105,6 +105,6 @@ MenuSchema.pre<IMenu>("save", async function (next) {
   }
   next();
 });
-
+ 
 const Menu: Model<IMenu> = mongoose.model<IMenu>("Menu", MenuSchema);
 export default Menu;
