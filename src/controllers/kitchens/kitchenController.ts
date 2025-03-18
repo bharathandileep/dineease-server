@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { query, Request, Response } from "express";
 import {
   sendErrorResponse,
   sendSuccessResponse,
@@ -356,7 +356,6 @@ export const handleCreateNewKitchens = async (
     );
   }
 };
-
 export const handleGetKitchens = async (
   req: Request,
   res: Response
@@ -367,10 +366,11 @@ export const handleGetKitchens = async (
     const skip = (page - 1) * limit;
     const { search, kitchen_status, kitchen_type, category, subcategory } =
       req.query;
-
+    console.log(req.query) 
     const matchQuery: any = {
-      is_deleted: false,
-      isapproved: "approved",
+      is_deleted: false, 
+
+      isapproved: "approved",  
     };
 
     if (kitchen_status) matchQuery.kitchen_status = kitchen_status;
@@ -1111,7 +1111,6 @@ export const handleUpdateKitchensById = async (
     const populatedKitchen = await Kitchen.findById(kitchenId)
       .populate("category")
       .populate("subcategoryName");
-    // Send success response
     sendSuccessResponse(
       res,
       "Kitchen updated successfully!",
