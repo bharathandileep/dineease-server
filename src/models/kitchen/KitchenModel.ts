@@ -20,6 +20,7 @@ export interface IKitchen extends Document, CommonDBInterface {
   kitchen_image: string;
   pre_ordering_options: string[];
   user_id: mongoose.Types.ObjectId;
+  org_id:mongoose.Types.ObjectId;
   status: boolean;
   slug: string;
 }

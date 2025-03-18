@@ -8,7 +8,7 @@ import {
   sendSuccessResponse,
 } from "../../lib/helpers/responseHelper";
 import Role from "../../models/users/RolesModels";
-import Designation from "../../models/designation/designationModel";
+import Designation from "../../models/designation/DesignationModel";
 
 export const createDesignation = async (req: Request, res: Response) => {
   try {
@@ -208,8 +208,6 @@ export const updateDesignation = async (req: Request, res: Response): Promise<vo
 
  
     const existingDesignation = await Designation.findById(id);
-    console.log("🔍 Existing Designation:", existingDesignation);
-
     if (!existingDesignation) {
    
       res.status(HTTP_STATUS_CODE.NOT_FOUND).json({

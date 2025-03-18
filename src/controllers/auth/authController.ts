@@ -16,7 +16,6 @@ import {
   accessTokenSecret,
 } from "../../config/environment";
 
-
 export const handleGoogleAuth = async (
   req: Request,
   res: Response
@@ -257,6 +256,105 @@ export const handleGenerateAccessToken = async (
       "Created new token",
       accessToken,
       HTTP_STATUS_CODE.OK
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
+export const checkUserExistence = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      throw new CustomError(
+        "Email is required.",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      throw new CustomError(
+        "User does not exist.",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR
+      );
+    }
+
+    sendSuccessResponse(
+      res,
+      "User found successfully.",
+      {
+        id: user._id,
+        email: user.email,
+        fullName: user.fullName,
+        phone: user.phone_number,
+      }, 
+      HTTP_STATUS_CODE.OK
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
+export const createUser = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { email, phone, name } = req.body;
+
+    if (!email || !phone || !name) {
+      throw new CustomError(
+        "Email, phone number, and full name are required.",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
+
+    const existingUser = await User.findOne({
+      $or: [{ email }, { phone }],
+    });
+
+    if (existingUser) {
+      throw new CustomError(
+        "User with this email or phone number already exists.",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.CONFLICT_ERROR
+      );
+    }
+
+    const newUser = new User({
+      email,
+      phone_number: phone,
+      fullName: name,
+      
+    });
+    await newUser.save();
+
+    sendSuccessResponse(
+      res,
+      "User created successfully.",
+      {
+        id: newUser._id,
+        email: newUser.email,
+        phone: newUser.phone_number,
+        fullName: newUser.fullName,
+      },
+      HTTP_STATUS_CODE.CREATED
     );
   } catch (error) {
     sendErrorResponse(

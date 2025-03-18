@@ -11,7 +11,6 @@ export const generateKitchenNotification = async (userId: any, kitchenName: stri
       });
   
       await notification.save();
-      console.log("Notification generated successfully.");
     } catch (error: any) {
       console.error("Error generating notification:", error.message);
     }
@@ -37,13 +36,11 @@ export const getUserNotifications = async (req: Request, res: Response):Promise<
 export const getNotificationById = async (req: Request, res: Response): Promise<void> => {
     try {
         const { notificationId } = req.params;
-        console.log("Notification ID:", notificationId);
        if (!mongoose.Types.ObjectId.isValid(notificationId)) {
             res.status(400).json({ message: "Invalid notification ID" });
             return;
         } 
         const notification = await NotificationModel.findById(notificationId);
-        console.log("Notification:", notification);
 
         if (!notification) {
             res.status(404).json({ message: "Notification not found" });
@@ -76,7 +73,6 @@ export const generateOrganizationNotification = async (userId: any, organization
     });
 
     await notification.save();
-    console.log("Notification generated successfully.");
   } catch (error: any) {
     console.error("Error generating notification:", error.message);
   }

@@ -11,13 +11,12 @@ import {
   sendSuccessResponse,
 } from "../../lib/helpers/responseHelper";
 import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
-import { Console } from "console";
-
 
 export const addMenuItems = async (req: Request, res: Response) => {
   try {
     const kitchen_id = req.params.id;
     const items = req.body;
+
     if (!kitchen_id || !Array.isArray(items) || items.length === 0) {
       throw new CustomError(
         "Kitchen ID and at least one item are required",
@@ -90,7 +89,7 @@ export const addMenuItems = async (req: Request, res: Response) => {
       res,
       "Items added to menu successfully",
       existingMenu,
-      HTTP_STATUS_CODE.OK 
+      HTTP_STATUS_CODE.OK
     );
   } catch (error) {
     sendErrorResponse(
@@ -101,7 +100,6 @@ export const addMenuItems = async (req: Request, res: Response) => {
     );
   }
 };
-
 export const getAllMenus = async (req: Request, res: Response) => {
   try {
     const { kitchenId } = req.params;
@@ -141,11 +139,11 @@ export const getAllMenus = async (req: Request, res: Response) => {
       });
 
     if (!menus || menus.length === 0) {
-      sendSuccessResponse(
-        res,
+      throw new CustomError(
         "No menus found for this kitchen",
-        [],
-        HTTP_STATUS_CODE.OK
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.BAD_REQUEST_ERROR,
+        false
       );
     }
 
@@ -167,7 +165,6 @@ export const getAllMenus = async (req: Request, res: Response) => {
     );
   }
 };
-
 export const removeMenuItem = async (req: Request, res: Response) => {
   try {
     const { kitchen_id, item_id } = req.params;
@@ -225,14 +222,16 @@ export const removeMenuItem = async (req: Request, res: Response) => {
       res,
       error,
       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE  
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
     );
   }
 };
-
 export const getMenuItemDetails = async (req: Request, res: Response) => {
   try {
     const { kitchenId, itemId } = req.params;
+    const { role } = req.body;
+
+    // Validate ObjectId format
     if (
       !mongoose.Types.ObjectId.isValid(kitchenId) ||
       !mongoose.Types.ObjectId.isValid(itemId)
@@ -245,6 +244,7 @@ export const getMenuItemDetails = async (req: Request, res: Response) => {
       );
     }
 
+    // Fetch the menu item
     const menuItem = await Menu.findOne(
       {
         kitchen_id: kitchenId,
@@ -265,21 +265,34 @@ export const getMenuItemDetails = async (req: Request, res: Response) => {
       );
     }
 
-    // Extract the item details
     const itemDetails = menuItem.items_id[0];
 
+    // Determine the price based on role
+    let item_price_user = itemDetails.price_user || "0";
+    let item_price_organization = itemDetails.price_organization || "0";
+    let item_price = null;
+
+    if (role === "Organization") {
+      item_price = item_price_organization;
+    } else if (role === "User") {
+      item_price = item_price_user;
+    }
+
+    // Send response with all prices
     res.status(HTTP_STATUS_CODE.OK).json({
       status: true,
       message: "Item details retrieved successfully",
       data: {
         item_id: itemDetails.item_id,
-        item_price: itemDetails.item_price,
         item_name: itemDetails.item_name,
         isAvailable: itemDetails.isAvailable,
         description: itemDetails.description,
         ingredients: itemDetails.ingredients,
         custom_image: itemDetails.custom_image,
         reviews_id: itemDetails.reviews_id,
+        price_user: item_price_user,
+        price_organization: item_price_organization,
+        item_price, // Price based on role (if specified)
       },
       statusCode: HTTP_STATUS_CODE.OK,
       timestamp: new Date().toISOString(),
@@ -293,33 +306,22 @@ export const getMenuItemDetails = async (req: Request, res: Response) => {
     );
   }
 };
-
 export const updateMenuItem = async (req: Request, res: Response) => {
   try {
     const { kitchenId, itemId } = req.params;
     const updatedItemData = req.body;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     let custom_image = updatedItemData.custom_image;
-   
+
     if (files?.custom_image?.[0]) {
       custom_image = await uploadFileToCloudinary(files.custom_image[0].buffer);
     }
 
-    if (!kitchenId || !itemId || !updatedItemData) {
+    if (!kitchenId || !itemId) {
       throw new CustomError(
-        "Kitchen ID, Item ID, and updated item data are required",
+        "Kitchen ID and Item ID are required",
         HTTP_STATUS_CODE.BAD_REQUEST,
         ERROR_TYPES.BAD_REQUEST_ERROR,
-        false
-      );
-    }
-
-    const existingKitchen = await Kitchen.findById(kitchenId);
-    if (!existingKitchen) {
-      throw new CustomError(
-        "Kitchen not found",
-        HTTP_STATUS_CODE.NOT_FOUND,
-        ERROR_TYPES.NOT_FOUND_ERROR,
         false
       );
     }
@@ -337,6 +339,7 @@ export const updateMenuItem = async (req: Request, res: Response) => {
         false
       );
     }
+
     const itemIndex = existingMenu.items_id.findIndex(
       (menuItem) => menuItem.item_id.toString() === itemId
     );
@@ -350,26 +353,103 @@ export const updateMenuItem = async (req: Request, res: Response) => {
       );
     }
 
-    const updatedIngredients =
-      updatedItemData.ingredients ||
-      existingMenu.items_id[itemIndex].ingredients;
+    // ✅ Parse ingredients correctly
+    let ingredients = existingMenu.items_id[itemIndex].ingredients || [];
+    if (updatedItemData.ingredients !== undefined) {
+      try {
+        if (typeof updatedItemData.ingredients === "string") {
+          ingredients = JSON.parse(updatedItemData.ingredients);
+        } else if (Array.isArray(updatedItemData.ingredients)) {
+          ingredients = updatedItemData.ingredients;
+        } else {
+          console.warn("Invalid ingredients format, resetting to empty array.");
+          ingredients = [];
+        }
+      } catch (error) {
+        console.error("Error parsing ingredients:", error);
+        ingredients = [];
+      }
+    }
 
-    existingMenu.items_id[itemIndex] = {
-      ...existingMenu.items_id[itemIndex],
-      ...updatedItemData,
-      custom_image,
-      ingredients: updatedIngredients,
-    };
+    let isAvailable = existingMenu.items_id[itemIndex].isAvailable;
+    if (updatedItemData.isAvailable !== undefined) {
+      if (typeof updatedItemData.isAvailable === "string") {
+        isAvailable = updatedItemData.isAvailable.toLowerCase() === "true";
+      } else {
+        isAvailable = !!updatedItemData.isAvailable;
+      }
+    }
 
-    await existingMenu.save();
+    // ✅ Determine menu_for based on viewType
+    let menu_for = existingMenu.items_id[itemIndex].menu_for || "Both";
+    if (updatedItemData.viewType) {
+      switch (updatedItemData.viewType.toLowerCase()) {
+        case "organization":
+          menu_for = "organisation";
+          break;
+        case "user":
+          menu_for = "User";
+          break;
+        case "both":
+        default:
+          menu_for = "Both";
+          break;
+      }
+    }
+
+    // ✅ Ensure price values are properly formatted
+    const price_user =
+      updatedItemData.priceUser !== undefined
+        ? String(updatedItemData.priceUser)
+        : existingMenu.items_id[itemIndex].price_user;
+
+    const price_organization =
+      updatedItemData.priceOrganization !== undefined
+        ? String(updatedItemData.priceOrganization)
+        : existingMenu.items_id[itemIndex].price_organization;
+
+    const result = await Menu.findOneAndUpdate(
+      {
+        kitchen_id: kitchenId,
+        is_deleted: false,
+        "items_id.item_id": itemId, // Ensure we match the correct item
+      },
+      {
+        $set: {
+          "items_id.$.item_name":
+            updatedItemData.item_name ||
+            existingMenu.items_id[itemIndex].item_name,
+          "items_id.$.description":
+            updatedItemData.description ||
+            existingMenu.items_id[itemIndex].description,
+          "items_id.$.price_user": price_user,
+          "items_id.$.price_organization": price_organization,
+          "items_id.$.isAvailable": isAvailable,
+          "items_id.$.ingredients": ingredients, // ✅ Ensures ingredients update
+          "items_id.$.menu_for": menu_for,
+          "items_id.$.custom_image":
+            custom_image || existingMenu.items_id[itemIndex].custom_image,
+        },
+      },
+      { new: true }
+    );
+    if (!result) {
+      throw new CustomError(
+        "Failed to update menu item",
+        HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+        ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE,
+        false
+      );
+    }
 
     return sendSuccessResponse(
       res,
       "Item updated successfully",
-      existingMenu,
+      result.items_id.find((item) => item.item_id.toString() === itemId),
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
+    console.error("Error updating menu item:", error);
     sendErrorResponse(
       res,
       error,
@@ -378,12 +458,9 @@ export const updateMenuItem = async (req: Request, res: Response) => {
     );
   }
 };
-
 export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
   try {
     const { kitchenId } = req.params;
-
-    // Validate kitchen ID
     if (!mongoose.Types.ObjectId.isValid(kitchenId)) {
       return sendErrorResponse(
         res,
@@ -393,13 +470,14 @@ export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
       );
     }
 
-   const menu = await Menu.findOne({
+    const menu = await Menu.findOne({
       kitchen_id: new mongoose.Types.ObjectId(kitchenId),
       is_deleted: false,
     })
       .populate({
         path: "items_id.item_id",
-        select: "item_name item_price description ingredients isAvailable custom_image reviews_id",
+        select:
+          "item_name item_price description ingredients isAvailable custom_image reviews_id",
       })
       .lean();
 
@@ -412,14 +490,13 @@ export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
       );
     }
 
-    
     res.status(HTTP_STATUS_CODE.OK).json({
       status: true,
       message: "Menu items retrieved successfully",
       data: {
         _id: menu._id,
         kitchen_id: menu.kitchen_id,
-        items_id: menu.items_id, 
+        items_id: menu.items_id,
         is_deleted: menu.is_deleted,
         createdAt: menu.createdAt,
         updatedAt: menu.updatedAt,

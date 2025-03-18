@@ -113,7 +113,7 @@ export const createItem = async (req: Request, res: Response) => {
         ].filter(Boolean); // Remove undefined fields
       }
   
-      console.log("Query:", query); // Debug log
+
   
       // Count total matching documents
       const total = await Item.countDocuments(query);

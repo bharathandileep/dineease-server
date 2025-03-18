@@ -21,13 +21,11 @@ import menuitemsRoutes from "./routes/menuitems/menuitemsRoutes";
 import kitchensMenuRoutes from "./routes/kitchen/kitchensMenuRoutes";
 import { clientOrigin } from "./config/environment";
 import userLoginsRoutes from "./routes/auth/loginsRoute";
-import notificationRoutes from "./routes/notification/notificationRoutes"
-import EmployeeManagementRoutes from "./routes/empmanagment/employeeManagementRoutes";
- 
- 
+import notificationRoutes from "./routes/notification/notificationRoutes";
+import EmployeeManagementRoutes from "./routes/empmanagment/EmployeeManagementRoutes";
+
 export const app: Application = Express();
 
- 
 // Middleware
 app.use(Express.json());
 app.use(Express.urlencoded({ extended: true }));
@@ -38,9 +36,9 @@ app.use(
     credentials: true,
   })
 );
- 
+
 // Routes
- 
+
 app.use(`${apiConfig.baseAPIUrl}/auth`, authRoute);
 app.use(`${apiConfig.baseAPIUrl}/user`, userLoginsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/admin`, adminControlRoutes);
@@ -55,7 +53,7 @@ app.use(`${apiConfig.baseAPIUrl}/menu-items`, menuitemsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/org-employee`, OrgEmployeeManagementRoutes);
 app.use(`${apiConfig.baseAPIUrl}/addressDetails`, addressDetailsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/notification`, notificationRoutes);
- 
+
 // Root route
 app.get(`/`, (req, res) => {
   res.send(`
@@ -77,7 +75,7 @@ app.get(`/`, (req, res) => {
     </html>
   `);
 });
- 
+
 // 404 Error handler for all non-existing routes
 app.use("*", (req, res, next) => {
   throw new CustomError(
@@ -87,8 +85,6 @@ app.use("*", (req, res, next) => {
     false
   );
 });
- 
+
 // Error handler middleware
 app.use(errorHandler);
-
- 

@@ -17,6 +17,8 @@ export const apiConfig = {
 
     userLogins: "/access/login",
     userRegister: "/access/register",
+    checkUserExistence: "/user/present",
+    createNewUser: "/user/new",
   },
   admin: {
     adminApproveOrganization: "/approve/organization/:id",
@@ -30,15 +32,12 @@ export const apiConfig = {
     getkitchensById: "/:kitchenId",
     toggleKitchensStatus: "/status/:id",
     handleGetUserApprovedKitchens: "/user/approved",
-   
-
 
     createCategory: "/categories",
     getallCategories: "/categories/all",
     updateCategory: "/categories/:id",
     deleteCategory: "/categories/:id",
     toggleCategoryStatus: "/categories/:id/toggle-status",
-    
 
     getallSubCategories: "/subcategories/all",
     createSubcategory: "/subcategories",
@@ -71,11 +70,8 @@ export const apiConfig = {
     listItems: "/allmenuitems",
     updateItem: "/allmenuitems/:id",
     deleteItem: "/allmenuitems/:id",
-    // changeItemStatus:"/allmenuitems/:id/status"
     changeItemStatus: "/allmenuitems/:id/status",
     getMenuItemsByKitchen: "/menu-items/kitchen/:kitchenId",
-
-    
   },
   organization: {
     newOrganization: "/new",
@@ -103,6 +99,11 @@ export const apiConfig = {
 
     getUnapprovedOrganisations: "/requested/all",
     approveOrganization: "/approve/:id",
+
+    selectKitchen:"/select",
+    getSelectedKitchen:"/:orgId/selcted-kitchens",
+
+
   },
   designation: {
     createDesignation: "/designations",
@@ -145,9 +146,9 @@ export const apiConfig = {
     deleteSubcategory: "/kitchen-menu/subcategories/:id",
     toggleSubcategoryStatus: "/kitchen-menu/subcategories/:id/toggle-status",
   },
-   notification:{
-   getUserNotifications:"/get/:userId",
-   getNotificationById:"/get/:notificationId",
-   getAllNotifications:"/all", 
-  },  
- }; 
+  notification: {
+    getUserNotifications: "/get/:userId",
+    getNotificationById: "/get/:notificationId",
+    getAllNotifications: "/all",
+  },
+};

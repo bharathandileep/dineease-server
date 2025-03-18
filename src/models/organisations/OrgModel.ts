@@ -10,13 +10,14 @@ export interface IOrganization extends Document, CommonDBInterface {
   managerName: string;
   register_number: string;
   location: string;
+  selected_kitchen_id: mongoose.Types.ObjectId; // Updated type
   isapproved: string;
   contact_number: string;
   email: string;
   no_of_employees: number;
   organizationLogo: string;
   status: boolean;
-  slug: string; 
+  slug: string;
 }
 
 export const OrganizationSchema: Schema<IOrganization> =
@@ -39,12 +40,12 @@ export const OrganizationSchema: Schema<IOrganization> =
         ref: "OrgCategory",
         required: true,
       },
-
       subcategoryName:{
         type:mongoose.Schema.Types.ObjectId,
         ref:"OrgSubcategory",
         required:true,
       },
+      
       organizationName: {
         type: String,
         required: true,
@@ -89,6 +90,11 @@ export const OrganizationSchema: Schema<IOrganization> =
         type: String,
         enum: ["processing", "rejected", "approved"],
         default: "processing",
+      },
+      selected_kitchen_id: {
+        type: mongoose.Schema.Types.ObjectId, // Correct type
+        ref: "Kitchen", // Reference to the Kitchen model
+        default: null, // Default value if no kitchen is selected
       },
     },
     { timestamps: true }
