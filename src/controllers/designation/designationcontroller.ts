@@ -208,8 +208,6 @@ export const updateDesignation = async (req: Request, res: Response): Promise<vo
 
  
     const existingDesignation = await Designation.findById(id);
-    console.log("🔍 Existing Designation:", existingDesignation);
-
     if (!existingDesignation) {
    
       res.status(HTTP_STATUS_CODE.NOT_FOUND).json({
