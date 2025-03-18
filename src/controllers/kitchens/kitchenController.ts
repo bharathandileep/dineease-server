@@ -100,7 +100,7 @@ export const handleCreateNewKitchens = async (
       );
     }
 
-    // Extract fields from request body
+ 
     const {
       kitchen_name,
       payload,

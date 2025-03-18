@@ -148,7 +148,18 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    validateMogooseObjectId(entity_id);
+  
+    console.log("entity_id:", entity_id);
+    try {
+      validateMogooseObjectId(entity_id); 
+    } catch (validationError) {
+      throw new CustomError(
+        "Invalid entity_id format",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.VALIDATION_ERROR,
+        false
+      );
+    }
 
     // Fetch and validate designation
     const existingDesignation = await Designation.findById(designation);
@@ -161,7 +172,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Fetch and validate role based on designation
+    // Rest of your code...
     const existingRole = await Role.findOne({
       role_name: existingDesignation.role_name,
     });
@@ -174,7 +185,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Check for existing employee
     const existingEmployee = await OrgEmployeeManagement.findOne({ email });
     if (existingEmployee) {
       throw new CustomError(
@@ -185,7 +195,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Upload files to Cloudinary
     const profile_picture = await uploadFileToCloudinary(
       files.profile_picture?.[0]?.buffer
     );
@@ -196,7 +205,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       files.aadhar_image?.[0]?.buffer
     );
 
-    // Create new employee
     const newEmployee = new OrgEmployeeManagement({
       entity_id,
       entity_type,
@@ -238,7 +246,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
     );
   }
 };
-
 export const getOrgEmployeeById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
