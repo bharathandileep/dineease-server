@@ -136,7 +136,6 @@ export const handleCreateNewKitchens = async (
       }
     }
     validateMogooseObjectId(userId)
-    console.log(userId)
     let parsedWorkingDays = [];
     if (typeof working_days === "string") {
       try {
@@ -218,7 +217,6 @@ export const handleCreateNewKitchens = async (
             };
           }
         );
-        // Ensure at least one pre-ordering option is provided with a valid day
         if (
           parsedPreOrderingOptions.some((option: { day: any }) => !option.day)
         ) {
@@ -421,7 +419,7 @@ export const handleGetKitchens = async (
       addressIds = addressMatch.map(
         (addr) => addr._id
       ) as mongoose.Types.ObjectId[];
-      console.log("Matching Address IDs:", addressIds);
+
 
       if (addressIds.length > 0) {
         if (matchQuery.$or) {
@@ -432,17 +430,13 @@ export const handleGetKitchens = async (
       }
     }
 
-    console.log("Final Match Query:", matchQuery);
 
     const totalKitchensBefore = await Kitchen.countDocuments({
       is_deleted: false,
       isapproved: "approved",
     });
-    console.log("Total Kitchens Count (before):", totalKitchensBefore);
-
     const totalKitchens = await Kitchen.countDocuments(matchQuery);
-    console.log("Total Kitchens Count (after match):", totalKitchens);
-
+  
     const kitchens = await Kitchen.aggregate([
       { $match: matchQuery },
       {
@@ -607,11 +601,6 @@ export const handleGetKitchens = async (
       { $skip: skip },
       { $limit: limit },
     ]);
-
-    console.log(
-      "Kitchens after aggregation:",
-      JSON.stringify(kitchens, null, 2)
-    );
 
     sendSuccessResponse(
       res,
@@ -1122,9 +1111,6 @@ export const handleUpdateKitchensById = async (
     const populatedKitchen = await Kitchen.findById(kitchenId)
       .populate("category")
       .populate("subcategoryName");
-    console.log("Updated category:", populatedKitchen?.category);
-    console.log("Updated subcategoryName:", populatedKitchen?.subcategoryName);
-
     // Send success response
     sendSuccessResponse(
       res,
