@@ -72,7 +72,6 @@ export const OrganizationSchema: Schema<IOrganization> =
       email: {
         type: String,
         required: true,
-        unique: true,
       },
       no_of_employees: {
         type: Number,
@@ -92,11 +91,11 @@ export const OrganizationSchema: Schema<IOrganization> =
         default: "processing",
       },
       selected_kitchen_id: {
-        type: mongoose.Schema.Types.ObjectId, // Correct type
-        ref: "Kitchen", // Reference to the Kitchen model
-        default: null, // Default value if no kitchen is selected
+        type: mongoose.Schema.Types.ObjectId, 
+        ref: "Kitchen", 
+        default: null,
       },
-    },
+    }, 
     { timestamps: true }
   );
 
@@ -109,7 +108,7 @@ OrganizationSchema.pre<IOrganization>("save", async function(next) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
-  
+   
   let slug = baseSlug;
   let count = 0;
   let slugExists = true;

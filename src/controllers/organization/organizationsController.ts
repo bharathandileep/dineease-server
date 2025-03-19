@@ -216,15 +216,6 @@ export const handleGetOrganisations = async (
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
     const { search, category, subcategory } = req.query;
-
-    console.log("Query Parameters:", {
-      page,
-      limit,
-      search,
-      category,
-      subcategory,
-    });
-
     const matchQuery: any = {
       is_deleted: false,
       isapproved: "approved",
@@ -278,7 +269,6 @@ export const handleGetOrganisations = async (
       addressIds = addressMatch.map(
         (addr) => addr._id as mongoose.Types.ObjectId
       );
-      console.log("Matching Address IDs:", addressIds);
 
       if (addressIds.length > 0) {
         if (matchQuery.$or) {
@@ -289,20 +279,12 @@ export const handleGetOrganisations = async (
       }
     }
 
-    console.log("Final Match Query:", matchQuery);
-
     const totalOrganizationsBefore = await Organization.countDocuments({
       is_deleted: false,
       isapproved: "approved",
     });
-    console.log(
-      "Total Organizations Count (before):",
-      totalOrganizationsBefore
-    );
 
     const totalOrganizations = await Organization.countDocuments(matchQuery);
-    console.log("Total Organizations Count (after match):", totalOrganizations);
-
     const organizations = await Organization.aggregate([
       { $match: matchQuery },
       {
@@ -420,11 +402,6 @@ export const handleGetOrganisations = async (
       { $skip: skip },
       { $limit: limit },
     ]);
-
-    console.log(
-      "Organizations after aggregation:",
-      JSON.stringify(organizations, null, 2)
-    );
 
     sendSuccessResponse(
       res,

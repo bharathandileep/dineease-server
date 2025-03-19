@@ -16,7 +16,6 @@ export const addMenuItems = async (req: Request, res: Response) => {
   try {
     const kitchen_id = req.params.id;
     const items = req.body;
-    console.log(items);
     if (!kitchen_id || !Array.isArray(items) || items.length === 0) {
       throw new CustomError(
         "Kitchen ID and at least one item are required",
@@ -310,7 +309,6 @@ export const updateMenuItem = async (req: Request, res: Response) => {
   try {
     const { kitchenId, itemId } = req.params;
     const updatedItemData = req.body;
-    console.log("Received update request with data:", updatedItemData);
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     let custom_image = updatedItemData.custom_image;
@@ -373,8 +371,6 @@ export const updateMenuItem = async (req: Request, res: Response) => {
       }
     }
 
-    console.log("Updated ingredients:", ingredients);
-
     // ✅ Parse isAvailable if it's a string
     let isAvailable = existingMenu.items_id[itemIndex].isAvailable;
     if (updatedItemData.isAvailable !== undefined) {
@@ -413,9 +409,6 @@ export const updateMenuItem = async (req: Request, res: Response) => {
         ? String(updatedItemData.priceOrganization)
         : existingMenu.items_id[itemIndex].price_organization;
 
-    console.log("Updating price_user:", price_user);
-    console.log("Updating price_organization:", price_organization);
-
     // ✅ Update the menu item in MongoDB
     const result = await Menu.findOneAndUpdate(
       {
@@ -442,8 +435,6 @@ export const updateMenuItem = async (req: Request, res: Response) => {
       },
       { new: true }
     );
-
-    console.log("Updated menu item:", result);
 
     if (!result) {
       throw new CustomError(

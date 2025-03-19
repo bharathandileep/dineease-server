@@ -84,7 +84,7 @@ OrgEmployeeManagementSchema.pre<IOrgEmployeeManagement>("save", async function (
     const OrgEmployee = mongoose.model("OrgEmployeeManagement");
     const existing = await OrgEmployee.findOne({
       slug: slugToCheck,
-      _id: { $ne: this._id }, // Avoid checking against itself
+      _id: { $ne: this._id }, 
     });
 
     if (!existing) {
