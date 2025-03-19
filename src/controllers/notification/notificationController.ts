@@ -11,6 +11,7 @@ export const generateKitchenNotification = async (userId: any, kitchenName: stri
       });
   
       await notification.save();
+  
     } catch (error: any) {
       console.error("Error generating notification:", error.message);
     }
@@ -41,7 +42,6 @@ export const getNotificationById = async (req: Request, res: Response): Promise<
             return;
         } 
         const notification = await NotificationModel.findById(notificationId);
-
         if (!notification) {
             res.status(404).json({ message: "Notification not found" });
             return;
@@ -71,7 +71,6 @@ export const generateOrganizationNotification = async (userId: any, organization
       message: `A new organization '${organizationName}' has been created!`,
       type: "organization",
     });
-
     await notification.save();
   } catch (error: any) {
     console.error("Error generating notification:", error.message);

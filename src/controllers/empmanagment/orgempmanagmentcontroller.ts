@@ -127,7 +127,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
     } = req.body;
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-
     // Validate required fields
     if (
       !entity_id ||
@@ -148,8 +147,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       );
     }
     validateMogooseObjectId(entity_id);
-
-    
+  
     // Fetch and validate designation
     const existingDesignation = await Designation.findById(designation);
     if (!existingDesignation) {
@@ -700,7 +698,6 @@ export const handleGetEmployeeOrganizations = async (
         },
       },
     ]);
-    
     if (employeeOrganizations.length === 0) {
       return sendSuccessResponse(
         res,

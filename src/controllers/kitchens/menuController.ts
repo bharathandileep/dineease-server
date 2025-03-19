@@ -16,7 +16,6 @@ export const addMenuItems = async (req: Request, res: Response) => {
   try {
     const kitchen_id = req.params.id;
     const items = req.body;
-
     if (!kitchen_id || !Array.isArray(items) || items.length === 0) {
       throw new CustomError(
         "Kitchen ID and at least one item are required",
@@ -408,6 +407,7 @@ export const updateMenuItem = async (req: Request, res: Response) => {
         ? String(updatedItemData.priceOrganization)
         : existingMenu.items_id[itemIndex].price_organization;
 
+    // ✅ Update the menu item in MongoDB
     const result = await Menu.findOneAndUpdate(
       {
         kitchen_id: kitchenId,

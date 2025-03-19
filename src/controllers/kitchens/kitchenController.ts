@@ -217,7 +217,6 @@ export const handleCreateNewKitchens = async (
             };
           }
         );
-        // Ensure at least one pre-ordering option is provided with a valid day
         if (
           parsedPreOrderingOptions.some((option: { day: any }) => !option.day)
         ) {
@@ -420,6 +419,8 @@ export const handleGetKitchens = async (
       addressIds = addressMatch.map(
         (addr) => addr._id
       ) as mongoose.Types.ObjectId[];
+
+
       if (addressIds.length > 0) {
         if (matchQuery.$or) {
           matchQuery.$or.push({ address_id: { $in: addressIds } });
@@ -433,9 +434,8 @@ export const handleGetKitchens = async (
       is_deleted: false,
       isapproved: "approved",
     });
-
     const totalKitchens = await Kitchen.countDocuments(matchQuery);
-
+  
     const kitchens = await Kitchen.aggregate([
       { $match: matchQuery },
       {
@@ -1110,7 +1110,7 @@ export const handleUpdateKitchensById = async (
     const populatedKitchen = await Kitchen.findById(kitchenId)
       .populate("category")
       .populate("subcategoryName");
-
+    // Send success response
     sendSuccessResponse(
       res,
       "Kitchen updated successfully!",
