@@ -20,7 +20,7 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
       throw new CustomError(
         "Organization not found",
         HTTP_STATUS_CODE.NOT_FOUND,
-        ERROR_TYPES.NOT_FOUND_ERROR,
+        ERROR_TYPES.NOT_FOUND_ERROR, 
         false
       );
     }
