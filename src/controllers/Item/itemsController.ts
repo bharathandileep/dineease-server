@@ -66,7 +66,7 @@ export const createItem = async (req: Request, res: Response) => {
     }
   };
 
-  
+
   export const listItems = async (req: Request, res: Response) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
@@ -74,21 +74,59 @@ export const createItem = async (req: Request, res: Response) => {
       const search = (req.query.search as string)?.trim() || '';
       const startIndex = (page - 1) * limit;
   
+      // Base query
       const query: any = { is_deleted: false };
+  
+      // Enhanced search across multiple fields
       if (search) {
-        query.item_name = { $regex: search, $options: "i" }; // Case-insensitive search on item_name
+        const searchRegex = new RegExp(search, "i"); // Case-insensitive regex
+  
+        // Fetch category and subcategory IDs based on search term
+        const categories = await Item.distinct("category", {
+          category: { $in: await Item.find({}).distinct("category") },
+          $lookup: {
+            from: "categories",
+            localField: "category",
+            foreignField: "_id",
+            as: "categoryDetails",
+          },
+          $match: { "categoryDetails.category": searchRegex },
+        });
+  
+        const subcategories = await Item.distinct("subcategory", {
+          subcategory: { $in: await Item.find({}).distinct("subcategory") },
+          $lookup: {
+            from: "subcategories",
+            localField: "subcategory",
+            foreignField: "_id",
+            as: "subcategoryDetails",
+          },
+          $match: { "subcategoryDetails.subcategoryName": searchRegex },
+        });
+  
+        // Build $or query for multiple fields
+        query.$or = [
+          { item_name: { $regex: searchRegex } },
+          { description: { $regex: searchRegex } }, // Assuming description exists
+          { category: { $in: categories } }, // Search by category ID
+          { subcategory: { $in: subcategories } }, // Search by subcategory ID
+        ].filter(Boolean); // Remove undefined fields
       }
   
-
+      console.log("Query:", query); // Debug log
   
+      // Count total matching documents
       const total = await Item.countDocuments(query);
+  
+      // Fetch items with pagination and population
       const items = await Item.find(query)
-        .populate("category", "category")
-        .populate("subcategory", "subcategoryName")
+        .populate("category", "category") // Populates category name
+        .populate("subcategory", "subcategoryName") // Populates subcategory name
         .skip(startIndex)
         .limit(limit)
         .sort({ createdAt: -1 });
   
+      // Handle no results on first page
       if (!items.length && page === 1) {
         throw new CustomError(
           "No items found",
@@ -98,11 +136,13 @@ export const createItem = async (req: Request, res: Response) => {
         );
       }
   
+      // Pagination metadata
       const pagination = {
         currentPage: page,
         totalItems: total,
         totalPages: Math.ceil(total / limit),
         itemsPerPage: limit,
+        hasMore: items.length === limit && page < Math.ceil(total / limit),
       };
   
       sendSuccessResponse(
@@ -112,15 +152,24 @@ export const createItem = async (req: Request, res: Response) => {
         HTTP_STATUS_CODE.OK
       );
     } catch (error) {
-      sendErrorResponse(
-        res,
-        error,
-        HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-        ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-      );
+      // Enhanced error handling
+      if (error instanceof CustomError) {
+        sendErrorResponse(
+          res,
+          error,
+          error.statusCode || HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+          error.errorType || ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+        );
+      } else {
+        sendErrorResponse(
+          res,
+          error,
+          HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+          ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+        );
+      }
     }
   };
-
 
   export const getItemById = async (req: Request, res: Response) => {
     try {

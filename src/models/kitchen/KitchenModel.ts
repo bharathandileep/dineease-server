@@ -33,11 +33,6 @@ export const KitchenSchema: Schema = new Schema<IKitchen>({
     ref: "User",
     required: true,
   },
-  org_id:{
-   type:mongoose.Schema.Types.ObjectId,
-   ref:"Organization",
-   required:true,
-  },
   address_id: [
     {
       type: mongoose.Schema.Types.ObjectId,
