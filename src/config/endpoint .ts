@@ -105,6 +105,8 @@ export const apiConfig = {
   collab:{
     collaborateKitchen:"/select",
     listCollaboratedKitchens:"/organization/:organization_id",
+    getAllColloborations:"/all"
+
    },
   designation: {
     createDesignation: "/designations",

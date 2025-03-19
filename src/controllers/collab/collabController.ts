@@ -1,7 +1,8 @@
 import { NextFunction, Request, Response } from "express";
-import Kitchen from "../../models/kitchen/KitchenModel";
-import Organization from "../../models/organisations/OrgModel";
+import Kitchen, { IKitchen } from "../../models/kitchen/KitchenModel";
+import Organization, { IOrganization } from "../../models/organisations/OrgModel";
 import Collaboration from "../../models/collab/Collab"; // Ensure this import is correct
+import CollaborationModel,{ICollaboration} from "../../models/collab/Collab"
 import {
   sendErrorResponse,
   sendSuccessResponse,
@@ -10,6 +11,10 @@ import { HTTP_STATUS_CODE } from "../../lib/constants/httpStatusCodes";
 import { ERROR_TYPES } from "../../lib/constants/errorType";
 import { CustomError } from "../../lib/errors/customError";
 import { generateColloborationNotification } from "../notification/notificationController";
+import { promises } from "dns";
+import { fromJS } from "immutable";
+
+
 
 export const collaborateKitchen = async (req: Request, res: Response) => {
   try {
@@ -22,7 +27,7 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
         HTTP_STATUS_CODE.NOT_FOUND,
         ERROR_TYPES.NOT_FOUND_ERROR, 
         false
-      );
+      ); 
     }
 
     const kitchen = await Kitchen.findById(kitchen_id);
@@ -38,31 +43,47 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
     const existingCollaboration = await Collaboration.findOne({
       organization_id,
       kitchen_id,
+      is_deleted: false
     });
+    
     if (existingCollaboration) {
       throw new CustomError(
         "Collaboration already exists",
         HTTP_STATUS_CODE.BAD_REQUEST,
         ERROR_TYPES.BAD_REQUEST_ERROR,
         false
-      );
+      ); 
     }
 
     const collaboration = new Collaboration({
       organization_id,
       kitchen_id,
-      status: "Pending",
+      // status: "Pending",
     });
 
-    await collaboration.save(); 
+    await collaboration.save();  
 
     // Generate notification for the collaboration
-    await generateColloborationNotification(organization_id, kitchen_id, organizationName, "organizationName");
+    await generateColloborationNotification(organization_id, kitchen_id, kitchen.kitchen_name,organization.organizationName);
+
+    const responseData = {
+      _id: collaboration._id,
+      organization: {
+        _id: organization._id,
+        name: organization.organizationName
+      },
+      kitchen: {
+        _id: kitchen._id,
+        name: kitchen.kitchen_name
+      },
+      // status: collaboration.status,
+      createdAt: collaboration.createdAt
+    };
 
     sendSuccessResponse(
       res,
       "Collaboration request created successfully",
-      collaboration,
+      responseData,
       HTTP_STATUS_CODE.CREATED
     );
   } catch (error) {
@@ -74,7 +95,6 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
     );
   }
 };
-
 export const listCollaboratedKitchens = async (req: Request, res: Response) => {
   try {
     const { organization_id } = req.params;
@@ -97,7 +117,7 @@ export const listCollaboratedKitchens = async (req: Request, res: Response) => {
     const kitchens = await Kitchen.aggregate([
       {
         $match: {
-          _id: { $in: kitchenIds },
+          _id: { $in: kitchenIds }, 
           is_deleted: false,
         },
       },
@@ -299,4 +319,82 @@ export const listCollaboratedKitchens = async (req: Request, res: Response) => {
       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
     );
   }
+}; 
+// Try this approach which is more resilient
+export const getAllColloborations = async(req: Request, res: Response): Promise<void> => {
+  try {
+    // First get the basic collaboration documents
+    const collaborations = await CollaborationModel.find({ is_deleted: false })
+      .sort({ createdAt: -1 })
+      .lean();
+    
+    // Then separately fetch the related organizations and kitchens
+    const organizationIds = collaborations.map(c => c.organization_id);
+    const kitchenIds = collaborations.map(c => c.kitchen_id);
+    
+    const organizations = await Organization.find({
+      _id: { $in: organizationIds },
+      is_deleted: false
+    }).select('organizationName organizationLogo').lean();
+    
+    const kitchens = await Kitchen.find({
+      _id: { $in: kitchenIds },
+      is_deleted: false
+    }).select('kitchen_name kitchen_image').lean();
+    
+    // Create lookup maps for easier access
+    const orgMap = new Map();
+    organizations.forEach(org => {
+      orgMap.set(org._id.toString(), org);
+    });
+    
+    const kitchenMap = new Map();
+    kitchens.forEach(kitchen => {
+      kitchenMap.set(kitchen._id.toString(), kitchen);
+    });
+    
+    // Map the data together
+    const formattedCollaborations = collaborations.map(collab => {
+      const orgId = collab.organization_id.toString();
+      const kitchenId = collab.kitchen_id.toString();
+      
+      const org = orgMap.get(orgId);
+      const kitchen = kitchenMap.get(kitchenId);
+      
+      return {
+        _id: collab._id,
+        organization: org ? {
+          _id: org._id,
+          name: org.organizationName || 'Unknown Organization',
+          logo: org.organizationLogo || null
+        } : {
+          _id: collab.organization_id,
+          name: 'Unknown Organization',
+          logo: null
+        },
+        kitchen: kitchen ? {
+          _id: kitchen._id,
+          name: kitchen.kitchen_name || 'Unknown Kitchen',
+          image: kitchen.kitchen_image || null
+        } : {
+          _id: collab.kitchen_id,
+          name: 'Unknown Kitchen',
+          image: null
+        },
+        // status: collab.status,
+        createdAt: collab.createdAt,
+        updatedAt: collab.updatedAt
+      };
+    });
+    
+    res.status(200).json(formattedCollaborations);
+  }
+  catch(error: any) {
+    console.error("Error fetching all collaborations:", error);
+    console.error(error.stack);
+    res.status(500).json({  
+      message: "Internal server error", 
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  } 
 };

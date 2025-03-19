@@ -1,50 +1,52 @@
+
+
+
 import mongoose, { Document, Model, Schema } from "mongoose";
 import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
 
-export interface ICollaboration extends Document, CommonDBInterface {
-  organization_id: mongoose.Types.ObjectId; // Reference to the Organization
-  kitchen_id: mongoose.Types.ObjectId; // Reference to the Kitchen
-//   start_date: Date; // Start date of the collaboration
-//   end_date: Date; // End date of the collaboration
-  status: string; // Status of the collaboration (e.g., "Pending", "Active", "Completed", "Cancelled")
+export interface ICollaborationMethods {
+  softDelete(): Promise<void>;
 }
 
-export const CollaborationSchema: Schema<ICollaboration> = new Schema(
+export interface ICollaboration extends Document, CommonDBInterface {
+  organization_id: mongoose.Types.ObjectId;
+  kitchen_id: mongoose.Types.ObjectId;
+  // status: "Pending" | "Active" | "Completed" | "Cancelled";
+  is_deleted: boolean;
+}
+
+interface CollaborationModel extends Model<ICollaboration, {}, ICollaborationMethods> {}
+
+const CollaborationSchema = new Schema<ICollaboration, CollaborationModel, ICollaborationMethods>(
   {
     organization_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Organization", // Reference to the Organization model
+      ref: "Organization",
       required: true,
     },
     kitchen_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Kitchen", // Reference to the Kitchen model
+      ref: "Kitchen",
       required: true,
     },
-    // start_date: {
-    //   type: Date,
-    //   required: true,
+    // status: {
+    //   type: String,
+    //   enum: ["Pending", "Active", "Completed", "Cancelled"],
+    //   default: "Active", 
     // },
-    // end_date: {
-    //   type: Date,
-    //   required: true,
-    // },
-    status: {
-      type: String,
-      enum: ["Pending", "Active", "Completed", "Cancelled"], // Allowed status values
-      default: "Pending", // Default status
-    },
     is_deleted: {
       type: Boolean,
-      default: false, // Soft delete flag
+      default: false,
     },
   },
-  { timestamps: true } // Automatically add createdAt and updatedAt fields
+  { timestamps: true }
 );
 
-const Collaboration: Model<ICollaboration> = mongoose.model<ICollaboration>(
-  "Collaboration",
-  CollaborationSchema
-);
+CollaborationSchema.method("softDelete", async function () {
+  this.is_deleted = true;
+  await this.save();
+});
+
+const Collaboration = mongoose.model<ICollaboration, CollaborationModel>("Collaboration", CollaborationSchema);
 
 export default Collaboration;

@@ -78,19 +78,20 @@ export const generateOrganizationNotification = async (userId: any, organization
 };
 
 export const generateColloborationNotification = async (
-  userId: any,
   organization_id: any, 
    kitchen_id: string, 
-  organizationName: string
+  organizationName: string,
+  kitchenName:string
 ) => {
   console.log("Organization Name:", organizationName)
+  console.log(organization_id,kitchen_id,organizationName,kitchenName);
+  
   try {
     const notification: INotification = new NotificationModel({
-      user_id: new mongoose.Types.ObjectId(userId), // Store the user ID if needed
       organization_id: new mongoose.Types.ObjectId(organization_id),
       kitchen_id: new mongoose.Types.ObjectId(kitchen_id), // Include kitchen ID if needed
       
-      message: `'${organizationName}' has collaborated with a new kitchen.`,
+      message: `'${organizationName}' has collaborated with ${kitchenName}`,
       type: "kitchen",
     });
 
