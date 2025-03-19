@@ -259,6 +259,12 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           preserveNullAndEmptyArrays: true,
         },
       },
+      // Debug address after unwind
+      {
+        $addFields: {
+          debugAddress: "$address",
+        },
+      },
       {
         $lookup: {
           from: "designations",
@@ -273,80 +279,124 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           preserveNullAndEmptyArrays: true,
         },
       },
+      // State lookup
       {
         $lookup: {
           from: "states",
           let: {
             stateId: {
-              $convert: {
-                input: "$address.state",
-                to: "int",
-                onError: null,
-                onNull: null,
+              $cond: {
+                if: { $and: [{ $ne: ["$address.state", null] }, { $ne: ["$address.state", ""] }] },
+                then: { $toInt: "$address.state" },
+                else: null,
               },
             },
           },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $ne: ["$$stateId", null] },
+                    { $eq: ["$id", "$$stateId"] },
+                  ],
+                },
+              },
+            },
+          ],
           as: "stateInfo",
         },
       },
+      // City lookup
       {
         $lookup: {
           from: "cities",
           let: {
             cityId: {
-              $convert: {
-                input: "$address.city",
-                to: "int",
-                onError: null,
-                onNull: null,
+              $cond: {
+                if: { $and: [{ $ne: ["$address.city", null] }, { $ne: ["$address.city", ""] }] },
+                then: { $toInt: "$address.city" },
+                else: null,
               },
             },
           },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $ne: ["$$cityId", null] },
+                    { $eq: ["$id", "$$cityId"] },
+                  ],
+                },
+              },
+            },
+          ],
           as: "cityInfo",
         },
       },
+      // District lookup
       {
         $lookup: {
           from: "districts",
           let: {
             districtId: {
-              $convert: {
-                input: "$address.district",
-                to: "int",
-                onError: null,
-                onNull: null,
+              $cond: {
+                if: { $and: [{ $ne: ["$address.district", null] }, { $ne: ["$address.district", ""] }] },
+                then: { $toInt: "$address.district" },
+                else: null,
               },
             },
           },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $ne: ["$$districtId", null] },
+                    { $eq: ["$id", "$$districtId"] },
+                  ],
+                },
+              },
+            },
+          ],
           as: "districtInfo",
         },
       },
+      // Country lookup
       {
         $lookup: {
           from: "countries",
           let: {
             countryId: {
-              $convert: {
-                input: "$address.country",
-                to: "int",
-                onError: null,
-                onNull: null,
+              $cond: {
+                if: { $and: [{ $ne: ["$address.country", null] }, { $ne: ["$address.country", ""] }] },
+                then: { $toInt: "$address.country" },
+                else: null,
               },
             },
           },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $ne: ["$$countryId", null] },
+                    { $eq: ["$id", "$$countryId"] },
+                  ],
+                },
+              },
+            },
+          ],
           as: "countryInfo",
         },
       },
+      // Project (aligned with getEmployeeById and handleGetByIdOrganisations)
       {
         $project: {
           _id: 1,
           entity_id: 1,
           entity_type: 1,
-          designation: 1,
           username: 1,
           email: 1,
           phone_number: 1,
@@ -359,15 +409,20 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           address: {
             _id: "$address._id",
             street_address: "$address.street_address",
-            city: { $arrayElemAt: ["$cityInfo.name", 0] },
-            state: { $arrayElemAt: ["$stateInfo.name", 0] },
-            district: { $arrayElemAt: ["$districtInfo.name", 0] },
+            city_id: "$address.city",
+            city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
+            state_id: "$address.state",
+            state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
+            district_id: "$address.district",
+            district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
             pincode: "$address.pincode",
-            country: { $arrayElemAt: ["$countryInfo.name", 0] },
+            country_id: "$address.country",
+            country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
           },
           designation_name: "$designation.designation_name",
-        },
+          designation_id: "$designation._id",
       },
+    },
     ]);
 
     if (!employee || employee.length === 0) {
@@ -379,6 +434,8 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
       );
     }
 
+    console.log("Org Employee Result:", employee[0]);
+
     sendSuccessResponse(
       res,
       "Employee retrieved successfully",
@@ -386,6 +443,7 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
+    console.error("Error in getOrgEmployeeById:", error);
     sendErrorResponse(
       res,
       error,

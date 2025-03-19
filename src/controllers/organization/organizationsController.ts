@@ -443,7 +443,6 @@ export const handleGetByIdOrganisations = async (req: Request, res: Response): P
         false
       );
     }
-    console.log("Raw Organization Document:", rawOrg);
 
     const organization = await Organization.aggregate([
       {
@@ -637,9 +636,6 @@ export const handleGetByIdOrganisations = async (req: Request, res: Response): P
         false
       );
     }
-
-    console.log("Intermediate Result (before group):", organization[0]);
-    console.log("Aggregated Organization:", organization[0]);
 
     sendSuccessResponse(
       res,
