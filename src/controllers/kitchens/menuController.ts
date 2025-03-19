@@ -309,7 +309,6 @@ export const updateMenuItem = async (req: Request, res: Response) => {
   try {
     const { kitchenId, itemId } = req.params;
     const updatedItemData = req.body;
-
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     let custom_image = updatedItemData.custom_image;
 
@@ -371,7 +370,6 @@ export const updateMenuItem = async (req: Request, res: Response) => {
       }
     }
 
-    // ✅ Parse isAvailable if it's a string
     let isAvailable = existingMenu.items_id[itemIndex].isAvailable;
     if (updatedItemData.isAvailable !== undefined) {
       if (typeof updatedItemData.isAvailable === "string") {
@@ -435,7 +433,6 @@ export const updateMenuItem = async (req: Request, res: Response) => {
       },
       { new: true }
     );
-
     if (!result) {
       throw new CustomError(
         "Failed to update menu item",

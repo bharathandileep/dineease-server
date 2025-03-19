@@ -8,7 +8,7 @@ import {
 } from "../../lib/helpers/responseHelper";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import EmployeeManagement from "../../models/empmanagment/EmployeeManagementModel";
-import Designation from "../../models/designation/designationModel";
+import Designation from "../../models/designation/DesignationModel";
 import {
   createAddressAndUpdateModel,
   updateAddress,
@@ -311,7 +311,7 @@ export const getEmployeeById = async (req: Request, res: Response) => {
           _id: 1,
           entity_id: 1,
           entity_type: 1,
-          designation: "$designation.designation_name",
+          designation: 1,
           username: 1,
           email: 1,
           phone_number: 1,
@@ -330,6 +330,7 @@ export const getEmployeeById = async (req: Request, res: Response) => {
             pincode: "$address.pincode",
             country: { $arrayElemAt: ["$countryInfo.name", 0] },
           },
+          designation_name: "$designation.designation_name",
         },
       },
     ]);
@@ -358,7 +359,7 @@ export const getEmployeeById = async (req: Request, res: Response) => {
     );
   }
 };
-// Update employee
+
 export const updateEmployee = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -379,7 +380,7 @@ export const updateEmployee = async (req: Request, res: Response) => {
       }
     }
 
-    // Fetch the existing employee
+
     const existingEmployee = await EmployeeManagement.findById(id);
     if (!existingEmployee || existingEmployee.is_deleted) {
       throw new CustomError(
@@ -390,7 +391,7 @@ export const updateEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Handle profile picture upload (if updated)
+
     if (files && files.profile_picture) {
       const profile_picture = await uploadFileToCloudinary(files.profile_picture[0].buffer);
       updateData.profile_picture = profile_picture;
@@ -404,7 +405,7 @@ export const updateEmployee = async (req: Request, res: Response) => {
       updateData.aadhar_image = aadhar_image;
     }
 
-    // Update address fields (if provided)
+
     if (
       updateData.street_address ||
       updateData.city ||
@@ -423,7 +424,7 @@ export const updateEmployee = async (req: Request, res: Response) => {
       });
     }
 
-    // Update employee details
+
     const updatedEmployee = await EmployeeManagement.findByIdAndUpdate(
       id,
       updateData,
@@ -444,7 +445,7 @@ export const updateEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Fetch address details with names for city, state, district, and country
+   
     const employeeWithAddress = await EmployeeManagement.aggregate([
       {
         $match: {

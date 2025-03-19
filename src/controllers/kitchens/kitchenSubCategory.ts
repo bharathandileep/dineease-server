@@ -33,7 +33,7 @@ export const kitchenGetAllSubCategories = async (req: Request, res: Response) =>
 
     const total = await kitchenSubcategory.countDocuments(query);
     const categories = await kitchenSubcategory.find(query)
-      .populate("category", "category status") // Populate category details
+      .populate("category", "category status") 
       .skip(startIndex)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -65,7 +65,7 @@ export const kitchenGetAllSubCategories = async (req: Request, res: Response) =>
 };
 
 
-// Create subcategory
+
 export const kitchenCreateSubcategory = async (req: Request, res: Response) => {
   try {
     const { category, subcategoryName } = req.body;
@@ -125,7 +125,6 @@ export const kitchenCreateSubcategory = async (req: Request, res: Response) => {
   }
 };
 
-// Get subcategories by category
 export const kitchenGetSubcategoriesByCategory = async (
   req: Request,
   res: Response

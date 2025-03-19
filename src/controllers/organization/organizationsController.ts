@@ -269,7 +269,6 @@ export const handleGetOrganisations = async (
       addressIds = addressMatch.map(
         (addr) => addr._id as mongoose.Types.ObjectId
       );
-
       if (addressIds.length > 0) {
         if (matchQuery.$or) {
           matchQuery.$or.push({ address_id: { $in: addressIds } });
@@ -278,12 +277,10 @@ export const handleGetOrganisations = async (
         }
       }
     }
-
     const totalOrganizationsBefore = await Organization.countDocuments({
       is_deleted: false,
       isapproved: "approved",
     });
-
     const totalOrganizations = await Organization.countDocuments(matchQuery);
     const organizations = await Organization.aggregate([
       { $match: matchQuery },
@@ -428,13 +425,25 @@ export const handleGetOrganisations = async (
   }
 };
 
-export const handleGetByIdOrganisations = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
+export const handleGetByIdOrganisations = async (req: Request, res: Response): Promise<any> => {
   try {
     const { orgId } = req.params;
     validateMogooseObjectId(orgId);
+
+    // Fetch raw organization for debugging
+    const rawOrg = await Organization.findOne({
+      _id: new mongoose.Types.ObjectId(orgId),
+      is_deleted: false,
+    });
+    if (!rawOrg) {
+      throw new CustomError(
+        "Organization not found",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR,
+        false
+      );
+    }
+    console.log("Raw Organization Document:", rawOrg);
 
     const organization = await Organization.aggregate([
       {
@@ -453,7 +462,7 @@ export const handleGetByIdOrganisations = async (
       },
       {
         $lookup: {
-          from: "categories",
+          from: "orgcategories",
           localField: "category",
           foreignField: "_id",
           as: "categoryDetails",
@@ -461,7 +470,7 @@ export const handleGetByIdOrganisations = async (
       },
       {
         $lookup: {
-          from: "subcategories",
+          from: "orgsubcategories",
           localField: "subcategoryName",
           foreignField: "_id",
           as: "subcategoryDetails",
@@ -505,9 +514,7 @@ export const handleGetByIdOrganisations = async (
           as: "gstDetails",
         },
       },
-      // Unwind addresses for easier processing
       { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
-      // Look up state information
       {
         $lookup: {
           from: "states",
@@ -516,7 +523,6 @@ export const handleGetByIdOrganisations = async (
           as: "stateInfo",
         },
       },
-      // Look up city information
       {
         $lookup: {
           from: "cities",
@@ -525,7 +531,6 @@ export const handleGetByIdOrganisations = async (
           as: "cityInfo",
         },
       },
-      // Look up district information
       {
         $lookup: {
           from: "districts",
@@ -534,7 +539,6 @@ export const handleGetByIdOrganisations = async (
           as: "districtInfo",
         },
       },
-      // Look up country information
       {
         $lookup: {
           from: "countries",
@@ -543,7 +547,30 @@ export const handleGetByIdOrganisations = async (
           as: "countryInfo",
         },
       },
-      // Group everything back together
+      // Debug intermediate results
+      {
+        $project: {
+          organizationName: 1,
+          status: 1,
+          managerName: 1,
+          register_number: 1,
+          contact_number: 1,
+          email: 1,
+          organizationLogo: 1,
+          no_of_employees: 1,
+          category: 1,
+          subcategoryName: 1,
+          categoryDetails: 1,
+          subcategoryDetails: 1,
+          panDetails: 1,
+          gstDetails: 1,
+          addresses: 1,
+          stateInfo: 1,
+          cityInfo: 1,
+          districtInfo: 1,
+          countryInfo: 1,
+        },
+      },
       {
         $group: {
           _id: "$_id",
@@ -555,9 +582,29 @@ export const handleGetByIdOrganisations = async (
           email: { $first: "$email" },
           organizationLogo: { $first: "$organizationLogo" },
           no_of_employees: { $first: "$no_of_employees" },
-          category: { $first: { $arrayElemAt: ["$categoryDetails", 0] } },
+          category: {
+            $first: {
+              $cond: {
+                if: { $gt: [{ $size: "$categoryDetails" }, 0] },
+                then: {
+                  _id: { $arrayElemAt: ["$categoryDetails._id", 0] },
+                  category_name: { $arrayElemAt: ["$categoryDetails.category", 0] },
+                },
+                else: { _id: "$category", category_name: null },
+              },
+            },
+          },
           subcategoryName: {
-            $first: { $arrayElemAt: ["$subcategoryDetails", 0] },
+            $first: {
+              $cond: {
+                if: { $gt: [{ $size: "$subcategoryDetails" }, 0] },
+                then: {
+                  _id: { $arrayElemAt: ["$subcategoryDetails._id", 0] },
+                  subcategory_name: { $arrayElemAt: ["$subcategoryDetails.subcategoryName", 0] },
+                },
+                else: { _id: "$subcategoryName", subcategory_name: null },
+              },
+            },
           },
           panDetails: { $first: "$panDetails" },
           gstDetails: { $first: "$gstDetails" },
@@ -590,6 +637,10 @@ export const handleGetByIdOrganisations = async (
         false
       );
     }
+
+    console.log("Intermediate Result (before group):", organization[0]);
+    console.log("Aggregated Organization:", organization[0]);
+
     sendSuccessResponse(
       res,
       "Organization retrieved successfully!",
@@ -605,7 +656,6 @@ export const handleGetByIdOrganisations = async (
     );
   }
 };
-
 export const handleUpdateOrganisations = async (
   req: Request,
   res: Response

@@ -7,7 +7,7 @@ import {
   sendSuccessResponse,
 } from "../../lib/helpers/responseHelper";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
-import Designation from "../../models/designation/designationModel";
+import Designation from "../../models/designation/DesignationModel";
 import {
   createAddressAndUpdateModel,
   updateAddress,
@@ -159,7 +159,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Fetch and validate role based on designation
+    // Rest of your code...
     const existingRole = await Role.findOne({
       role_name: existingDesignation.role_name,
     });
@@ -172,7 +172,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Check for existing employee
     const existingEmployee = await OrgEmployeeManagement.findOne({ email });
     if (existingEmployee) {
       throw new CustomError(
@@ -183,7 +182,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Upload files to Cloudinary
     const profile_picture = await uploadFileToCloudinary(
       files.profile_picture?.[0]?.buffer
     );
@@ -194,7 +192,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       files.aadhar_image?.[0]?.buffer
     );
 
-    // Create new employee
     const newEmployee = new OrgEmployeeManagement({
       entity_id,
       entity_type,
@@ -236,7 +233,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
     );
   }
 };
-
 export const getOrgEmployeeById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -702,7 +698,6 @@ export const handleGetEmployeeOrganizations = async (
         },
       },
     ]);
-
     if (employeeOrganizations.length === 0) {
       return sendSuccessResponse(
         res,
