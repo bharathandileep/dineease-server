@@ -135,7 +135,7 @@ export const handleCreateNewKitchens = async (
         );
       }
     }
-    validateMogooseObjectId(userId)
+    validateMogooseObjectId(userId);
     let parsedWorkingDays = [];
     if (typeof working_days === "string") {
       try {
@@ -364,44 +364,30 @@ export const handleGetKitchens = async (
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 4;
     const skip = (page - 1) * limit;
-    const { search, kitchen_status, kitchen_type, category, subcategory } =
-      req.query;
-    console.log(req.query) 
+    const { search, kitchen_type, category, subcategory } = req.query;
+
     const matchQuery: any = {
-      is_deleted: false, 
-
-      isapproved: "approved",  
+      is_deleted: false,
+      isapproved: "approved",
     };
-
-    if (kitchen_status) matchQuery.kitchen_status = kitchen_status;
-    if (kitchen_type) matchQuery.kitchen_type = kitchen_type;
-
     if (category) {
       matchQuery.category = new mongoose.Types.ObjectId(category as string);
     }
+
     if (subcategory) {
       matchQuery.subcategoryName = new mongoose.Types.ObjectId(
         subcategory as string
       );
     }
 
-    // Search kitchen fields
+    if (kitchen_type) matchQuery.kitchen_type = kitchen_type;
     if (search && typeof search === "string" && search.trim() !== "") {
       const searchRegex = new RegExp(search.trim(), "i");
       matchQuery.$or = [
         { kitchen_name: { $regex: searchRegex } },
-        { kitchen_owner_name: { $regex: searchRegex } },
         { owner_email: { $regex: searchRegex } },
         { owner_phone_number: { $regex: searchRegex } },
-        { kitchen_phone_number: { $regex: searchRegex } },
       ];
-    }
-
-    // Search address fields by pre-querying Address
-    let addressIds: mongoose.Types.ObjectId[] = [];
-    if (search && typeof search === "string" && search.trim() !== "") {
-      const searchRegex = new RegExp(search.trim(), "i");
-
       const addressMatch = await Address.find({
         is_deleted: false,
         $or: [
@@ -412,14 +398,12 @@ export const handleGetKitchens = async (
           { country: { $regex: searchRegex } },
           { pincode: { $regex: searchRegex } },
           { landmark: { $regex: searchRegex } },
-          { address_type: { $regex: searchRegex } },
         ],
       }).select("_id");
 
-      addressIds = addressMatch.map(
+      const addressIds = addressMatch.map(
         (addr) => addr._id
       ) as mongoose.Types.ObjectId[];
-
 
       if (addressIds.length > 0) {
         if (matchQuery.$or) {
@@ -430,15 +414,10 @@ export const handleGetKitchens = async (
       }
     }
 
-
-    const totalKitchensBefore = await Kitchen.countDocuments({
-      is_deleted: false,
-      isapproved: "approved",
-    });
     const totalKitchens = await Kitchen.countDocuments(matchQuery);
-  
     const kitchens = await Kitchen.aggregate([
       { $match: matchQuery },
+      { $sort: { _id: 1 } },
       {
         $lookup: {
           from: "addresses",
@@ -447,154 +426,83 @@ export const handleGetKitchens = async (
           as: "addresses",
         },
       },
-      {
-        $lookup: {
-          from: "kitchencategories",
-          localField: "category",
-          foreignField: "_id",
-          as: "categoryDetails",
-        },
-      },
-      {
-        $lookup: {
-          from: "kitchensubcategories",
-          localField: "subcategoryName",
-          foreignField: "_id",
-          as: "subcategoryDetails",
-        },
-      },
-      {
-        $lookup: {
-          from: "fssaicertificatedetails",
-          localField: "_id",
-          foreignField: "kitchen_id",
-          as: "fssaiDetails",
-        },
-      },
-      {
-        $lookup: {
-          from: "gstcertificatedetails",
-          localField: "_id",
-          foreignField: "prepared_by_id",
-          as: "gstDetails",
-        },
-      },
-      {
-        $lookup: {
-          from: "pancarddetails",
-          localField: "_id",
-          foreignField: "prepared_by_id",
-          as: "panDetails",
-        },
-      },
       { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
-          from: "countries",
-          let: { countryName: "$addresses.country" },
-          pipeline: [
-            { $match: { $expr: { $eq: ["$name", "$$countryName"] } } },
-          ],
-          as: "countryInfo",
+          from: "orgcategories",
+          localField: "category",
+          foreignField: "_id",
+          as: "categoryInfo",
         },
       },
       {
         $lookup: {
-          from: "states",
-          let: { stateName: "$addresses.state" },
-          pipeline: [{ $match: { $expr: { $eq: ["$name", "$$stateName"] } } }],
-          as: "stateInfo",
+          from: "orgsubcategories",
+          localField: "subcategoryName",
+          foreignField: "_id",
+          as: "subcategoryInfo",
         },
       },
       {
         $lookup: {
           from: "cities",
-          let: { cityName: "$addresses.city" },
-          pipeline: [{ $match: { $expr: { $eq: ["$name", "$$cityName"] } } }],
+          let: { cityId: { $toInt: "$addresses.city" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
           as: "cityInfo",
         },
       },
       {
         $lookup: {
+          from: "states",
+          let: { stateId: { $toInt: "$addresses.state" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          as: "stateInfo",
+        },
+      },
+      {
+        $lookup: {
           from: "districts",
-          let: { districtName: "$addresses.district" },
-          pipeline: [
-            { $match: { $expr: { $eq: ["$name", "$$districtName"] } } },
-          ],
+          let: { districtId: { $toInt: "$addresses.district" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
           as: "districtInfo",
         },
       },
       {
-        $group: {
-          _id: "$_id",
-          kitchen_name: { $first: "$kitchen_name" },
-          user_id: { $first: "$user_id" },
-          kitchen_status: { $first: "$kitchen_status" },
-          kitchen_owner_name: { $first: "$kitchen_owner_name" },
-          owner_email: { $first: "$owner_email" },
-          owner_phone_number: { $first: "$owner_phone_number" },
-          restaurant_type: { $first: "$restaurant_type" },
-          kitchen_type: { $first: "$kitchen_type" },
-          kitchen_phone_number: { $first: "$kitchen_phone_number" },
-          kitchen_image: { $first: "$kitchen_image" },
-          categoryDetails: {
-            $first: {
-              $mergeObjects: [
-                { $arrayElemAt: ["$categoryDetails", 0] },
-                { category_name: "$categoryDetails.category" },
-              ],
-            },
+        $lookup: {
+          from: "countries",
+          let: { countryId: { $toInt: "$addresses.country" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          as: "countryInfo",
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          kitchen_name: 1,
+          kitchen_type: 1,
+          kitchen_phone_number: 1,
+          owner_email: 1,
+          kitchen_image: 1,
+          category: 1,
+          subcategoryName: 1,
+          categoryInfo: {
+            $arrayElemAt: ["$categoryInfo", 0],
           },
-          subcategoryDetails: {
-            $first: {
-              $mergeObjects: [
-                { $arrayElemAt: ["$subcategoryDetails", 0] },
-                { subcategory_name: "$subcategoryDetails.subcategoryName" },
-              ],
-            },
+          subcategoryInfo: {
+            $arrayElemAt: ["$subcategoryInfo", 0],
           },
-          working_days: { $first: "$working_days" },
-          pre_ordering_options: { $first: "$pre_ordering_options" },
-          role: { $first: "$role" },
           addresses: {
-            $push: {
-              _id: "$addresses._id",
-              street_address: "$addresses.street_address",
-              city: "$addresses.city",
-              city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
-              state: "$addresses.state",
-              state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
-              district: "$addresses.district",
-              district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
-              pincode: "$addresses.pincode",
-              country: "$addresses.country",
-              country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
-              landmark: "$addresses.landmark",
-              address_type: "$addresses.address_type",
-            },
-          },
-          fssaiDetails: {
-            $first: {
-              ffsai_certificate_number:
-                "$fssaiDetails.ffsai_certificate_number",
-              ffsai_card_owner_name: "$fssaiDetails.ffsai_card_owner_name",
-              ffsai_certificate_image: "$fssaiDetails.ffsai_certificate_image",
-              expiry_date: "$fssaiDetails.expiry_date",
-            },
-          },
-          gstDetails: {
-            $first: {
-              gst_number: "$gstDetails.gst_number",
-              gst_certificate_image: "$gstDetails.gst_certificate_image",
-              expiry_date: "$gstDetails.expiry_date",
-            },
-          },
-          panDetails: {
-            $first: {
-              pan_card_number: "$panDetails.pan_card_number",
-              pan_card_user_name: "$panDetails.pan_card_user_name",
-              pan_card_image: "$panDetails.pan_card_image",
-            },
+            street_address: "$addresses.street_address",
+            city_id: "$addresses.city",
+            city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
+            state_id: "$addresses.state",
+            state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
+            district_id: "$addresses.district",
+            district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
+            pincode: "$addresses.pincode",
+            country_id: "$addresses.country",
+            country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
+            landmark: "$addresses.landmark",
           },
         },
       },
@@ -602,6 +510,7 @@ export const handleGetKitchens = async (
       { $limit: limit },
     ]);
 
+    const hasMore = skip + limit < totalKitchens;
     sendSuccessResponse(
       res,
       "Kitchens retrieved successfully!",
@@ -610,8 +519,7 @@ export const handleGetKitchens = async (
         totalPages: Math.ceil(totalKitchens / limit),
         currentPage: page,
         totalKitchens,
-        hasMore:
-          kitchens.length === limit && page < Math.ceil(totalKitchens / limit),
+        hasMore,
       },
       HTTP_STATUS_CODE.OK
     );
