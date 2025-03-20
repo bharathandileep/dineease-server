@@ -23,6 +23,7 @@ import { clientOrigin } from "./config/environment";
 import userLoginsRoutes from "./routes/auth/loginsRoute";
 import notificationRoutes from "./routes/notification/notificationRoutes";
 import EmployeeManagementRoutes from "./routes/empmanagment/EmployeeManagementRoutes";
+import CollabRoutes from "./routes/collab/CollabRoutes"
 
 export const app: Application = Express();
 
@@ -53,7 +54,7 @@ app.use(`${apiConfig.baseAPIUrl}/menu-items`, menuitemsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/org-employee`, OrgEmployeeManagementRoutes);
 app.use(`${apiConfig.baseAPIUrl}/addressDetails`, addressDetailsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/notification`, notificationRoutes);
-
+app.use(`${apiConfig.baseAPIUrl}/collab`,CollabRoutes);
 // Root route
 app.get(`/`, (req, res) => {
   res.send(`

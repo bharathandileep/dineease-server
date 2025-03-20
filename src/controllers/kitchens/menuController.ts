@@ -461,17 +461,9 @@ export const updateMenuItem = async (req: Request, res: Response) => {
 export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
   try {
     const { kitchenId } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(kitchenId)) {
-      return sendErrorResponse(
-        res,
-        new Error("Invalid kitchen ID format"),
-        HTTP_STATUS_CODE.BAD_REQUEST,
-        ERROR_TYPES.BAD_REQUEST_ERROR
-      );
-    }
-
+    const kitchenInfo = await Kitchen.findOne({slug:kitchenId})
     const menu = await Menu.findOne({
-      kitchen_id: new mongoose.Types.ObjectId(kitchenId),
+      slug:kitchenInfo?._id,
       is_deleted: false,
     })
       .populate({

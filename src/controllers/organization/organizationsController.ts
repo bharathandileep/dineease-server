@@ -1181,113 +1181,119 @@ export const handleAdminApproveOgaisation = async (
   }
 };
 
-export const handleSelectKitchen = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
-  try {
-    const { orgId, kitchenId } = req.body;
+// export const handleSelectKitchen = async (req: Request, res: Response): Promise<any> => {
+//   try {
+//     const { orgId, kitchenId } = req.body;
 
-    // Validate IDs
-    validateMogooseObjectId(orgId);
-    validateMogooseObjectId(kitchenId);
+//     // Validate IDs
+//     validateMogooseObjectId(orgId);
+//     validateMogooseObjectId(kitchenId);
 
-    // Check if the organization exists
-    const organization = await Organization.findById(orgId);
-    if (!organization || organization.is_deleted) {
-      throw new CustomError(
-        "Organization not found",
-        HTTP_STATUS_CODE.NOT_FOUND,
-        ERROR_TYPES.NOT_FOUND_ERROR,
-        false
-      );
-    }
+//     // Check if the organization exists
+//     const organization = await Organization.findById(orgId);
+//     if (!organization || organization.is_deleted) {
+//       throw new CustomError(
+//         "Organization not found",
+//         HTTP_STATUS_CODE.NOT_FOUND,
+//         ERROR_TYPES.NOT_FOUND_ERROR,
+//         false
+//       );
+//     }
 
-    // Check if the kitchen exists
-    const kitchen = await Kitchen.findById(kitchenId);
-    if (!kitchen || kitchen.is_deleted) {
-      throw new CustomError(
-        "Kitchen not found",
-        HTTP_STATUS_CODE.NOT_FOUND,
-        ERROR_TYPES.NOT_FOUND_ERROR,
-        false
-      );
-    }
+//     // Check if the kitchen exists
+//     const kitchen = await Kitchen.findById(kitchenId);
+//     if (!kitchen || kitchen.is_deleted) {
+//       throw new CustomError(
+//         "Kitchen not found",
+//         HTTP_STATUS_CODE.NOT_FOUND,
+//         ERROR_TYPES.NOT_FOUND_ERROR,
+//         false
+//       );
+//     }
 
-    // Update the organization with the selected kitchen
-    organization.selected_kitchen_id = kitchenId;
-    await organization.save();
+//     // Update the organization with the selected kitchen
+//     organization.selected_kitchen_id = kitchenId;
+//     await organization.save();
 
-    sendSuccessResponse(
-      res,
-      "Kitchen selected successfully!",
-      { organization },
-      HTTP_STATUS_CODE.OK
-    );
-  } catch (error) {
-    sendErrorResponse(
-      res,
-      error,
-      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-    );
-  }
-};
+//     sendSuccessResponse(
+//       res,
+//       "Kitchen selected successfully!",
+//       { organization },
+//       HTTP_STATUS_CODE.OK
+//     );
+//   } catch (error) {
+//     sendErrorResponse(
+//       res,
+//       error,
+//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+//     );
+//   }
+// };
 
-export const handleGetSelectedKitchen = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
-  try {
-    const { orgId } = req.params;
 
-    // Validate ID
-    validateMogooseObjectId(orgId);
 
-    // Check if the organization exists
-    const organization = await Organization.findById(orgId);
-    if (!organization || organization.is_deleted) {
-      throw new CustomError(
-        "Organization not found",
-        HTTP_STATUS_CODE.NOT_FOUND,
-        ERROR_TYPES.NOT_FOUND_ERROR,
-        false
-      );
-    }
+//     // Check if the organization exists
+//     const organization = await Organization.findById(orgId);
+//     if (!organization || organization.is_deleted) {
+//       throw new CustomError(
+//         "Organization not found",
+//         HTTP_STATUS_CODE.NOT_FOUND,
+//         ERROR_TYPES.NOT_FOUND_ERROR,
+//         false
+//       );
+//     }
 
-    // Check if a kitchen is selected
-    if (!organization.selected_kitchen_id) {
-      throw new CustomError(
-        "No kitchen selected for this organization",
-        HTTP_STATUS_CODE.BAD_REQUEST,
-        ERROR_TYPES.BAD_REQUEST_ERROR,
-        false
-      );
-    }
+//     // Check if a kitchen is selected
+//     if (!organization.selected_kitchen_id) {
+//       throw new CustomError(
+//         "No kitchen selected for this organization",
+//         HTTP_STATUS_CODE.BAD_REQUEST,
+//         ERROR_TYPES.BAD_REQUEST_ERROR,
+//         false
+//       );
+//     }
+
+//     // Fetch the selected kitchen
+//     const kitchen = await Kitchen.findById(organization.selected_kitchen_id);
+//     if (!kitchen || kitchen.is_deleted) {
+//       throw new CustomError(
+//         "Selected kitchen not found",
+//         HTTP_STATUS_CODE.NOT_FOUND,
+//         ERROR_TYPES.NOT_FOUND_ERROR,
+//         false
+//       );
+//     }
 
     // Fetch the selected kitchen
-    const kitchen = await Kitchen.findById(organization.selected_kitchen_id);
-    if (!kitchen || kitchen.is_deleted) {
-      throw new CustomError(
-        "Selected kitchen not found",
-        HTTP_STATUS_CODE.NOT_FOUND,
-        ERROR_TYPES.NOT_FOUND_ERROR,
-        false
-      );
-    }
+//     export const handleGetSelectedKitchen = async (
+//       req: Request,
+//       res: Response
+//     ): Promise<any> => {
+//       try {
+//         const { orgId } = req.params;
+//     const kitchen = await Kitchen.findById(Organization.selected_kitchen_id);
+//     if (!kitchen || kitchen.is_deleted) {
+//       throw new CustomError(
+//         "Selected kitchen not found",
+//         HTTP_STATUS_CODE.NOT_FOUND,
+//         ERROR_TYPES.NOT_FOUND_ERROR,
+//         false
+//       );
+//     }
 
-    sendSuccessResponse(
-      res,
-      "Selected kitchen retrieved successfully!",
-      { kitchen },
-      HTTP_STATUS_CODE.OK
-    );
-  } catch (error) {
-    sendErrorResponse(
-      res,
-      error,
-      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-    );
-  }
-};
+//     sendSuccessResponse(
+//       res,
+//       "Selected kitchen retrieved successfully!",
+//       { kitchen },
+//       HTTP_STATUS_CODE.OK
+//     );
+//   } catch (error) {
+//     sendErrorResponse(
+//       res,
+//       error,
+//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+//     );
+//   }
+// };

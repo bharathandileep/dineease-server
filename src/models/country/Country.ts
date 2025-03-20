@@ -8,14 +8,13 @@ export interface ICountry extends Document {
 
 const countrySchema: Schema<ICountry> = new Schema<ICountry>(
   {
-    id: { type: Number, unique: true }, // Unique country ID
-    name: { type: String, required: true, unique: true }, // Country name
-    phone_code: { type: String, required: true } // Country phone code
+    id: { type: Number, unique: true },
+    name: { type: String, required: true, unique: true }, 
+    phone_code: { type: String, required: true } 
   },
   { timestamps: true }
 );
 
-// Create the model for the Country schema
 const Country: Model<ICountry> = mongoose.model<ICountry>("Country", countrySchema, "countries");
 
 export default Country;

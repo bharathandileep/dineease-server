@@ -300,7 +300,7 @@ export const checkUserExistence = async (
         email: user.email,
         fullName: user.fullName,
         phone: user.phone_number,
-      }, 
+      },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -341,7 +341,6 @@ export const createUser = async (req: Request, res: Response): Promise<any> => {
       email,
       phone_number: phone,
       fullName: name,
-      
     });
     await newUser.save();
 
