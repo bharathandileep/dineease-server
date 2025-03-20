@@ -216,6 +216,7 @@ export const handleGetOrganisations = async (
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
     const { search, category, subcategory } = req.query;
+
     const matchQuery: any = {
       is_deleted: false,
       isapproved: "approved",
@@ -230,30 +231,27 @@ export const handleGetOrganisations = async (
       );
     }
 
-    // Search organization fields
+    // Search organization fields and addresses
     if (search && typeof search === "string" && search.trim() !== "") {
       const searchRegex = new RegExp(search.trim(), "i");
-      const searchNumber = parseInt(search.trim(), 10);
       matchQuery.$or = [
         { organizationName: { $regex: searchRegex } },
         { managerName: { $regex: searchRegex } },
         { register_number: { $regex: searchRegex } },
         { contact_number: { $regex: searchRegex } },
-        { email: { $regex: searchRegex } },
-      ];
+          { email: { $regex: searchRegex } },
+        ];
+  
+        const searchNumber = parseInt(search.trim(), 10);
+        if (!isNaN(searchNumber)) {
+          matchQuery.$or.push({ no_of_employees: searchNumber });
+        }
 
-      if (!isNaN(searchNumber)) {
-        matchQuery.$or.push({ no_of_employees: searchNumber });
-      }
-    }
-    // Search address fields by pre-querying Address
-    let addressIds: mongoose.Types.ObjectId[] = [];
-    if (search && typeof search === "string" && search.trim() !== "") {
-      const searchRegex = new RegExp(search.trim(), "i");
+      
 
-      // Query Addresses directly with string fields
+      // Search address fields
       const addressMatch = await Address.find({
-        is_deleted: false, // Match your Address model's default
+        is_deleted: false,
         $or: [
           { street_address: { $regex: searchRegex } },
           { city: { $regex: searchRegex } },
@@ -262,13 +260,13 @@ export const handleGetOrganisations = async (
           { country: { $regex: searchRegex } },
           { pincode: { $regex: searchRegex } },
           { landmark: { $regex: searchRegex } },
-          { address_type: { $regex: searchRegex } },
         ],
       }).select("_id");
 
-      addressIds = addressMatch.map(
-        (addr) => addr._id as mongoose.Types.ObjectId
-      );
+      const addressIds = addressMatch.map(
+        (addr) => addr._id
+      ) as mongoose.Types.ObjectId[];
+
       if (addressIds.length > 0) {
         if (matchQuery.$or) {
           matchQuery.$or.push({ address_id: { $in: addressIds } });
@@ -277,13 +275,11 @@ export const handleGetOrganisations = async (
         }
       }
     }
-    const totalOrganizationsBefore = await Organization.countDocuments({
-      is_deleted: false,
-      isapproved: "approved",
-    });
+
     const totalOrganizations = await Organization.countDocuments(matchQuery);
     const organizations = await Organization.aggregate([
       { $match: matchQuery },
+      { $sort: { _id: 1 } }, // Consistent sorting like handleGetKitchens
       {
         $lookup: {
           from: "addresses",
@@ -292,12 +288,13 @@ export const handleGetOrganisations = async (
           as: "addresses",
         },
       },
+      { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: "orgcategories",
           localField: "category",
           foreignField: "_id",
-          as: "categoryDetails",
+          as: "categoryInfo",
         },
       },
       {
@@ -305,94 +302,73 @@ export const handleGetOrganisations = async (
           from: "orgsubcategories",
           localField: "subcategoryName",
           foreignField: "_id",
-          as: "subcategoryDetails",
-        },
-      },
-      {
-        $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true },
-      },
-
-      {
-        $lookup: {
-          from: "countries",
-          let: { countryName: "$addresses.country" },
-          pipeline: [
-            { $match: { $expr: { $eq: ["$name", "$$countryName"] } } },
-          ],
-          as: "countryInfo",
-        },
-      },
-      {
-        $lookup: {
-          from: "states",
-          let: { stateName: "$addresses.state" },
-          pipeline: [{ $match: { $expr: { $eq: ["$name", "$$stateName"] } } }],
-          as: "stateInfo",
+          as: "subcategoryInfo",
         },
       },
       {
         $lookup: {
           from: "cities",
-          let: { cityName: "$addresses.city" },
-          pipeline: [{ $match: { $expr: { $eq: ["$name", "$$cityName"] } } }],
+          let: { cityId: { $toInt: "$addresses.city" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
           as: "cityInfo",
         },
       },
       {
         $lookup: {
+          from: "states",
+          let: { stateId: { $toInt: "$addresses.state" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          as: "stateInfo",
+        },
+      },
+      {
+        $lookup: {
           from: "districts",
-          let: { districtName: "$addresses.district" },
-          pipeline: [
-            { $match: { $expr: { $eq: ["$name", "$$districtName"] } } },
-          ],
+          let: { districtId: { $toInt: "$addresses.district" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
           as: "districtInfo",
         },
       },
       {
-        $group: {
-          _id: "$_id",
-          user_id: { $first: "$user_id" },
-          organizationName: { $first: "$organizationName" },
-          managerName: { $first: "$managerName" },
-          register_number: { $first: "$register_number" },
-          contact_number: { $first: "$contact_number" },
-          email: { $first: "$email" },
-          organizationLogo: { $first: "$organizationLogo" },
-          no_of_employees: { $first: "$no_of_employees" },
-          slug: { $first: "$slug" },
-          status: { $first: "$status" },
-          categoryDetails: {
-            $first: {
-              $mergeObjects: [
-                { $arrayElemAt: ["$categoryDetails", 0] },
-                { category_name: "$categoryDetails.category" },
-              ],
-            },
+        $lookup: {
+          from: "countries",
+          let: { countryId: { $toInt: "$addresses.country" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          as: "countryInfo",
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          user_id: 1,
+          organizationName: 1,
+          managerName: 1,
+          register_number: 1,
+          contact_number: 1,
+          email: 1,
+          organizationLogo: 1,
+          no_of_employees: 1,
+          slug: 1,
+          status: 1,
+          categoryInfo: {
+            $arrayElemAt: ["$categoryInfo", 0],
           },
-          subcategoryDetails: {
-            $first: {
-              $mergeObjects: [
-                { $arrayElemAt: ["$subcategoryDetails", 0] },
-                { subcategory_name: "$subcategoryDetails.subcategoryName" },
-              ],
-            },
+          subcategoryInfo: {
+            $arrayElemAt: ["$subcategoryInfo", 0],
           },
           addresses: {
-            $push: {
-              _id: "$addresses._id",
-              street_address: "$addresses.street_address",
-              city: "$addresses.city", // Keep as string
-              city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
-              state: "$addresses.state", // Keep as string
-              state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
-              district: "$addresses.district", // Keep as string
-              district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
-              pincode: "$addresses.pincode",
-              country: "$addresses.country", // Keep as string
-              country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
-              landmark: "$addresses.landmark",
-              address_type: "$addresses.address_type",
-            },
+            street_address: "$addresses.street_address",
+            city_id: "$addresses.city",
+            city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
+            state_id: "$addresses.state",
+            state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
+            district_id: "$addresses.district",
+            district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
+            pincode: "$addresses.pincode",
+            country_id: "$addresses.country",
+            country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
+            landmark: "$addresses.landmark",
+            address_type: "$addresses.address_type",
           },
         },
       },
@@ -400,6 +376,7 @@ export const handleGetOrganisations = async (
       { $limit: limit },
     ]);
 
+    const hasMore = skip + limit < totalOrganizations;
     sendSuccessResponse(
       res,
       "Organizations retrieved successfully!",
@@ -408,9 +385,7 @@ export const handleGetOrganisations = async (
         totalPages: Math.ceil(totalOrganizations / limit),
         currentPage: page,
         totalOrganizations,
-        hasMore:
-          organizations.length === limit &&
-          page < Math.ceil(totalOrganizations / limit),
+        hasMore,
       },
       HTTP_STATUS_CODE.OK
     );
