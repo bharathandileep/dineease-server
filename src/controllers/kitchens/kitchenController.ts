@@ -769,7 +769,7 @@ export const handleUpdateKitchensById = async (
     const kitchenId = req.params.id;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const {
-      kitchen_name,
+      kitchen_name, 
       kitchen_status,
       kitchen_owner_name,
       owner_email,
@@ -782,7 +782,7 @@ export const handleUpdateKitchensById = async (
       address_type,
       street_address,
       district,
-      city,
+      city, 
       state,
       pincode,
       country,

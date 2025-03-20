@@ -100,11 +100,14 @@ export const apiConfig = {
     getUnapprovedOrganisations: "/requested/all",
     approveOrganization: "/approve/:id",
 
-    selectKitchen:"/select",
-    getSelectedKitchen:"/:orgId/selcted-kitchens",
-
 
   },
+  collab:{
+    collaborateKitchen:"/select",
+    listCollaboratedKitchens:"/organization/:organization_id",
+    getAllColloborations:"/all"
+
+   },
   designation: {
     createDesignation: "/designations",
     getAllDesignations: "/designations/all",
