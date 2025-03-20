@@ -480,6 +480,7 @@ export const handleGetKitchens = async (
           _id: 1,
           kitchen_name: 1,
           kitchen_type: 1,
+          slug: 1,
           kitchen_phone_number: 1,
           owner_email: 1,
           kitchen_image: 1,
@@ -539,11 +540,10 @@ export const handleGetKitchensById = async (
 ): Promise<any> => {
   try {
     const { kitchenId } = req.params;
-    validateMogooseObjectId(kitchenId);
     const kitchen = await Kitchen.aggregate([
       {
         $match: {
-          _id: new mongoose.Types.ObjectId(kitchenId),
+          slug:kitchenId,
           is_deleted: false,
         },
       },
@@ -555,25 +555,24 @@ export const handleGetKitchensById = async (
           as: "addresses",
         },
       },
-      // Corrected category lookup
       {
         $lookup: {
           from: "kitchencategories",
-          localField: "category", // This should match the field in your Kitchen schema
-          foreignField: "_id", // This should match the primary key in kitchencategories
+          localField: "category", 
+          foreignField: "_id", 
           as: "categoryDetails",
         },
       },
-      // Corrected subcategory lookup
+
       {
         $lookup: {
-          from: "kitchensubcategories", // Corrected collection name
-          localField: "subcategoryName", // This should match the field in your Kitchen schema
-          foreignField: "_id", // This should match the primary key in kitchensubcategories
+          from: "kitchensubcategories", 
+          localField: "subcategoryName",
+          foreignField: "_id", 
           as: "subcategoryDetails",
         },
       },
-      // Other lookups remain the same
+
       {
         $lookup: {
           from: "kitchenfssaicertificatedetails",
@@ -1189,6 +1188,7 @@ export const handleGetUnapprovedKitchens = async (
         $group: {
           _id: "$_id",
           kitchen_name: { $first: "$kitchen_name" },
+          slug: { $first: "$slug" },
           kitchen_owner_name: { $first: "$kitchen_owner_name" },
           kitchen_type: { $first: "$kitchen_type" },
           kitchen_phone_number: { $first: "$kitchen_phone_number" },

@@ -11,9 +11,6 @@ import { HTTP_STATUS_CODE } from "../../lib/constants/httpStatusCodes";
 import { ERROR_TYPES } from "../../lib/constants/errorType";
 import { CustomError } from "../../lib/errors/customError";
 import { generateColloborationNotification } from "../notification/notificationController";
-import { promises } from "dns";
-import { fromJS } from "immutable";
-
 
 
 export const collaborateKitchen = async (req: Request, res: Response) => {
@@ -323,6 +320,7 @@ export const listCollaboratedKitchens = async (req: Request, res: Response) => {
 // Try this approach which is more resilient
 export const getAllColloborations = async(req: Request, res: Response): Promise<void> => {
   try {
+    console.log("haii")
     // First get the basic collaboration documents
     const collaborations = await CollaborationModel.find({ is_deleted: false })
       .sort({ createdAt: -1 })
