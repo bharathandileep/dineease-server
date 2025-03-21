@@ -543,7 +543,7 @@ export const handleGetKitchensById = async (
     const kitchen = await Kitchen.aggregate([
       {
         $match: {
-          slug:kitchenId,
+          slug: kitchenId,
           is_deleted: false,
         },
       },
@@ -558,17 +558,17 @@ export const handleGetKitchensById = async (
       {
         $lookup: {
           from: "kitchencategories",
-          localField: "category", 
-          foreignField: "_id", 
+          localField: "category",
+          foreignField: "_id",
           as: "categoryDetails",
         },
       },
 
       {
         $lookup: {
-          from: "kitchensubcategories", 
+          from: "kitchensubcategories",
           localField: "subcategoryName",
-          foreignField: "_id", 
+          foreignField: "_id",
           as: "subcategoryDetails",
         },
       },
@@ -766,9 +766,10 @@ export const handleUpdateKitchensById = async (
     }
 
     const kitchenId = req.params.id;
+
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const {
-      kitchen_name, 
+      kitchen_name,
       kitchen_status,
       kitchen_owner_name,
       owner_email,
@@ -781,7 +782,7 @@ export const handleUpdateKitchensById = async (
       address_type,
       street_address,
       district,
-      city, 
+      city,
       state,
       pincode,
       country,
@@ -795,16 +796,12 @@ export const handleUpdateKitchensById = async (
       working_days,
       pre_ordering_options,
     } = req.body;
-
-    validateMogooseObjectId(kitchenId);
-
     const existingKitchen = await Kitchen.findOne({
-      _id: kitchenId,
+      slug: kitchenId,
       is_deleted: false,
     })
       .populate("category")
       .populate("subcategoryName");
-
     if (!existingKitchen) {
       throw new CustomError(
         "Kitchen not found",
@@ -813,8 +810,6 @@ export const handleUpdateKitchensById = async (
         false
       );
     }
-
-    // Parse and validate working_days
     let parsedWorkingDays = [];
     if (typeof working_days === "string") {
       try {
@@ -929,9 +924,8 @@ export const handleUpdateKitchensById = async (
       subcategoryName && mongoose.Types.ObjectId.isValid(subcategoryName)
         ? new mongoose.Types.ObjectId(subcategoryName)
         : existingKitchen.subcategoryName;
-
     const updatedKitchen = await Kitchen.findByIdAndUpdate(
-      kitchenId,
+      existingKitchen._id,
       {
         $set: {
           kitchen_name,
@@ -951,9 +945,8 @@ export const handleUpdateKitchensById = async (
       },
       { new: true }
     );
-
     // Update address
-    await updateAddress(Kitchen, kitchenId, {
+    await updateAddress(Kitchen, existingKitchen?._id, {
       street_address,
       city,
       state,
@@ -961,44 +954,39 @@ export const handleUpdateKitchensById = async (
       pincode,
       country,
       address_type,
-      prepared_by_id: kitchenId,
+      prepared_by_id: existingKitchen?._id,
       entity_type: "Kitchen",
     });
-
     // Update or create PAN details
     if (pan_card_number) {
       const panData = {
         pan_card_number,
         pan_card_user_name,
         pan_card_image: panImageUrl,
-        prepared_by_id: kitchenId,
+        prepared_by_id: existingKitchen?._id,
         entity_type: "Kitchen",
       };
-
       await PanCardDetails.findOneAndUpdate(
-        { prepared_by_id: kitchenId, entity_type: "Kitchen" },
+        { prepared_by_id: existingKitchen?._id, entity_type: "Kitchen" },
         panData,
         { upsert: true, new: true }
       );
     }
-
     // Update or create GST details
     if (gst_number) {
       const gstData = {
         gst_number,
         gst_certificate_image: gstImageUrl,
         expiry_date: gst_expiry_date,
-        prepared_by_id: kitchenId,
+        prepared_by_id: existingKitchen?._id,
         entity_type: "Kitchen",
       };
-
       await GstCertificateDetails.findOneAndUpdate(
-        { prepared_by_id: kitchenId, entity_type: "Kitchen" },
+        { prepared_by_id: existingKitchen?._id, entity_type: "Kitchen" },
         gstData,
         { upsert: true, new: true }
       );
     }
-
     // Update or create FSSAI details
     if (ffsai_certificate_number) {
       const fssaiData = {
@@ -1006,16 +994,16 @@ export const handleUpdateKitchensById = async (
         ffsai_card_owner_name,
         ffsai_certificate_image: fssaiImageUrl,
         expiry_date: ffsai_expiry_date,
-        kitchen_id: kitchenId,
+        kitchen_id: existingKitchen?._id,
       };
-
+      console.log("haii-8");
       await FssaiCertificateDetails.findOneAndUpdate(
-        { kitchen_id: kitchenId },
+        { kitchen_id: existingKitchen?._id },
         fssaiData,
         { upsert: true, new: true }
       );
     }
-    const populatedKitchen = await Kitchen.findById(kitchenId)
+    const populatedKitchen = await Kitchen.findById(existingKitchen?._id)
       .populate("category")
       .populate("subcategoryName");
     sendSuccessResponse(
