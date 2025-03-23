@@ -7,4 +7,5 @@ const router: Router = express.Router();
 router.post(`${apiConfig.collab.collaborateKitchen}`, collaborateKitchen);
 router.get(`${apiConfig.collab.listCollaboratedKitchens}`, listCollaboratedKitchens);
 router.get(`${apiConfig.collab.getAllColloborations}`,getAllColloborations);
+
 export default router; 
