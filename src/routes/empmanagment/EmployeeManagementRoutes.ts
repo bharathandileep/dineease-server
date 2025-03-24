@@ -9,6 +9,7 @@ import {
 } from "../../controllers/empmanagment/empmanagmentcontroller";
 import { apiConfig } from "../../config/endpoint ";
 import upload from "../../lib/helpers/uploadMiddleware";
+import { authorizationAccess } from "../../middleware/TokenValidation";
 
 const router = express.Router();
 
@@ -24,7 +25,7 @@ router.post(`${apiConfig.employee.createEmployee}`,
   upload.fields([
     { name: "profile_picture", maxCount: 1},  { name: "pan_image", maxCount: 1 },
     { name: "aadhar_image", maxCount: 1 }, 
-  ]),createEmployee);
+  ]), authorizationAccess, createEmployee);
 router.put(`${apiConfig.employee.updateEmployee}`, 
   upload.fields([
     { name: "profile_picture", maxCount: 1},  { name: "pan_image", maxCount: 1 },

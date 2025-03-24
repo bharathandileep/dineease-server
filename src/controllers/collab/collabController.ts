@@ -323,13 +323,12 @@ export const listCollaboratedKitchens = async (req: Request, res: Response) => {
       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
     );
   }
-};
+}; 
 
-export const getAllColloborations = async (
-  req: Request,
-  res: Response
-): Promise<void> => {
+export const getAllColloborations = async(req: Request, res: Response): Promise<void> => {
   try {
+
+
     const collaborations = await CollaborationModel.find({ is_deleted: false })
       .sort({ createdAt: -1 })
       .lean();
@@ -405,6 +404,67 @@ export const getAllColloborations = async (
     res.status(500).json({
       message: "Internal server error",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,
+    });
+  } 
+};
+export const getCollaborationById = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params; 
+
+ 
+    const collaboration = await CollaborationModel.findOne({ 
+      _id: id, 
+      is_deleted: false 
+    }).lean();
+
+    if (!collaboration) {
+      res.status(404).json({ message: 'Collaboration not found' });
+      return;
+    }
+
+    // Fetch related organization and kitchen
+    const organization = await Organization.findOne({
+      _id: collaboration.organization_id,
+      is_deleted: false
+    }).select('organizationName organizationLogo').lean();
+
+    const kitchen = await Kitchen.findOne({
+      _id: collaboration.kitchen_id,
+      is_deleted: false
+    }).select('kitchen_name kitchen_image').lean();
+
+    // Format the response
+    const formattedCollaboration = {
+      _id: collaboration._id,
+      organization: organization ? {
+        _id: organization._id,
+        name: organization.organizationName || 'Unknown Organization',
+        logo: organization.organizationLogo || null
+      } : {
+        _id: collaboration.organization_id,
+        name: 'Unknown Organization',
+        logo: null
+      },
+      kitchen: kitchen ? {
+        _id: kitchen._id,
+        name: kitchen.kitchen_name || 'Unknown Kitchen',
+        image: kitchen.kitchen_image || null
+      } : {
+        _id: collaboration.kitchen_id,
+        name: 'Unknown Kitchen',
+        image: null
+      },
+      createdAt: collaboration.createdAt,
+      updatedAt: collaboration.updatedAt
+    };
+
+    res.status(200).json(formattedCollaboration);
+  } catch (error: any) {
+    console.error(`Error fetching collaboration by ID (${req.params.id}):`, error);
+    console.error(error.stack);
+    res.status(500).json({  
+      message: 'Internal server error', 
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };

@@ -136,6 +136,28 @@ export const handleCreateNewKitchens = async (
       }
     }
     validateMogooseObjectId(userId);
+    const existingGst = await GstCertificateDetails.findOne({
+      gst_number: gst_number,
+    });
+
+    if (existingGst) {
+      throw new CustomError(
+        "GST number already exists",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
+    const existingFssai = await FssaiCertificateDetails.findOne({
+      ffsai_certificate_number: ffsai_certificate_number,
+    });
+
+    if (existingFssai) {
+      throw new CustomError(
+        "FSSAI certificate number already exists",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
     let parsedWorkingDays = [];
     if (typeof working_days === "string") {
       try {
@@ -1028,10 +1050,9 @@ export const handleDeleteKitchens = async (
 ): Promise<any> => {
   try {
     const { kitchenId } = req.params;
-    validateMogooseObjectId(kitchenId);
 
-    const updatedKitchen = await Kitchen.findByIdAndUpdate(
-      kitchenId,
+    const updatedKitchen = await Kitchen.findOneAndUpdate(
+      { slug: kitchenId },
       { $set: { is_deleted: true } },
       { new: true }
     );
@@ -1061,7 +1082,7 @@ export const handleDeleteKitchens = async (
 export const kitchenToggleStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const kitchen = await Kitchen.findById(id);
+    const kitchen = await Kitchen.findOne({ slug: id });
 
     if (!kitchen) {
       throw new CustomError(
@@ -1072,8 +1093,8 @@ export const kitchenToggleStatus = async (req: Request, res: Response) => {
       );
     }
     const newStatus = !kitchen.status;
-    const updatedKitchen = await Kitchen.findByIdAndUpdate(
-      id,
+    const updatedKitchen = await Kitchen.findOneAndUpdate(
+      { slug: id },
       { status: newStatus },
       { new: true }
     );
