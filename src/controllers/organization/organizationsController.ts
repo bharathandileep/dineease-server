@@ -403,7 +403,6 @@ export const handleGetOrganisations = async (
     );
   }
 };
-
 export const handleGetByIdOrganisations = async (
   req: Request,
   res: Response
@@ -649,7 +648,7 @@ export const handleUpdateOrganisations = async (
         ERROR_TYPES.BAD_REQUEST_ERROR
       );
     }
-    const orgId = req.params.id;
+    let orgId:any = req.params.id;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const {
       organizationName,
@@ -672,10 +671,8 @@ export const handleUpdateOrganisations = async (
       category,
       subcategoryName,
     } = req.body;
-
-    validateMogooseObjectId(orgId);
     const existingOrg = await Organization.findOne({
-      _id: orgId,
+      slug: orgId,
       is_deleted: false,
     });
 
@@ -687,7 +684,8 @@ export const handleUpdateOrganisations = async (
         false
       );
     }
-
+    orgId = existingOrg._id;
+    console.log(orgId,"1")
     const organizationLogoUrl = files.organizationLogo
       ? await uploadFileToCloudinary(files.organizationLogo[0].buffer)
       : existingOrg.organizationLogo;
@@ -793,7 +791,6 @@ export const handleUpdateOrganisations = async (
     );
   }
 };
-
 export const handledDeleteOrganisations = async (
   req: Request,
   res: Response
@@ -832,7 +829,7 @@ export const handledDeleteOrganisations = async (
 export const organizationToggleStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const organization = await Organization.findOne({slug:id});
+    const organization = await Organization.findOne({ slug: id });
     if (!organization) {
       throw new CustomError(
         "Organization not found",
@@ -1161,118 +1158,3 @@ export const handleAdminApproveOgaisation = async (
     );
   }
 };
-
-// export const handleSelectKitchen = async (req: Request, res: Response): Promise<any> => {
-//   try {
-//     const { orgId, kitchenId } = req.body;
-
-//     // Validate IDs
-//     validateMogooseObjectId(orgId);
-//     validateMogooseObjectId(kitchenId);
-
-//     // Check if the organization exists
-//     const organization = await Organization.findById(orgId);
-//     if (!organization || organization.is_deleted) {
-//       throw new CustomError(
-//         "Organization not found",
-//         HTTP_STATUS_CODE.NOT_FOUND,
-//         ERROR_TYPES.NOT_FOUND_ERROR,
-//         false
-//       );
-//     }
-
-//     // Check if the kitchen exists
-//     const kitchen = await Kitchen.findById(kitchenId);
-//     if (!kitchen || kitchen.is_deleted) {
-//       throw new CustomError(
-//         "Kitchen not found",
-//         HTTP_STATUS_CODE.NOT_FOUND,
-//         ERROR_TYPES.NOT_FOUND_ERROR,
-//         false
-//       );
-//     }
-
-//     // Update the organization with the selected kitchen
-//     organization.selected_kitchen_id = kitchenId;
-//     await organization.save();
-
-//     sendSuccessResponse(
-//       res,
-//       "Kitchen selected successfully!",
-//       { organization },
-//       HTTP_STATUS_CODE.OK
-//     );
-//   } catch (error) {
-//     sendErrorResponse(
-//       res,
-//       error,
-//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-//     );
-//   }
-// };
-
-//     // Check if the organization exists
-//     const organization = await Organization.findById(orgId);
-//     if (!organization || organization.is_deleted) {
-//       throw new CustomError(
-//         "Organization not found",
-//         HTTP_STATUS_CODE.NOT_FOUND,
-//         ERROR_TYPES.NOT_FOUND_ERROR,
-//         false
-//       );
-//     }
-
-//     // Check if a kitchen is selected
-//     if (!organization.selected_kitchen_id) {
-//       throw new CustomError(
-//         "No kitchen selected for this organization",
-//         HTTP_STATUS_CODE.BAD_REQUEST,
-//         ERROR_TYPES.BAD_REQUEST_ERROR,
-//         false
-//       );
-//     }
-
-//     // Fetch the selected kitchen
-//     const kitchen = await Kitchen.findById(organization.selected_kitchen_id);
-//     if (!kitchen || kitchen.is_deleted) {
-//       throw new CustomError(
-//         "Selected kitchen not found",
-//         HTTP_STATUS_CODE.NOT_FOUND,
-//         ERROR_TYPES.NOT_FOUND_ERROR,
-//         false
-//       );
-//     }
-
-// Fetch the selected kitchen
-//     export const handleGetSelectedKitchen = async (
-//       req: Request,
-//       res: Response
-//     ): Promise<any> => {
-//       try {
-//         const { orgId } = req.params;
-//     const kitchen = await Kitchen.findById(Organization.selected_kitchen_id);
-//     if (!kitchen || kitchen.is_deleted) {
-//       throw new CustomError(
-//         "Selected kitchen not found",
-//         HTTP_STATUS_CODE.NOT_FOUND,
-//         ERROR_TYPES.NOT_FOUND_ERROR,
-//         false
-//       );
-//     }
-
-//     sendSuccessResponse(
-//       res,
-//       "Selected kitchen retrieved successfully!",
-//       { kitchen },
-//       HTTP_STATUS_CODE.OK
-//     );
-//   } catch (error) {
-//     sendErrorResponse(
-//       res,
-//       error,
-//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-//     );
-//   }
-// };
