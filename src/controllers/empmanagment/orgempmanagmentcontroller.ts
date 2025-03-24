@@ -7,7 +7,7 @@ import {
   sendSuccessResponse,
 } from "../../lib/helpers/responseHelper";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
-import Designation from "../../models/designation/designationModel";
+import Designation from "../../models/designation/DesignationModel";
 import {
   createAddressAndUpdateModel,
   updateAddress,
@@ -25,8 +25,6 @@ export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
     const skip = (page - 1) * limit;
 
     const matchQuery: any = { is_deleted: false };
-
-    // Optional filters for designation and status
     if (req.query.designation) {
       matchQuery.designation = req.query.designation;
     }
@@ -55,7 +53,6 @@ export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
       },
     ];
 
-    // Add search functionality
     if (req.query.search) {
       const searchRegex = new RegExp(req.query.search as string, "i");
       pipeline.push({
@@ -70,15 +67,12 @@ export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
       });
     }
 
-    // Pagination stages
     pipeline.push({ $skip: skip }, { $limit: limit });
 
     const orgEmployees = await OrgEmployeeManagement.aggregate(pipeline);
-
-    // Count total employees with the same search criteria
     const totalPipeline = [...pipeline];
-    totalPipeline.pop(); // Remove $limit
-    totalPipeline.pop(); // Remove $skip
+    totalPipeline.pop(); 
+    totalPipeline.pop(); 
     totalPipeline.push({ $count: "total" });
 
     const totalDocs = await OrgEmployeeManagement.aggregate(totalPipeline);
@@ -110,7 +104,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
   try {
     const {
       entity_id,
-      entity_type = "Organization",
+      entity_type,
       designation,
       username,
       email,
@@ -127,10 +121,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
     } = req.body;
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    // Validate required fields
     if (
-      !entity_id ||
-      !entity_type ||
       !designation ||
       !username ||
       !email ||
@@ -146,9 +137,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
         false
       );
     }
-    validateMogooseObjectId(entity_id);
-  
-    // Fetch and validate designation
     const existingDesignation = await Designation.findById(designation);
     if (!existingDesignation) {
       throw new CustomError(
@@ -159,7 +147,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Fetch and validate role based on designation
+    // Rest of your code...
     const existingRole = await Role.findOne({
       role_name: existingDesignation.role_name,
     });
@@ -172,7 +160,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Check for existing employee
     const existingEmployee = await OrgEmployeeManagement.findOne({ email });
     if (existingEmployee) {
       throw new CustomError(
@@ -183,7 +170,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Upload files to Cloudinary
     const profile_picture = await uploadFileToCloudinary(
       files.profile_picture?.[0]?.buffer
     );
@@ -194,7 +180,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       files.aadhar_image?.[0]?.buffer
     );
 
-    // Create new employee
     const newEmployee = new OrgEmployeeManagement({
       entity_id,
       entity_type,
@@ -236,7 +221,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
     );
   }
 };
-
 export const getOrgEmployeeById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -264,6 +248,11 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
         },
       },
       {
+        $addFields: {
+          debugAddress: "$address",
+        },
+      },
+      {
         $lookup: {
           from: "designations",
           localField: "designation",
@@ -282,15 +271,33 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           from: "states",
           let: {
             stateId: {
-              $convert: {
-                input: "$address.state",
-                to: "int",
-                onError: null,
-                onNull: null,
+              $cond: {
+                if: {
+                  $and: [
+                    { $ne: ["$address.state", null] },
+                    { $ne: ["$address.state", ""] },
+                    {
+                      $regexMatch: { input: "$address.state", regex: /^\d+$/ },
+                    },
+                  ],
+                },
+                then: { $toInt: "$address.state" }, 
+                else: null, 
               },
             },
           },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $ne: ["$$stateId", null] },
+                    { $eq: ["$id", "$$stateId"] },
+                  ],
+                },
+              },
+            },
+          ],
           as: "stateInfo",
         },
       },
@@ -299,15 +306,31 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           from: "cities",
           let: {
             cityId: {
-              $convert: {
-                input: "$address.city",
-                to: "int",
-                onError: null,
-                onNull: null,
+              $cond: {
+                if: {
+                  $and: [
+                    { $ne: ["$address.city", null] },
+                    { $ne: ["$address.city", ""] },
+                    { $regexMatch: { input: "$address.city", regex: /^\d+$/ } },
+                  ],
+                },
+                then: { $toInt: "$address.city" }, 
+                else: null, 
               },
             },
           },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $ne: ["$$cityId", null] },
+                    { $eq: ["$id", "$$cityId"] },
+                  ],
+                },
+              },
+            },
+          ],
           as: "cityInfo",
         },
       },
@@ -316,15 +339,36 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           from: "districts",
           let: {
             districtId: {
-              $convert: {
-                input: "$address.district",
-                to: "int",
-                onError: null,
-                onNull: null,
+              $cond: {
+                if: {
+                  $and: [
+                    { $ne: ["$address.district", null] },
+                    { $ne: ["$address.district", ""] },
+                    {
+                      $regexMatch: {
+                        input: "$address.district",
+                        regex: /^\d+$/,
+                      },
+                    }, 
+                  ],
+                },
+                then: { $toInt: "$address.district" }, 
+                else: null, 
               },
             },
           },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $ne: ["$$districtId", null] },
+                    { $eq: ["$id", "$$districtId"] },
+                  ],
+                },
+              },
+            },
+          ],
           as: "districtInfo",
         },
       },
@@ -333,15 +377,36 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           from: "countries",
           let: {
             countryId: {
-              $convert: {
-                input: "$address.country",
-                to: "int",
-                onError: null,
-                onNull: null,
+              $cond: {
+                if: {
+                  $and: [
+                    { $ne: ["$address.country", null] },
+                    { $ne: ["$address.country", ""] },
+                    {
+                      $regexMatch: {
+                        input: "$address.country",
+                        regex: /^\d+$/,
+                      },
+                    }, 
+                  ],
+                },
+                then: { $toInt: "$address.country" }, 
+                else: null, 
               },
             },
           },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $ne: ["$$countryId", null] },
+                    { $eq: ["$id", "$$countryId"] },
+                  ],
+                },
+              },
+            },
+          ],
           as: "countryInfo",
         },
       },
@@ -350,7 +415,6 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           _id: 1,
           entity_id: 1,
           entity_type: 1,
-          designation: 1,
           username: 1,
           email: 1,
           phone_number: 1,
@@ -363,13 +427,18 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           address: {
             _id: "$address._id",
             street_address: "$address.street_address",
-            city: { $arrayElemAt: ["$cityInfo.name", 0] },
-            state: { $arrayElemAt: ["$stateInfo.name", 0] },
-            district: { $arrayElemAt: ["$districtInfo.name", 0] },
+            city_id: "$address.city",
+            city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
+            state_id: "$address.state",
+            state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
+            district_id: "$address.district",
+            district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
             pincode: "$address.pincode",
-            country: { $arrayElemAt: ["$countryInfo.name", 0] },
+            country_id: "$address.country",
+            country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
           },
           designation_name: "$designation.designation_name",
+          designation_id: "$designation._id",
         },
       },
     ]);
@@ -382,7 +451,6 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
         false
       );
     }
-
     sendSuccessResponse(
       res,
       "Employee retrieved successfully",
@@ -390,6 +458,7 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
+    console.error("Error in getOrgEmployeeById:", error);
     sendErrorResponse(
       res,
       error,
@@ -398,7 +467,7 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
     );
   }
 };
- 
+
 // Update employee
 export const updateOrgEmployee = async (req: Request, res: Response) => {
   try {
@@ -407,9 +476,7 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     validateMogooseObjectId(id);
 
-    // Check if designation exists
     if (updateData.designation) {
-      // validateMogooseObjectId(updateData.designation);
       const designationExists = await Designation.findById(
         updateData.designation
       );
@@ -422,8 +489,6 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
         );
       }
     }
-
-    // Fetch the existing employee
     const existingEmployee = await OrgEmployeeManagement.findById(id);
     if (!existingEmployee || existingEmployee.is_deleted) {
       throw new CustomError(
@@ -434,7 +499,6 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Handle profile picture upload (if updated)
     if (files && files.profile_picture) {
       const profile_picture = await uploadFileToCloudinary(
         files.profile_picture[0].buffer
@@ -452,7 +516,6 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
       updateData.aadhar_image = aadhar_image;
     }
 
-    // Update address fields (if provided)
     if (
       updateData.street_address ||
       updateData.city ||
@@ -471,7 +534,7 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
       });
     }
 
-    // Update employee details
+
     const updatedEmployee = await OrgEmployeeManagement.findByIdAndUpdate(
       id,
       updateData,
@@ -702,7 +765,6 @@ export const handleGetEmployeeOrganizations = async (
         },
       },
     ]);
-
     if (employeeOrganizations.length === 0) {
       return sendSuccessResponse(
         res,

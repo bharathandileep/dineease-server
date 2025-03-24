@@ -20,7 +20,7 @@ export const orgGetAllSubCategories = async (req: Request, res: Response) => {
     const status = req.query.status as string;
     const startIndex = (page - 1) * limit;
 
-    // Build query object
+  
     const query: any = {};
     if (search) {
       query.subcategoryName = { $regex: search, $options: "i" }; 
@@ -33,7 +33,7 @@ export const orgGetAllSubCategories = async (req: Request, res: Response) => {
 
     const total = await OrgSubcategory.countDocuments(query);
     const categories = await OrgSubcategory.find(query)
-      .populate("category", "category status") // Populate category details
+      .populate("category", "category status") 
       .skip(startIndex)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -62,7 +62,7 @@ export const orgGetAllSubCategories = async (req: Request, res: Response) => {
   }
 };
 
-// Create subcategory
+
 export const orgCreateSubcategory = async (req: Request, res: Response) => {
   try {
     const { category, subcategoryName } = req.body;
@@ -122,7 +122,7 @@ export const orgCreateSubcategory = async (req: Request, res: Response) => {
   }
 };
 
-// Get subcategories by category
+
 export const orgGetSubcategoriesByCategory = async (
   req: Request,
   res: Response
@@ -166,7 +166,7 @@ export const orgGetSubcategoriesByCategory = async (
   }
 };
 
-// Update subcategory
+
 export const orgUpdateSubcategory = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -285,7 +285,7 @@ export const orgToggleSubcategoryStatus = async (
   }
 };
 
-// Delete subcategory
+
 export const orgDeleteSubcategory = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -318,7 +318,7 @@ export const orgDeleteSubcategory = async (req: Request, res: Response) => {
   }
 };
 
-// Get all categories
+
 export const getAllCategoriesByStatus = async (req: Request, res: Response) => {
   try {
     const categories = await OrgCategory.find({ status: true });

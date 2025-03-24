@@ -71,7 +71,7 @@ export const apiConfig = {
     updateItem: "/allmenuitems/:id",
     deleteItem: "/allmenuitems/:id",
     changeItemStatus: "/allmenuitems/:id/status",
-    getMenuItemsByKitchen: "/menu-items/kitchen/:kitchenId",
+    getMenuItemsByKitchen: "/kitchen/:kitchenId",
   },
   organization: {
     newOrganization: "/new",
@@ -105,7 +105,8 @@ export const apiConfig = {
   collab:{
     collaborateKitchen:"/select",
     listCollaboratedKitchens:"/organization/:organization_id",
-    getAllColloborations:"/all"
+    getAllColloborations:"/all",
+    getCollaborationById:"/:id",
 
    },
   designation: {

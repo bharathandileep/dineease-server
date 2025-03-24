@@ -1,4 +1,3 @@
-import { string } from "joi";
 import mongoose, { Model, Document, Schema } from "mongoose";
 
 export interface ICity extends Document {

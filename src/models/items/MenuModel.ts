@@ -16,13 +16,13 @@ export interface IMenu extends Document, CommonDBInterface {
     reviews_id: mongoose.Types.ObjectId[];
     description: string;
     ingredients?: string[];
-    menu_for?: "organisation" | "User" | "Both";
+    menu_for?: "Organization" | "User" | "Both";
+    price?:number
   }[];
   slug: string;
   menu_image: string;
   is_deleted: boolean;
-  category: mongoose.Types.ObjectId; 
-  subcategory: mongoose.Types.ObjectId; 
+ 
 }
 
 export const MenuSchema: Schema<IMenu> = new Schema(
@@ -66,7 +66,7 @@ export const MenuSchema: Schema<IMenu> = new Schema(
         },
         menu_for: {
           type: String,
-          enum: ["organisation", "User", "Both"],
+          enum: ["Organization", "User", "Both"],
           default: "Both",
         },
         reviews_id: [
@@ -84,16 +84,16 @@ export const MenuSchema: Schema<IMenu> = new Schema(
       type: Boolean,
       default: false,
     },
-    category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "MenuCategory",
-      required: true,
-    },
-    subcategory: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "MenuSubcategory",
-      required: true,
-    },
+    // category: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "MenuCategory",
+    //   required: true,
+    // },
+    // subcategory: {
+    //   type: mongoose.Schema.Types.ObjectId,
+    //   ref: "MenuSubcategory",
+    //   required: true,
+    // },
   },
   { timestamps: true }
 );

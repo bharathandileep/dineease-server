@@ -113,19 +113,28 @@ export const handleCreateNewOrganisation = async (
       }
     }
 
+    const existingGst = await GstCertificateDetails.findOne({
+      gst_number: gstNumber,
+    });
+
+    if (existingGst) {
+      throw new CustomError(
+        "GST number already exists",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
     const categoryId = category ? new mongoose.Types.ObjectId(category) : null;
     const subcategoryId = subcategoryName
       ? new mongoose.Types.ObjectId(subcategoryName)
       : null;
 
-    // Handle file uploads safely
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
     const organizationLogoUrl = files?.organizationLogo?.[0]?.buffer
       ? await uploadFileToCloudinary(files.organizationLogo[0].buffer)
       : null;
 
-    // Create new organization with isapproved explicitly set to false
     const newOrg = await Organization.create({
       organizationName,
       user_id: userId,
@@ -156,7 +165,6 @@ export const handleCreateNewOrganisation = async (
       entity_type: "Organization",
     });
 
-    // Upload GST Certificate Image
     if (files?.gstCertificateImage?.[0]?.buffer) {
       const gstImageUrl = await uploadFileToCloudinary(
         files.gstCertificateImage[0].buffer
@@ -170,7 +178,6 @@ export const handleCreateNewOrganisation = async (
       });
     }
 
-    // Upload PAN Card Image
     if (files?.panCardImage?.[0]?.buffer) {
       const panImageUrl = await uploadFileToCloudinary(
         files.panCardImage[0].buffer
@@ -213,6 +220,7 @@ export const handleGetOrganisations = async (
     const limit = parseInt(req.query.limit as string) || 10;
     const skip = (page - 1) * limit;
     const { search, category, subcategory } = req.query;
+
     const matchQuery: any = {
       is_deleted: false,
       isapproved: "approved",
@@ -227,10 +235,9 @@ export const handleGetOrganisations = async (
       );
     }
 
-    // Search organization fields
+    // Search organization fields and addresses
     if (search && typeof search === "string" && search.trim() !== "") {
       const searchRegex = new RegExp(search.trim(), "i");
-      const searchNumber = parseInt(search.trim(), 10);
       matchQuery.$or = [
         { organizationName: { $regex: searchRegex } },
         { managerName: { $regex: searchRegex } },
@@ -239,18 +246,14 @@ export const handleGetOrganisations = async (
         { email: { $regex: searchRegex } },
       ];
 
+      const searchNumber = parseInt(search.trim(), 10);
       if (!isNaN(searchNumber)) {
         matchQuery.$or.push({ no_of_employees: searchNumber });
       }
-    }
-    // Search address fields by pre-querying Address
-    let addressIds: mongoose.Types.ObjectId[] = [];
-    if (search && typeof search === "string" && search.trim() !== "") {
-      const searchRegex = new RegExp(search.trim(), "i");
 
-      // Query Addresses directly with string fields
+      // Search address fields
       const addressMatch = await Address.find({
-        is_deleted: false, // Match your Address model's default
+        is_deleted: false,
         $or: [
           { street_address: { $regex: searchRegex } },
           { city: { $regex: searchRegex } },
@@ -259,13 +262,12 @@ export const handleGetOrganisations = async (
           { country: { $regex: searchRegex } },
           { pincode: { $regex: searchRegex } },
           { landmark: { $regex: searchRegex } },
-          { address_type: { $regex: searchRegex } },
         ],
       }).select("_id");
 
-      addressIds = addressMatch.map(
-        (addr) => addr._id as mongoose.Types.ObjectId
-      );
+      const addressIds = addressMatch.map(
+        (addr) => addr._id
+      ) as mongoose.Types.ObjectId[];
 
       if (addressIds.length > 0) {
         if (matchQuery.$or) {
@@ -276,14 +278,10 @@ export const handleGetOrganisations = async (
       }
     }
 
-    const totalOrganizationsBefore = await Organization.countDocuments({
-      is_deleted: false,
-      isapproved: "approved",
-    });
-
     const totalOrganizations = await Organization.countDocuments(matchQuery);
     const organizations = await Organization.aggregate([
       { $match: matchQuery },
+      { $sort: { _id: 1 } }, // Consistent sorting like handleGetKitchens
       {
         $lookup: {
           from: "addresses",
@@ -292,12 +290,13 @@ export const handleGetOrganisations = async (
           as: "addresses",
         },
       },
+      { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
       {
         $lookup: {
           from: "orgcategories",
           localField: "category",
           foreignField: "_id",
-          as: "categoryDetails",
+          as: "categoryInfo",
         },
       },
       {
@@ -305,94 +304,73 @@ export const handleGetOrganisations = async (
           from: "orgsubcategories",
           localField: "subcategoryName",
           foreignField: "_id",
-          as: "subcategoryDetails",
-        },
-      },
-      {
-        $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true },
-      },
-
-      {
-        $lookup: {
-          from: "countries",
-          let: { countryName: "$addresses.country" },
-          pipeline: [
-            { $match: { $expr: { $eq: ["$name", "$$countryName"] } } },
-          ],
-          as: "countryInfo",
-        },
-      },
-      {
-        $lookup: {
-          from: "states",
-          let: { stateName: "$addresses.state" },
-          pipeline: [{ $match: { $expr: { $eq: ["$name", "$$stateName"] } } }],
-          as: "stateInfo",
+          as: "subcategoryInfo",
         },
       },
       {
         $lookup: {
           from: "cities",
-          let: { cityName: "$addresses.city" },
-          pipeline: [{ $match: { $expr: { $eq: ["$name", "$$cityName"] } } }],
+          let: { cityId: { $toInt: "$addresses.city" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
           as: "cityInfo",
         },
       },
       {
         $lookup: {
+          from: "states",
+          let: { stateId: { $toInt: "$addresses.state" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
+          as: "stateInfo",
+        },
+      },
+      {
+        $lookup: {
           from: "districts",
-          let: { districtName: "$addresses.district" },
-          pipeline: [
-            { $match: { $expr: { $eq: ["$name", "$$districtName"] } } },
-          ],
+          let: { districtId: { $toInt: "$addresses.district" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
           as: "districtInfo",
         },
       },
       {
-        $group: {
-          _id: "$_id",
-          user_id: { $first: "$user_id" },
-          organizationName: { $first: "$organizationName" },
-          managerName: { $first: "$managerName" },
-          register_number: { $first: "$register_number" },
-          contact_number: { $first: "$contact_number" },
-          email: { $first: "$email" },
-          organizationLogo: { $first: "$organizationLogo" },
-          no_of_employees: { $first: "$no_of_employees" },
-          slug: { $first: "$slug" },
-          status: { $first: "$status" },
-          categoryDetails: {
-            $first: {
-              $mergeObjects: [
-                { $arrayElemAt: ["$categoryDetails", 0] },
-                { category_name: "$categoryDetails.category" },
-              ],
-            },
+        $lookup: {
+          from: "countries",
+          let: { countryId: { $toInt: "$addresses.country" } },
+          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
+          as: "countryInfo",
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          user_id: 1,
+          organizationName: 1,
+          managerName: 1,
+          register_number: 1,
+          contact_number: 1,
+          email: 1,
+          organizationLogo: 1,
+          no_of_employees: 1,
+          slug: 1,
+          status: 1,
+          categoryInfo: {
+            $arrayElemAt: ["$categoryInfo", 0],
           },
-          subcategoryDetails: {
-            $first: {
-              $mergeObjects: [
-                { $arrayElemAt: ["$subcategoryDetails", 0] },
-                { subcategory_name: "$subcategoryDetails.subcategoryName" },
-              ],
-            },
+          subcategoryInfo: {
+            $arrayElemAt: ["$subcategoryInfo", 0],
           },
           addresses: {
-            $push: {
-              _id: "$addresses._id",
-              street_address: "$addresses.street_address",
-              city: "$addresses.city", 
-              city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
-              state: "$addresses.state", 
-              state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
-              district: "$addresses.district", 
-              district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
-              pincode: "$addresses.pincode",
-              country: "$addresses.country", 
-              country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
-              landmark: "$addresses.landmark",
-              address_type: "$addresses.address_type",
-            },
+            street_address: "$addresses.street_address",
+            city_id: "$addresses.city",
+            city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
+            state_id: "$addresses.state",
+            state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
+            district_id: "$addresses.district",
+            district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
+            pincode: "$addresses.pincode",
+            country_id: "$addresses.country",
+            country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
+            landmark: "$addresses.landmark",
+            address_type: "$addresses.address_type",
           },
         },
       },
@@ -400,6 +378,7 @@ export const handleGetOrganisations = async (
       { $limit: limit },
     ]);
 
+    const hasMore = skip + limit < totalOrganizations;
     sendSuccessResponse(
       res,
       "Organizations retrieved successfully!",
@@ -408,9 +387,7 @@ export const handleGetOrganisations = async (
         totalPages: Math.ceil(totalOrganizations / limit),
         currentPage: page,
         totalOrganizations,
-        hasMore:
-          organizations.length === limit &&
-          page < Math.ceil(totalOrganizations / limit),
+        hasMore,
       },
       HTTP_STATUS_CODE.OK
     );
@@ -431,12 +408,23 @@ export const handleGetByIdOrganisations = async (
 ): Promise<any> => {
   try {
     const { orgId } = req.params;
-    validateMogooseObjectId(orgId);
+    const rawOrg = await Organization.findOne({
+      slug: orgId,
+      is_deleted: false,
+    });
+    if (!rawOrg) {
+      throw new CustomError(
+        "Organization not found",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR,
+        false
+      );
+    }
 
     const organization = await Organization.aggregate([
       {
         $match: {
-          _id: new mongoose.Types.ObjectId(orgId),
+          slug: orgId,
           is_deleted: false,
         },
       },
@@ -450,7 +438,7 @@ export const handleGetByIdOrganisations = async (
       },
       {
         $lookup: {
-          from: "categories",
+          from: "orgcategories",
           localField: "category",
           foreignField: "_id",
           as: "categoryDetails",
@@ -458,7 +446,7 @@ export const handleGetByIdOrganisations = async (
       },
       {
         $lookup: {
-          from: "subcategories",
+          from: "orgsubcategories",
           localField: "subcategoryName",
           foreignField: "_id",
           as: "subcategoryDetails",
@@ -502,9 +490,7 @@ export const handleGetByIdOrganisations = async (
           as: "gstDetails",
         },
       },
-      // Unwind addresses for easier processing
       { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
-      // Look up state information
       {
         $lookup: {
           from: "states",
@@ -513,7 +499,6 @@ export const handleGetByIdOrganisations = async (
           as: "stateInfo",
         },
       },
-      // Look up city information
       {
         $lookup: {
           from: "cities",
@@ -522,7 +507,6 @@ export const handleGetByIdOrganisations = async (
           as: "cityInfo",
         },
       },
-      // Look up district information
       {
         $lookup: {
           from: "districts",
@@ -531,7 +515,6 @@ export const handleGetByIdOrganisations = async (
           as: "districtInfo",
         },
       },
-      // Look up country information
       {
         $lookup: {
           from: "countries",
@@ -540,7 +523,30 @@ export const handleGetByIdOrganisations = async (
           as: "countryInfo",
         },
       },
-      // Group everything back together
+      // Debug intermediate results
+      {
+        $project: {
+          organizationName: 1,
+          status: 1,
+          managerName: 1,
+          register_number: 1,
+          contact_number: 1,
+          email: 1,
+          organizationLogo: 1,
+          no_of_employees: 1,
+          category: 1,
+          subcategoryName: 1,
+          categoryDetails: 1,
+          subcategoryDetails: 1,
+          panDetails: 1,
+          gstDetails: 1,
+          addresses: 1,
+          stateInfo: 1,
+          cityInfo: 1,
+          districtInfo: 1,
+          countryInfo: 1,
+        },
+      },
       {
         $group: {
           _id: "$_id",
@@ -552,9 +558,33 @@ export const handleGetByIdOrganisations = async (
           email: { $first: "$email" },
           organizationLogo: { $first: "$organizationLogo" },
           no_of_employees: { $first: "$no_of_employees" },
-          category: { $first: { $arrayElemAt: ["$categoryDetails", 0] } },
+          category: {
+            $first: {
+              $cond: {
+                if: { $gt: [{ $size: "$categoryDetails" }, 0] },
+                then: {
+                  _id: { $arrayElemAt: ["$categoryDetails._id", 0] },
+                  category_name: {
+                    $arrayElemAt: ["$categoryDetails.category", 0],
+                  },
+                },
+                else: { _id: "$category", category_name: null },
+              },
+            },
+          },
           subcategoryName: {
-            $first: { $arrayElemAt: ["$subcategoryDetails", 0] },
+            $first: {
+              $cond: {
+                if: { $gt: [{ $size: "$subcategoryDetails" }, 0] },
+                then: {
+                  _id: { $arrayElemAt: ["$subcategoryDetails._id", 0] },
+                  subcategory_name: {
+                    $arrayElemAt: ["$subcategoryDetails.subcategoryName", 0],
+                  },
+                },
+                else: { _id: "$subcategoryName", subcategory_name: null },
+              },
+            },
           },
           panDetails: { $first: "$panDetails" },
           gstDetails: { $first: "$gstDetails" },
@@ -587,6 +617,7 @@ export const handleGetByIdOrganisations = async (
         false
       );
     }
+
     sendSuccessResponse(
       res,
       "Organization retrieved successfully!",
@@ -602,7 +633,6 @@ export const handleGetByIdOrganisations = async (
     );
   }
 };
-
 export const handleUpdateOrganisations = async (
   req: Request,
   res: Response
@@ -768,10 +798,8 @@ export const handledDeleteOrganisations = async (
 ): Promise<any> => {
   try {
     const { orgId } = req.params;
-    validateMogooseObjectId(orgId);
-
-    const updatedOrg = await Organization.findByIdAndUpdate(
-      orgId,
+    const updatedOrg = await Organization.findOneAndUpdate(
+      { slug: orgId },
       { $set: { is_deleted: true } },
       { new: true }
     );
@@ -802,7 +830,7 @@ export const handledDeleteOrganisations = async (
 export const organizationToggleStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const organization = await Organization.findById(id);
+    const organization = await Organization.findOne({slug:id});
     if (!organization) {
       throw new CustomError(
         "Organization not found",
@@ -812,8 +840,8 @@ export const organizationToggleStatus = async (req: Request, res: Response) => {
       );
     }
     const newStatus = !organization.status;
-    const updatedOrganization = await Organization.findByIdAndUpdate(
-      id,
+    const updatedOrganization = await Organization.findOneAndUpdate(
+      { slug: id },
       { status: newStatus },
       { new: true }
     );

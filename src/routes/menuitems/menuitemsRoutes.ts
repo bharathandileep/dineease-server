@@ -28,6 +28,7 @@ router.post(`${apiConfig.menu.createItem}`,
 router.put("/allmenuitems/:id", upload.fields([
     {name : "item_image",maxCount:1}
     ]),updateItem);
+    
 router.delete(`${apiConfig.menu.deleteItem}`,deleteItem);
 router.patch(`${apiConfig.menu.changeItemStatus}`,changeItemStatus)
 router.get(`${apiConfig.menu.getMenuItemsByKitchen}`,getMenuItemsByKitchen)
