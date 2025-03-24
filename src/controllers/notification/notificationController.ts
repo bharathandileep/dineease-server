@@ -77,4 +77,22 @@ export const generateOrganizationNotification = async (userId: any, organization
   }
 };
 
-
+export const generateColloborationNotification = async (
+  organization_id: any, 
+   kitchen_id: string, 
+  organizationName: string,
+  kitchenName:string
+) => {
+  try {
+    const notification: INotification = new NotificationModel({
+      organization_id: new mongoose.Types.ObjectId(organization_id),
+      kitchen_id: new mongoose.Types.ObjectId(kitchen_id),
+      
+      message: `'${organizationName}' has collaborated with ${kitchenName}`,
+      type: "kitchen",
+    });
+    await notification.save();
+  } catch (error: any) {
+    console.error("Error generating notification:", error.message); 
+  }
+}; 

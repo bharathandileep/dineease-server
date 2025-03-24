@@ -309,7 +309,6 @@ export const updateMenuItem = async (req: Request, res: Response) => {
   try {
     const { kitchenId, itemId } = req.params;
     const updatedItemData = req.body;
-
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     let custom_image = updatedItemData.custom_image;
 
@@ -353,7 +352,6 @@ export const updateMenuItem = async (req: Request, res: Response) => {
       );
     }
 
-    // ✅ Parse ingredients correctly
     let ingredients = existingMenu.items_id[itemIndex].ingredients || [];
     if (updatedItemData.ingredients !== undefined) {
       try {
@@ -371,7 +369,6 @@ export const updateMenuItem = async (req: Request, res: Response) => {
       }
     }
 
-    // ✅ Parse isAvailable if it's a string
     let isAvailable = existingMenu.items_id[itemIndex].isAvailable;
     if (updatedItemData.isAvailable !== undefined) {
       if (typeof updatedItemData.isAvailable === "string") {
@@ -381,24 +378,8 @@ export const updateMenuItem = async (req: Request, res: Response) => {
       }
     }
 
-    // ✅ Determine menu_for based on viewType
     let menu_for = existingMenu.items_id[itemIndex].menu_for || "Both";
-    if (updatedItemData.viewType) {
-      switch (updatedItemData.viewType.toLowerCase()) {
-        case "organization":
-          menu_for = "organisation";
-          break;
-        case "user":
-          menu_for = "User";
-          break;
-        case "both":
-        default:
-          menu_for = "Both";
-          break;
-      }
-    }
-
-    // ✅ Ensure price values are properly formatted
+    menu_for = updatedItemData.viewType;
     const price_user =
       updatedItemData.priceUser !== undefined
         ? String(updatedItemData.priceUser)
@@ -408,13 +389,11 @@ export const updateMenuItem = async (req: Request, res: Response) => {
       updatedItemData.priceOrganization !== undefined
         ? String(updatedItemData.priceOrganization)
         : existingMenu.items_id[itemIndex].price_organization;
-
-    // ✅ Update the menu item in MongoDB
     const result = await Menu.findOneAndUpdate(
       {
         kitchen_id: kitchenId,
         is_deleted: false,
-        "items_id.item_id": itemId, // Ensure we match the correct item
+        "items_id.item_id": itemId,
       },
       {
         $set: {
@@ -427,7 +406,7 @@ export const updateMenuItem = async (req: Request, res: Response) => {
           "items_id.$.price_user": price_user,
           "items_id.$.price_organization": price_organization,
           "items_id.$.isAvailable": isAvailable,
-          "items_id.$.ingredients": ingredients, // ✅ Ensures ingredients update
+          "items_id.$.ingredients": ingredients,
           "items_id.$.menu_for": menu_for,
           "items_id.$.custom_image":
             custom_image || existingMenu.items_id[itemIndex].custom_image,
@@ -435,7 +414,6 @@ export const updateMenuItem = async (req: Request, res: Response) => {
       },
       { new: true }
     );
-
     if (!result) {
       throw new CustomError(
         "Failed to update menu item",
@@ -464,23 +442,42 @@ export const updateMenuItem = async (req: Request, res: Response) => {
 export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
   try {
     const { kitchenId } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(kitchenId)) {
-      return sendErrorResponse(
-        res,
-        new Error("Invalid kitchen ID format"),
+    const { role } = req.query;
+    const validRole =
+      role && ["User", "Organization", "Both", "Admin"].includes(role as string)
+        ? (role as string)
+        : "Both";
+
+    const kitchenInfo = await Kitchen.findOne({ slug: kitchenId });
+    if (!kitchenInfo) {
+      throw new CustomError(
+        "Kitchen not found..!",
         HTTP_STATUS_CODE.BAD_REQUEST,
-        ERROR_TYPES.BAD_REQUEST_ERROR
+        ERROR_TYPES.BAD_GATEWAY_ERROR,
+        false
       );
     }
 
     const menu = await Menu.findOne({
-      kitchen_id: new mongoose.Types.ObjectId(kitchenId),
+      kitchen_id: kitchenInfo?.id,
       is_deleted: false,
     })
       .populate({
         path: "items_id.item_id",
         select:
-          "item_name item_price description ingredients isAvailable custom_image reviews_id",
+          "item_name item_price description ingredients isAvailable custom_image reviews_id category subcategory",
+        populate: [
+          {
+            path: "category",
+            select: "category",
+            model: "MenuCategory",
+          },
+          {
+            path: "subcategory",
+            select: "subcategoryName",
+            model: "MenuSubcategory",
+          },
+        ],
       })
       .lean();
 
@@ -492,22 +489,42 @@ export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
         HTTP_STATUS_CODE.OK
       );
     }
+    let filteredItems = menu.items_id;
+    if (validRole !== "Admin") {
+      filteredItems = menu.items_id.filter((item) => {
+        return item.menu_for === "Both" || item.menu_for === validRole;
+      });
+    }
+    const processedItems = filteredItems.map((item) => {
+      const processedItem = { ...item };
+      if (validRole === "Admin") {
+      } else if (validRole === "Organization") {
+        processedItem.price = processedItem.price_organization;
+        delete processedItem.price_organization;
+        delete processedItem.price_user;
+      } else {
+        processedItem.price = processedItem.price_user;
+        delete processedItem.price_organization;
+        delete processedItem.price_user;
+      }
 
-    res.status(HTTP_STATUS_CODE.OK).json({
-      status: true,
-      message: "Menu items retrieved successfully",
-      data: {
+      return processedItem;
+    });
+
+    sendSuccessResponse(
+      res,
+      "Menu items retrieved successfully",
+      {
         _id: menu._id,
         kitchen_id: menu.kitchen_id,
-        items_id: menu.items_id,
+        items_id: processedItems,
         is_deleted: menu.is_deleted,
         createdAt: menu.createdAt,
         updatedAt: menu.updatedAt,
         __v: menu.__v,
       },
-      statusCode: HTTP_STATUS_CODE.OK,
-      timestamp: new Date().toISOString(),
-    });
+      HTTP_STATUS_CODE.OK
+    );
   } catch (error) {
     return sendErrorResponse(
       res,
@@ -517,3 +534,6 @@ export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
     );
   }
 };
+
+
+

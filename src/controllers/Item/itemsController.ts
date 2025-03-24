@@ -68,54 +68,96 @@ export const listItems = async (req: Request, res: Response) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 4;
-    const search = (req.query.search as string)?.trim() || "";
-    const startIndex = (page - 1) * limit;
+    const skip = (page - 1) * limit;
+    const { search, category, subcategory } = req.query;
 
-    const query: any = { is_deleted: false };
-    if (search) {
-      const searchRegex = new RegExp(search, "i");
-      const categories = await Item.distinct("category", {
-        category: { $in: await Item.find({}).distinct("category") },
-        $lookup: {
-          from: "categories",
-          localField: "category",
-          foreignField: "_id",
-          as: "categoryDetails",
-        },
-        $match: { "categoryDetails.category": searchRegex },
-      });
+    const matchQuery: any = { is_deleted: false };
 
-      const subcategories = await Item.distinct("subcategory", {
-        subcategory: { $in: await Item.find({}).distinct("subcategory") },
-        $lookup: {
-          from: "subcategories",
-          localField: "subcategory",
-          foreignField: "_id",
-          as: "subcategoryDetails",
-        },
-        $match: { "subcategoryDetails.subcategoryName": searchRegex },
-      });
-
-      query.$or = [
-        { item_name: { $regex: searchRegex } },
-        { description: { $regex: searchRegex } },
-        { category: { $in: categories } },
-        { subcategory: { $in: subcategories } },
-      ].filter(Boolean);
+    if (category) {
+      matchQuery.category = new mongoose.Types.ObjectId(category as string);
+    }
+    if (subcategory) {
+      matchQuery.subcategory = new mongoose.Types.ObjectId(subcategory as string);
     }
 
-    // Count total matching documents
-    const total = await Item.countDocuments(query);
+    if (search && typeof search === "string" && search.trim() !== "") {
+      const searchRegex = new RegExp(search.trim(), "i");
+      matchQuery.$or = [
+        { item_name: { $regex: searchRegex } },
+        { item_description: { $regex: searchRegex } },
+      ];
 
-    // Fetch items with pagination and population
-    const items = await Item.find(query)
-      .populate("category", "category") // Populates category name
-      .populate("subcategory", "subcategoryName") // Populates subcategory name
-      .skip(startIndex)
-      .limit(limit)
-      .sort({ createdAt: -1 });
+      const categoryMatch = await mongoose.model("MenuCategory").find({
+        category: { $regex: searchRegex },
+      }).select("_id");
+      const categoryIds = categoryMatch.map((cat) => cat._id);
+      if (categoryIds.length > 0) {
+        matchQuery.$or.push({ category: { $in: categoryIds } });
+      }
 
-    // Handle no results on first page
+      const subcategoryMatch = await mongoose.model("MenuSubcategory").find({
+        subcategoryName: { $regex: searchRegex },
+      }).select("_id");
+      const subcategoryIds = subcategoryMatch.map((sub) => sub._id);
+      if (subcategoryIds.length > 0) {
+        matchQuery.$or.push({ subcategory: { $in: subcategoryIds } });
+      }
+    }
+
+    const totalItems = await Item.countDocuments(matchQuery);
+    const items = await Item.aggregate([
+      { $match: matchQuery },
+      { $sort: { createdAt: -1 } }, // Sort by creation date descending
+      {
+        $lookup: {
+          from: "menucategories", // Matches your ref: "MenuCategory"
+          localField: "category",
+          foreignField: "_id",
+          as: "categoryInfo",
+        },
+      },
+      {
+        $lookup: {
+          from: "menusubcategories", // Matches your ref: "MenuSubcategory"
+          localField: "subcategory",
+          foreignField: "_id",
+          as: "subcategoryInfo",
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          item_name: 1,
+          item_description: 1,
+          item_image: 1,
+          status: 1,
+          slug: 1, // Include slug for routing
+          category: {
+            $cond: {
+              if: { $gt: [{ $size: "$categoryInfo" }, 0] },
+              then: {
+                _id: { $arrayElemAt: ["$categoryInfo._id", 0] },
+                category: { $arrayElemAt: ["$categoryInfo.category", 0] },
+              },
+              else: null,
+            },
+          },
+          subcategory: {
+            $cond: {
+              if: { $gt: [{ $size: "$subcategoryInfo" }, 0] },
+              then: {
+                _id: { $arrayElemAt: ["$subcategoryInfo._id", 0] },
+                subcategoryName: { $arrayElemAt: ["$subcategoryInfo.subcategoryName", 0] },
+              },
+              else: null,
+            },
+          },
+        },
+      },
+      { $skip: skip },
+      { $limit: limit },
+    ]);
+
     if (!items.length && page === 1) {
       throw new CustomError(
         "No items found",
@@ -125,23 +167,20 @@ export const listItems = async (req: Request, res: Response) => {
       );
     }
 
-    // Pagination metadata
-    const pagination = {
-      currentPage: page,
-      totalItems: total,
-      totalPages: Math.ceil(total / limit),
-      itemsPerPage: limit,
-      hasMore: items.length === limit && page < Math.ceil(total / limit),
-    };
-
+    const hasMore = skip + limit < totalItems;
     sendSuccessResponse(
       res,
       "Items fetched successfully",
-      { items, pagination },
+      {
+        items,
+        totalPages: Math.ceil(totalItems / limit),
+        currentPage: page,
+        totalItems,
+        hasMore,
+      },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
-    // Enhanced error handling
     if (error instanceof CustomError) {
       sendErrorResponse(
         res,
