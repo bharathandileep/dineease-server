@@ -20,7 +20,6 @@ import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
 import { generateOrganizationNotification } from "../notification/notificationController";
 import User from "../../models/users/UserModel";
 import Address from "../../models/address/AddressModel";
-// import { generateOrganizationNotification } from "../notification/notificationController";
 
 const validateOrganizationDetails = (data: any) => {
   const errors: { field: string; message: string }[] = [];
@@ -116,19 +115,28 @@ export const handleCreateNewOrganisation = async (
       }
     }
 
+    const existingGst = await GstCertificateDetails.findOne({
+      gst_number: gstNumber,
+    });
+
+    if (existingGst) {
+      throw new CustomError(
+        "GST number already exists",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
     const categoryId = category ? new mongoose.Types.ObjectId(category) : null;
     const subcategoryId = subcategoryName
       ? new mongoose.Types.ObjectId(subcategoryName)
       : null;
 
-    // Handle file uploads safely
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
 
     const organizationLogoUrl = files?.organizationLogo?.[0]?.buffer
       ? await uploadFileToCloudinary(files.organizationLogo[0].buffer)
       : null;
 
-    // Create new organization with isapproved explicitly set to false
     const newOrg = await Organization.create({
       organizationName,
       user_id: userId,
@@ -159,7 +167,6 @@ export const handleCreateNewOrganisation = async (
       entity_type: "Organization",
     });
 
-    // Upload GST Certificate Image
     if (files?.gstCertificateImage?.[0]?.buffer) {
       const gstImageUrl = await uploadFileToCloudinary(
         files.gstCertificateImage[0].buffer
@@ -173,7 +180,6 @@ export const handleCreateNewOrganisation = async (
       });
     }
 
-    // Upload PAN Card Image
     if (files?.panCardImage?.[0]?.buffer) {
       const panImageUrl = await uploadFileToCloudinary(
         files.panCardImage[0].buffer
@@ -239,15 +245,13 @@ export const handleGetOrganisations = async (
         { managerName: { $regex: searchRegex } },
         { register_number: { $regex: searchRegex } },
         { contact_number: { $regex: searchRegex } },
-          { email: { $regex: searchRegex } },
-        ];
-  
-        const searchNumber = parseInt(search.trim(), 10);
-        if (!isNaN(searchNumber)) {
-          matchQuery.$or.push({ no_of_employees: searchNumber });
-        }
+        { email: { $regex: searchRegex } },
+      ];
 
-      
+      const searchNumber = parseInt(search.trim(), 10);
+      if (!isNaN(searchNumber)) {
+        matchQuery.$or.push({ no_of_employees: searchNumber });
+      }
 
       // Search address fields
       const addressMatch = await Address.find({
@@ -400,14 +404,14 @@ export const handleGetOrganisations = async (
   }
 };
 
-export const handleGetByIdOrganisations = async (req: Request, res: Response): Promise<any> => {
+export const handleGetByIdOrganisations = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   try {
     const { orgId } = req.params;
-    validateMogooseObjectId(orgId);
-
-    // Fetch raw organization for debugging
     const rawOrg = await Organization.findOne({
-      _id: new mongoose.Types.ObjectId(orgId),
+      slug: orgId,
       is_deleted: false,
     });
     if (!rawOrg) {
@@ -422,7 +426,7 @@ export const handleGetByIdOrganisations = async (req: Request, res: Response): P
     const organization = await Organization.aggregate([
       {
         $match: {
-          _id: new mongoose.Types.ObjectId(orgId),
+          slug: orgId,
           is_deleted: false,
         },
       },
@@ -562,7 +566,9 @@ export const handleGetByIdOrganisations = async (req: Request, res: Response): P
                 if: { $gt: [{ $size: "$categoryDetails" }, 0] },
                 then: {
                   _id: { $arrayElemAt: ["$categoryDetails._id", 0] },
-                  category_name: { $arrayElemAt: ["$categoryDetails.category", 0] },
+                  category_name: {
+                    $arrayElemAt: ["$categoryDetails.category", 0],
+                  },
                 },
                 else: { _id: "$category", category_name: null },
               },
@@ -574,7 +580,9 @@ export const handleGetByIdOrganisations = async (req: Request, res: Response): P
                 if: { $gt: [{ $size: "$subcategoryDetails" }, 0] },
                 then: {
                   _id: { $arrayElemAt: ["$subcategoryDetails._id", 0] },
-                  subcategory_name: { $arrayElemAt: ["$subcategoryDetails.subcategoryName", 0] },
+                  subcategory_name: {
+                    $arrayElemAt: ["$subcategoryDetails.subcategoryName", 0],
+                  },
                 },
                 else: { _id: "$subcategoryName", subcategory_name: null },
               },
@@ -792,10 +800,8 @@ export const handledDeleteOrganisations = async (
 ): Promise<any> => {
   try {
     const { orgId } = req.params;
-    validateMogooseObjectId(orgId);
-
-    const updatedOrg = await Organization.findByIdAndUpdate(
-      orgId,
+    const updatedOrg = await Organization.findOneAndUpdate(
+      { slug: orgId },
       { $set: { is_deleted: true } },
       { new: true }
     );
@@ -826,7 +832,7 @@ export const handledDeleteOrganisations = async (
 export const organizationToggleStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const organization = await Organization.findById(id);
+    const organization = await Organization.findOne({slug:id});
     if (!organization) {
       throw new CustomError(
         "Organization not found",
@@ -836,8 +842,8 @@ export const organizationToggleStatus = async (req: Request, res: Response) => {
       );
     }
     const newStatus = !organization.status;
-    const updatedOrganization = await Organization.findByIdAndUpdate(
-      id,
+    const updatedOrganization = await Organization.findOneAndUpdate(
+      { slug: id },
       { status: newStatus },
       { new: true }
     );
@@ -1206,8 +1212,6 @@ export const handleAdminApproveOgaisation = async (
 //   }
 // };
 
-
-
 //     // Check if the organization exists
 //     const organization = await Organization.findById(orgId);
 //     if (!organization || organization.is_deleted) {
@@ -1240,7 +1244,7 @@ export const handleAdminApproveOgaisation = async (
 //       );
 //     }
 
-    // Fetch the selected kitchen
+// Fetch the selected kitchen
 //     export const handleGetSelectedKitchen = async (
 //       req: Request,
 //       res: Response

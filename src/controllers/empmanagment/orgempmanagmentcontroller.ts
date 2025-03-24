@@ -7,7 +7,7 @@ import {
   sendSuccessResponse,
 } from "../../lib/helpers/responseHelper";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
-import Designation from "../../models/designation/DesignationModel";
+import Designation from "../../models/designation/designationModel";
 import {
   createAddressAndUpdateModel,
   updateAddress,
@@ -25,8 +25,6 @@ export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
     const skip = (page - 1) * limit;
 
     const matchQuery: any = { is_deleted: false };
-
-    // Optional filters for designation and status
     if (req.query.designation) {
       matchQuery.designation = req.query.designation;
     }
@@ -55,7 +53,6 @@ export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
       },
     ];
 
-    // Add search functionality
     if (req.query.search) {
       const searchRegex = new RegExp(req.query.search as string, "i");
       pipeline.push({
@@ -70,15 +67,12 @@ export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
       });
     }
 
-    // Pagination stages
     pipeline.push({ $skip: skip }, { $limit: limit });
 
     const orgEmployees = await OrgEmployeeManagement.aggregate(pipeline);
-
-    // Count total employees with the same search criteria
     const totalPipeline = [...pipeline];
-    totalPipeline.pop(); // Remove $limit
-    totalPipeline.pop(); // Remove $skip
+    totalPipeline.pop(); 
+    totalPipeline.pop(); 
     totalPipeline.push({ $count: "total" });
 
     const totalDocs = await OrgEmployeeManagement.aggregate(totalPipeline);
@@ -110,7 +104,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
   try {
     const {
       entity_id,
-      entity_type = "Organization",
+      entity_type,
       designation,
       username,
       email,
@@ -127,10 +121,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
     } = req.body;
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
-    // Validate required fields
     if (
-      !entity_id ||
-      !entity_type ||
       !designation ||
       !username ||
       !email ||
@@ -146,9 +137,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
         false
       );
     }
-    validateMogooseObjectId(entity_id);
-  
-    // Fetch and validate designation
     const existingDesignation = await Designation.findById(designation);
     if (!existingDesignation) {
       throw new CustomError(
@@ -259,7 +247,6 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           preserveNullAndEmptyArrays: true,
         },
       },
-      // Debug address after unwind
       {
         $addFields: {
           debugAddress: "$address",
@@ -279,16 +266,23 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           preserveNullAndEmptyArrays: true,
         },
       },
-      // State lookup
       {
         $lookup: {
           from: "states",
           let: {
             stateId: {
               $cond: {
-                if: { $and: [{ $ne: ["$address.state", null] }, { $ne: ["$address.state", ""] }] },
-                then: { $toInt: "$address.state" },
-                else: null,
+                if: {
+                  $and: [
+                    { $ne: ["$address.state", null] },
+                    { $ne: ["$address.state", ""] },
+                    {
+                      $regexMatch: { input: "$address.state", regex: /^\d+$/ },
+                    },
+                  ],
+                },
+                then: { $toInt: "$address.state" }, 
+                else: null, 
               },
             },
           },
@@ -307,16 +301,21 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           as: "stateInfo",
         },
       },
-      // City lookup
       {
         $lookup: {
           from: "cities",
           let: {
             cityId: {
               $cond: {
-                if: { $and: [{ $ne: ["$address.city", null] }, { $ne: ["$address.city", ""] }] },
-                then: { $toInt: "$address.city" },
-                else: null,
+                if: {
+                  $and: [
+                    { $ne: ["$address.city", null] },
+                    { $ne: ["$address.city", ""] },
+                    { $regexMatch: { input: "$address.city", regex: /^\d+$/ } },
+                  ],
+                },
+                then: { $toInt: "$address.city" }, 
+                else: null, 
               },
             },
           },
@@ -335,16 +334,26 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           as: "cityInfo",
         },
       },
-      // District lookup
       {
         $lookup: {
           from: "districts",
           let: {
             districtId: {
               $cond: {
-                if: { $and: [{ $ne: ["$address.district", null] }, { $ne: ["$address.district", ""] }] },
-                then: { $toInt: "$address.district" },
-                else: null,
+                if: {
+                  $and: [
+                    { $ne: ["$address.district", null] },
+                    { $ne: ["$address.district", ""] },
+                    {
+                      $regexMatch: {
+                        input: "$address.district",
+                        regex: /^\d+$/,
+                      },
+                    }, 
+                  ],
+                },
+                then: { $toInt: "$address.district" }, 
+                else: null, 
               },
             },
           },
@@ -363,16 +372,26 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           as: "districtInfo",
         },
       },
-      // Country lookup
       {
         $lookup: {
           from: "countries",
           let: {
             countryId: {
               $cond: {
-                if: { $and: [{ $ne: ["$address.country", null] }, { $ne: ["$address.country", ""] }] },
-                then: { $toInt: "$address.country" },
-                else: null,
+                if: {
+                  $and: [
+                    { $ne: ["$address.country", null] },
+                    { $ne: ["$address.country", ""] },
+                    {
+                      $regexMatch: {
+                        input: "$address.country",
+                        regex: /^\d+$/,
+                      },
+                    }, 
+                  ],
+                },
+                then: { $toInt: "$address.country" }, 
+                else: null, 
               },
             },
           },
@@ -391,7 +410,6 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           as: "countryInfo",
         },
       },
-      // Project (aligned with getEmployeeById and handleGetByIdOrganisations)
       {
         $project: {
           _id: 1,
@@ -421,8 +439,8 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           },
           designation_name: "$designation.designation_name",
           designation_id: "$designation._id",
+        },
       },
-    },
     ]);
 
     if (!employee || employee.length === 0) {
@@ -433,9 +451,6 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
         false
       );
     }
-
-    console.log("Org Employee Result:", employee[0]);
-
     sendSuccessResponse(
       res,
       "Employee retrieved successfully",
@@ -452,7 +467,7 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
     );
   }
 };
- 
+
 // Update employee
 export const updateOrgEmployee = async (req: Request, res: Response) => {
   try {
@@ -461,9 +476,7 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     validateMogooseObjectId(id);
 
-    // Check if designation exists
     if (updateData.designation) {
-      // validateMogooseObjectId(updateData.designation);
       const designationExists = await Designation.findById(
         updateData.designation
       );
@@ -476,8 +489,6 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
         );
       }
     }
-
-    // Fetch the existing employee
     const existingEmployee = await OrgEmployeeManagement.findById(id);
     if (!existingEmployee || existingEmployee.is_deleted) {
       throw new CustomError(
@@ -488,7 +499,6 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Handle profile picture upload (if updated)
     if (files && files.profile_picture) {
       const profile_picture = await uploadFileToCloudinary(
         files.profile_picture[0].buffer
@@ -506,7 +516,6 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
       updateData.aadhar_image = aadhar_image;
     }
 
-    // Update address fields (if provided)
     if (
       updateData.street_address ||
       updateData.city ||
@@ -525,7 +534,7 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
       });
     }
 
-    // Update employee details
+
     const updatedEmployee = await OrgEmployeeManagement.findByIdAndUpdate(
       id,
       updateData,

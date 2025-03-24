@@ -71,7 +71,7 @@ export const apiConfig = {
     updateItem: "/allmenuitems/:id",
     deleteItem: "/allmenuitems/:id",
     changeItemStatus: "/allmenuitems/:id/status",
-    getMenuItemsByKitchen: "/menu-items/kitchen/:kitchenId",
+    getMenuItemsByKitchen: "/kitchen/:kitchenId",
   },
   organization: {
     newOrganization: "/new",

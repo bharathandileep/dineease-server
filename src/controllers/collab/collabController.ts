@@ -1,8 +1,10 @@
 import { NextFunction, Request, Response } from "express";
 import Kitchen, { IKitchen } from "../../models/kitchen/KitchenModel";
-import Organization, { IOrganization } from "../../models/organisations/OrgModel";
+import Organization, {
+  IOrganization,
+} from "../../models/organisations/OrgModel";
 import Collaboration from "../../models/collab/Collab"; // Ensure this import is correct
-import CollaborationModel,{ICollaboration} from "../../models/collab/Collab"
+import CollaborationModel, { ICollaboration } from "../../models/collab/Collab";
 import {
   sendErrorResponse,
   sendSuccessResponse,
@@ -11,7 +13,6 @@ import { HTTP_STATUS_CODE } from "../../lib/constants/httpStatusCodes";
 import { ERROR_TYPES } from "../../lib/constants/errorType";
 import { CustomError } from "../../lib/errors/customError";
 import { generateColloborationNotification } from "../notification/notificationController";
-
 
 export const collaborateKitchen = async (req: Request, res: Response) => {
   try {
@@ -22,9 +23,9 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
       throw new CustomError(
         "Organization not found",
         HTTP_STATUS_CODE.NOT_FOUND,
-        ERROR_TYPES.NOT_FOUND_ERROR, 
+        ERROR_TYPES.NOT_FOUND_ERROR,
         false
-      ); 
+      );
     }
 
     const kitchen = await Kitchen.findById(kitchen_id);
@@ -40,16 +41,16 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
     const existingCollaboration = await Collaboration.findOne({
       organization_id,
       kitchen_id,
-      is_deleted: false
+      is_deleted: false,
     });
-    
+
     if (existingCollaboration) {
       throw new CustomError(
         "Collaboration already exists",
         HTTP_STATUS_CODE.BAD_REQUEST,
         ERROR_TYPES.BAD_REQUEST_ERROR,
         false
-      ); 
+      );
     }
 
     const collaboration = new Collaboration({
@@ -58,23 +59,28 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
       // status: "Pending",
     });
 
-    await collaboration.save();  
+    await collaboration.save();
 
     // Generate notification for the collaboration
-    await generateColloborationNotification(organization_id, kitchen_id, kitchen.kitchen_name,organization.organizationName);
+    await generateColloborationNotification(
+      organization_id,
+      kitchen_id,
+      kitchen.kitchen_name,
+      organization.organizationName
+    );
 
     const responseData = {
       _id: collaboration._id,
       organization: {
         _id: organization._id,
-        name: organization.organizationName
+        name: organization.organizationName,
       },
       kitchen: {
         _id: kitchen._id,
-        name: kitchen.kitchen_name
+        name: kitchen.kitchen_name,
       },
       // status: collaboration.status,
-      createdAt: collaboration.createdAt
+      createdAt: collaboration.createdAt,
     };
 
     sendSuccessResponse(
@@ -84,7 +90,7 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
       HTTP_STATUS_CODE.CREATED
     );
   } catch (error) {
-    sendErrorResponse( 
+    sendErrorResponse(
       res,
       error,
       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
@@ -95,9 +101,9 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
 export const listCollaboratedKitchens = async (req: Request, res: Response) => {
   try {
     const { organization_id } = req.params;
-
-    // Find all collaborations for the organization
-    const collaborations = await Collaboration.find({ organization_id }).select("kitchen_id status");
+    const collaborations = await Collaboration.find({ organization_id }).select(
+      "kitchen_id status"
+    );
 
     if (!collaborations || collaborations.length === 0) {
       throw new CustomError(
@@ -114,7 +120,7 @@ export const listCollaboratedKitchens = async (req: Request, res: Response) => {
     const kitchens = await Kitchen.aggregate([
       {
         $match: {
-          _id: { $in: kitchenIds }, 
+          _id: { $in: kitchenIds },
           is_deleted: false,
         },
       },
@@ -229,9 +235,9 @@ export const listCollaboratedKitchens = async (req: Request, res: Response) => {
           kitchen_owner_name: { $first: "$kitchen_owner_name" },
           owner_email: { $first: "$owner_email" },
           status: { $first: "$status" },
+          slug: { $first: "$slug" },
           owner_phone_number: { $first: "$owner_phone_number" },
           restaurant_type: { $first: "$restaurant_type" },
-
           category: {
             $first: {
               $cond: {
@@ -264,7 +270,9 @@ export const listCollaboratedKitchens = async (req: Request, res: Response) => {
 
           kitchen_type: { $first: "$kitchen_type" },
           kitchen_phone_number: { $first: "$kitchen_phone_number" },
-          kitchen_document_verification: { $first: "$kitchen_document_verification" },
+          kitchen_document_verification: {
+            $first: "$kitchen_document_verification",
+          },
           kitchen_image: { $first: "$kitchen_image" },
           working_days: { $first: "$working_days" },
           pre_ordering_options: { $first: "$pre_ordering_options" },
@@ -301,12 +309,11 @@ export const listCollaboratedKitchens = async (req: Request, res: Response) => {
       );
     }
 
-   
     sendSuccessResponse(
       res,
       "Collaborated kitchens retrieved successfully",
       kitchens,
-      HTTP_STATUS_CODE.OK 
+      HTTP_STATUS_CODE.OK
     );
   } catch (error) {
     sendErrorResponse(
@@ -325,74 +332,78 @@ export const getAllColloborations = async(req: Request, res: Response): Promise<
     const collaborations = await CollaborationModel.find({ is_deleted: false })
       .sort({ createdAt: -1 })
       .lean();
-    
-    // Then separately fetch the related organizations and kitchens
-    const organizationIds = collaborations.map(c => c.organization_id);
-    const kitchenIds = collaborations.map(c => c.kitchen_id);
-    
+    const organizationIds = collaborations.map((c) => c.organization_id);
+    const kitchenIds = collaborations.map((c) => c.kitchen_id);
+
     const organizations = await Organization.find({
       _id: { $in: organizationIds },
-      is_deleted: false
-    }).select('organizationName organizationLogo').lean();
-    
+      is_deleted: false,
+    })
+      .select("organizationName organizationLogo")
+      .lean();
+
     const kitchens = await Kitchen.find({
       _id: { $in: kitchenIds },
-      is_deleted: false
-    }).select('kitchen_name kitchen_image').lean();
-    
-    // Create lookup maps for easier access
+      is_deleted: false,
+    })
+      .select("kitchen_name kitchen_image")
+      .lean();
+
     const orgMap = new Map();
-    organizations.forEach(org => {
+    organizations.forEach((org) => {
       orgMap.set(org._id.toString(), org);
     });
-    
+
     const kitchenMap = new Map();
-    kitchens.forEach(kitchen => {
+    kitchens.forEach((kitchen) => {
       kitchenMap.set(kitchen._id.toString(), kitchen);
     });
-    
+
     // Map the data together
-    const formattedCollaborations = collaborations.map(collab => {
+    const formattedCollaborations = collaborations.map((collab) => {
       const orgId = collab.organization_id.toString();
       const kitchenId = collab.kitchen_id.toString();
-      
+
       const org = orgMap.get(orgId);
       const kitchen = kitchenMap.get(kitchenId);
-      
+
       return {
         _id: collab._id,
-        organization: org ? {
-          _id: org._id,
-          name: org.organizationName || 'Unknown Organization',
-          logo: org.organizationLogo || null
-        } : {
-          _id: collab.organization_id,
-          name: 'Unknown Organization',
-          logo: null
-        },
-        kitchen: kitchen ? {
-          _id: kitchen._id,
-          name: kitchen.kitchen_name || 'Unknown Kitchen',
-          image: kitchen.kitchen_image || null
-        } : {
-          _id: collab.kitchen_id,
-          name: 'Unknown Kitchen',
-          image: null
-        },
+        organization: org
+          ? {
+              _id: org._id,
+              name: org.organizationName || "Unknown Organization",
+              logo: org.organizationLogo || null,
+            }
+          : {
+              _id: collab.organization_id,
+              name: "Unknown Organization",
+              logo: null,
+            },
+        kitchen: kitchen
+          ? {
+              _id: kitchen._id,
+              name: kitchen.kitchen_name || "Unknown Kitchen",
+              image: kitchen.kitchen_image || null,
+            }
+          : {
+              _id: collab.kitchen_id,
+              name: "Unknown Kitchen",
+              image: null,
+            },
         // status: collab.status,
         createdAt: collab.createdAt,
-        updatedAt: collab.updatedAt
+        updatedAt: collab.updatedAt,
       };
     });
-    
+
     res.status(200).json(formattedCollaborations);
-  }
-  catch(error: any) {
+  } catch (error: any) {
     console.error("Error fetching all collaborations:", error);
     console.error(error.stack);
-    res.status(500).json({  
-      message: "Internal server error", 
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    res.status(500).json({
+      message: "Internal server error",
+      error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
   } 
 };

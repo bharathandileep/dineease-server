@@ -8,7 +8,7 @@ import {
 } from "../../lib/helpers/responseHelper";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import EmployeeManagement from "../../models/empmanagment/EmployeeManagementModel";
-import Designation from "../../models/designation/DesignationModel";
+import Designation from "../../models/designation/designationModel";
 import {
   createAddressAndUpdateModel,
   updateAddress,
@@ -105,8 +105,7 @@ export const getAllEmployees = async (req: Request, res: Response) => {
 export const createEmployee = async (req: Request, res: Response) => {
   try {
     const {
-      entity_id,
-      entity_type = "Admin",
+      payload,
       designation,
       username,
       email,
@@ -121,11 +120,9 @@ export const createEmployee = async (req: Request, res: Response) => {
       aadhar_number,
       pan_number,
     } = req.body;
-
+    console.dir(req.body);
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (
-      !entity_id ||
-      !entity_type ||
       !designation ||
       !username ||
       !email ||
@@ -141,10 +138,6 @@ export const createEmployee = async (req: Request, res: Response) => {
         false
       );
     }
-
-    validateMogooseObjectId(entity_id);
-
-    // Fetch Designation
     const existingDesignation = await Designation.findById(designation);
     if (!existingDesignation) {
       throw new CustomError(
@@ -154,8 +147,6 @@ export const createEmployee = async (req: Request, res: Response) => {
         false
       );
     }
-
-    // Fetch Role using the role_name from the Designation
     const existingRole = await Role.findOne({
       role_name: existingDesignation.role_name,
     });
@@ -167,8 +158,6 @@ export const createEmployee = async (req: Request, res: Response) => {
         false
       );
     }
-
-    // Check if employee already exists
     const existingEmployee = await EmployeeManagement.findOne({ email });
     if (existingEmployee) {
       throw new CustomError(
@@ -178,8 +167,6 @@ export const createEmployee = async (req: Request, res: Response) => {
         false
       );
     }
-
-    // Upload files to Cloudinary
     const profile_picture = await uploadFileToCloudinary(
       files.profile_picture?.[0]?.buffer
     );
@@ -190,10 +177,9 @@ export const createEmployee = async (req: Request, res: Response) => {
       files.aadhar_image?.[0]?.buffer
     );
 
- 
     const newEmployee = new EmployeeManagement({
-      entity_id,
-      entity_type,
+      entity_id: payload.id,
+      entity_type: payload.role,
       designation,
       username,
       email,
@@ -217,7 +203,7 @@ export const createEmployee = async (req: Request, res: Response) => {
       pincode,
       country,
     });
-    await registerUser(email,username,existingRole.role_id,existingRole._id)
+    await registerUser(email, username, existingRole.role_id, existingRole._id);
     sendSuccessResponse(
       res,
       "Employee created successfully",
@@ -280,14 +266,19 @@ export const getEmployeeById = async (req: Request, res: Response) => {
           preserveNullAndEmptyArrays: true,
         },
       },
-    
+
       {
         $lookup: {
           from: "states",
           let: {
             stateId: {
               $cond: {
-                if: { $and: [{ $ne: ["$address.state", null] }, { $ne: ["$address.state", ""] }] },
+                if: {
+                  $and: [
+                    { $ne: ["$address.state", null] },
+                    { $ne: ["$address.state", ""] },
+                  ],
+                },
                 then: { $toInt: "$address.state" },
                 else: null,
               },
@@ -315,7 +306,12 @@ export const getEmployeeById = async (req: Request, res: Response) => {
           let: {
             cityId: {
               $cond: {
-                if: { $and: [{ $ne: ["$address.city", null] }, { $ne: ["$address.city", ""] }] },
+                if: {
+                  $and: [
+                    { $ne: ["$address.city", null] },
+                    { $ne: ["$address.city", ""] },
+                  ],
+                },
                 then: { $toInt: "$address.city" },
                 else: null,
               },
@@ -343,7 +339,12 @@ export const getEmployeeById = async (req: Request, res: Response) => {
           let: {
             districtId: {
               $cond: {
-                if: { $and: [{ $ne: ["$address.district", null] }, { $ne: ["$address.district", ""] }] },
+                if: {
+                  $and: [
+                    { $ne: ["$address.district", null] },
+                    { $ne: ["$address.district", ""] },
+                  ],
+                },
                 then: { $toInt: "$address.district" },
                 else: null,
               },
@@ -371,7 +372,12 @@ export const getEmployeeById = async (req: Request, res: Response) => {
           let: {
             countryId: {
               $cond: {
-                if: { $and: [{ $ne: ["$address.country", null] }, { $ne: ["$address.country", ""] }] },
+                if: {
+                  $and: [
+                    { $ne: ["$address.country", null] },
+                    { $ne: ["$address.country", ""] },
+                  ],
+                },
                 then: { $toInt: "$address.country" },
                 else: null,
               },
@@ -385,7 +391,7 @@ export const getEmployeeById = async (req: Request, res: Response) => {
                     { $ne: ["$$countryId", null] },
                     { $eq: ["$id", "$$countryId"] },
                   ],
-                }, 
+                },
               },
             },
           ],
@@ -422,7 +428,6 @@ export const getEmployeeById = async (req: Request, res: Response) => {
           },
           designation_name: "$designation.designation_name",
           designation_id: "$designation._id",
-   
         },
       },
     ]);
@@ -464,7 +469,9 @@ export const updateEmployee = async (req: Request, res: Response) => {
 
     // Check if designation exists
     if (updateData.designation) {
-      const designationExists = await Designation.findById(updateData.designation);
+      const designationExists = await Designation.findById(
+        updateData.designation
+      );
       if (!designationExists) {
         throw new CustomError(
           "Designation not found",
@@ -474,7 +481,6 @@ export const updateEmployee = async (req: Request, res: Response) => {
         );
       }
     }
-
 
     const existingEmployee = await EmployeeManagement.findById(id);
     if (!existingEmployee || existingEmployee.is_deleted) {
@@ -486,9 +492,10 @@ export const updateEmployee = async (req: Request, res: Response) => {
       );
     }
 
-
     if (files && files.profile_picture) {
-      const profile_picture = await uploadFileToCloudinary(files.profile_picture[0].buffer);
+      const profile_picture = await uploadFileToCloudinary(
+        files.profile_picture[0].buffer
+      );
       updateData.profile_picture = profile_picture;
     }
     if (files && files.pan_image) {
@@ -496,10 +503,11 @@ export const updateEmployee = async (req: Request, res: Response) => {
       updateData.pan_image = pan_image;
     }
     if (files && files.aadhar_image) {
-      const aadhar_image = await uploadFileToCloudinary(files.aadhar_image[0].buffer);
+      const aadhar_image = await uploadFileToCloudinary(
+        files.aadhar_image[0].buffer
+      );
       updateData.aadhar_image = aadhar_image;
     }
-
 
     if (
       updateData.street_address ||
@@ -518,7 +526,6 @@ export const updateEmployee = async (req: Request, res: Response) => {
         country: updateData.country,
       });
     }
-
 
     const updatedEmployee = await EmployeeManagement.findByIdAndUpdate(
       id,
@@ -540,7 +547,6 @@ export const updateEmployee = async (req: Request, res: Response) => {
       );
     }
 
-   
     const employeeWithAddress = await EmployeeManagement.aggregate([
       {
         $match: {
