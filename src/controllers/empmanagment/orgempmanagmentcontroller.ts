@@ -451,9 +451,6 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
         false
       );
     }
-
-    console.log("Org Employee Result:", employee[0]);
-
     sendSuccessResponse(
       res,
       "Employee retrieved successfully",

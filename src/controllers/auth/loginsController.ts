@@ -231,7 +231,6 @@ export const handleUserLogin = async (req: Request, res: Response) => {
         is_deleted: false,
       });
     }
-   console.log(employee)
     if (!employee) {
       throw new CustomError(
         "Employee details not found",
