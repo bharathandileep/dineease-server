@@ -107,10 +107,10 @@ export const listItems = async (req: Request, res: Response) => {
     const totalItems = await Item.countDocuments(matchQuery);
     const items = await Item.aggregate([
       { $match: matchQuery },
-      { $sort: { createdAt: -1 } }, // Sort by creation date descending
+      { $sort: { createdAt: -1 } }, 
       {
         $lookup: {
-          from: "menucategories", // Matches your ref: "MenuCategory"
+          from: "menucategories", 
           localField: "category",
           foreignField: "_id",
           as: "categoryInfo",
@@ -118,7 +118,7 @@ export const listItems = async (req: Request, res: Response) => {
       },
       {
         $lookup: {
-          from: "menusubcategories", // Matches your ref: "MenuSubcategory"
+          from: "menusubcategories", 
           localField: "subcategory",
           foreignField: "_id",
           as: "subcategoryInfo",

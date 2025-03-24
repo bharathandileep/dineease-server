@@ -83,8 +83,7 @@ export const generateColloborationNotification = async (
   organizationName: string,
   kitchenName:string
 ) => {
-  console.log("Organization Name:", organizationName)
-  console.log(organization_id,kitchen_id,organizationName,kitchenName);
+ 
   
   try {
     const notification: INotification = new NotificationModel({
