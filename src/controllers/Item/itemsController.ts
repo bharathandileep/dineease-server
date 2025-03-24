@@ -109,8 +109,8 @@ export const listItems = async (req: Request, res: Response) => {
 
     // Fetch items with pagination and population
     const items = await Item.find(query)
-      .populate("category", "category") // Populates category name
-      .populate("subcategory", "subcategoryName") // Populates subcategory name
+      .populate("category", "category") 
+      .populate("subcategory", "subcategoryName") 
       .skip(startIndex)
       .limit(limit)
       .sort({ createdAt: -1 });

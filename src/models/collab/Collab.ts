@@ -1,6 +1,3 @@
-
-
-
 import mongoose, { Document, Model, Schema } from "mongoose";
 import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
 
@@ -11,7 +8,6 @@ export interface ICollaborationMethods {
 export interface ICollaboration extends Document, CommonDBInterface {
   organization_id: mongoose.Types.ObjectId;
   kitchen_id: mongoose.Types.ObjectId;
-  // status: "Pending" | "Active" | "Completed" | "Cancelled";
   is_deleted: boolean;
 }
 
@@ -29,11 +25,7 @@ const CollaborationSchema = new Schema<ICollaboration, CollaborationModel, IColl
       ref: "Kitchen",
       required: true,
     },
-    // status: {
-    //   type: String,
-    //   enum: ["Pending", "Active", "Completed", "Cancelled"],
-    //   default: "Active", 
-    // },
+   
     is_deleted: {
       type: Boolean,
       default: false,

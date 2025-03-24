@@ -2,17 +2,12 @@ import express, { Application, Router } from "express";
 import { apiConfig } from "../../config/endpoint ";
 import upload from "../../lib/helpers/uploadMiddleware";
 import {
- // handleApproveorganisation,
-  // handleApproveOrganization,
-  // handleApproveOrganization,
   handleCreateNewOrganisation,
   handledDeleteOrganisations,
   handleGetByIdOrganisations,
   handleGetOrganisations,
-  //handleGetSelectedKitchen,
   handleGetUnapprovedOrganisations,
   handleGetUserOrganizations,
-  //handleSelectKitchen,
   handleUpdateOrganisations,
   organizationToggleStatus,
 } from "../../controllers/organization/organizationsController";
@@ -116,9 +111,5 @@ router.get(
 );
 
 router.get(`${apiConfig.organization.getUnapprovedOrganisations}`,handleGetUnapprovedOrganisations)
-//router.patch(`${apiConfig.organization.getApprovedOrganisations}`, handleApproveorganisation);
 
-// router.post(`${apiConfig.organization.selectKitchen}`,handleSelectKitchen);
-
-// router.get(`${apiConfig.organization.getSelectedKitchen}`,handleGetSelectedKitchen)
 export default router;

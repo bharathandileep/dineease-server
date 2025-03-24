@@ -23,10 +23,10 @@ export const orgGetAllSubCategories = async (req: Request, res: Response) => {
     // Build query object
     const query: any = {};
     if (search) {
-      query.subcategoryName = { $regex: search, $options: "i" }; // Case-insensitive search on subcategoryName
+      query.subcategoryName = { $regex: search, $options: "i" }; 
     }
     if (status && status !== "all") {
-      query.status = status === "active" ? true : false; // Boolean status filter
+      query.status = status === "active" ? true : false; 
     }
 
     

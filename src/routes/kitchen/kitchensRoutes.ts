@@ -8,7 +8,6 @@ import {
   handleGetKitchens,
   handleGetKitchensById,
   handleGetUnapprovedKitchens,
-  // handleGetUnapprovedKitchens,
   handleGetUserApprovedKitchens,
   handleUpdateKitchensById,
   kitchenToggleStatus,

@@ -1,3 +1,4 @@
+
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { CustomError } from "../../lib/errors/customError";
@@ -99,6 +100,7 @@ export const addMenuItems = async (req: Request, res: Response) => {
     );
   }
 };
+
 export const getAllMenus = async (req: Request, res: Response) => {
   try {
     const { kitchenId } = req.params;
@@ -131,7 +133,7 @@ export const getAllMenus = async (req: Request, res: Response) => {
           },
           {
             path: "subcategory",
-            select: "subcategory",
+            select: "subcategoryName",
             model: "MenuSubcategory",
           },
         ],
@@ -164,6 +166,7 @@ export const getAllMenus = async (req: Request, res: Response) => {
     );
   }
 };
+
 export const removeMenuItem = async (req: Request, res: Response) => {
   try {
     const { kitchen_id, item_id } = req.params;
@@ -225,6 +228,7 @@ export const removeMenuItem = async (req: Request, res: Response) => {
     );
   }
 };
+
 export const getMenuItemDetails = async (req: Request, res: Response) => {
   try {
     const { kitchenId, itemId } = req.params;
@@ -243,7 +247,7 @@ export const getMenuItemDetails = async (req: Request, res: Response) => {
       );
     }
 
-    // Fetch the menu item
+    // Fetch the menu item with category and subcategory populated
     const menuItem = await Menu.findOne(
       {
         kitchen_id: kitchenId,
@@ -253,7 +257,24 @@ export const getMenuItemDetails = async (req: Request, res: Response) => {
       {
         "items_id.$": 1,
       }
-    ).lean();
+    )
+      .populate({
+        path: "items_id.item_id",
+        select: "category subcategory",
+        populate: [
+          {
+            path: "category",
+            select: "category",
+            model: "MenuCategory",
+          },
+          {
+            path: "subcategory",
+            select: "subcategoryName",
+            model: "MenuSubcategory",
+          },
+        ],
+      })
+      .lean();
 
     if (!menuItem || !menuItem.items_id[0]) {
       return sendErrorResponse(
@@ -265,6 +286,10 @@ export const getMenuItemDetails = async (req: Request, res: Response) => {
     }
 
     const itemDetails = menuItem.items_id[0];
+    const itemData = await Item.findById(itemDetails.item_id)
+      .populate("category", "category")
+      .populate("subcategory", "subcategory")
+      .lean();
 
     // Determine the price based on role
     let item_price_user = itemDetails.price_user || "0";
@@ -277,7 +302,7 @@ export const getMenuItemDetails = async (req: Request, res: Response) => {
       item_price = item_price_user;
     }
 
-    // Send response with all prices
+    // Send response with all prices and category information
     res.status(HTTP_STATUS_CODE.OK).json({
       status: true,
       message: "Item details retrieved successfully",
@@ -291,7 +316,9 @@ export const getMenuItemDetails = async (req: Request, res: Response) => {
         reviews_id: itemDetails.reviews_id,
         price_user: item_price_user,
         price_organization: item_price_organization,
-        item_price, // Price based on role (if specified)
+        item_price, 
+        category: itemData?.category || null,
+        subcategory: itemData?.subcategory || null,
       },
       statusCode: HTTP_STATUS_CODE.OK,
       timestamp: new Date().toISOString(),
@@ -305,6 +332,7 @@ export const getMenuItemDetails = async (req: Request, res: Response) => {
     );
   }
 };
+
 export const updateMenuItem = async (req: Request, res: Response) => {
   try {
     const { kitchenId, itemId } = req.params;
@@ -353,7 +381,6 @@ export const updateMenuItem = async (req: Request, res: Response) => {
       );
     }
 
-    // ✅ Parse ingredients correctly
     let ingredients = existingMenu.items_id[itemIndex].ingredients || [];
     if (updatedItemData.ingredients !== undefined) {
       try {
@@ -371,7 +398,6 @@ export const updateMenuItem = async (req: Request, res: Response) => {
       }
     }
 
-    // ✅ Parse isAvailable if it's a string
     let isAvailable = existingMenu.items_id[itemIndex].isAvailable;
     if (updatedItemData.isAvailable !== undefined) {
       if (typeof updatedItemData.isAvailable === "string") {
@@ -381,7 +407,6 @@ export const updateMenuItem = async (req: Request, res: Response) => {
       }
     }
 
-    // ✅ Determine menu_for based on viewType
     let menu_for = existingMenu.items_id[itemIndex].menu_for || "Both";
     if (updatedItemData.viewType) {
       switch (updatedItemData.viewType.toLowerCase()) {
@@ -398,7 +423,6 @@ export const updateMenuItem = async (req: Request, res: Response) => {
       }
     }
 
-    // ✅ Ensure price values are properly formatted
     const price_user =
       updatedItemData.priceUser !== undefined
         ? String(updatedItemData.priceUser)
@@ -409,12 +433,11 @@ export const updateMenuItem = async (req: Request, res: Response) => {
         ? String(updatedItemData.priceOrganization)
         : existingMenu.items_id[itemIndex].price_organization;
 
-    // ✅ Update the menu item in MongoDB
     const result = await Menu.findOneAndUpdate(
       {
         kitchen_id: kitchenId,
         is_deleted: false,
-        "items_id.item_id": itemId, // Ensure we match the correct item
+        "items_id.item_id": itemId, 
       },
       {
         $set: {
@@ -427,14 +450,30 @@ export const updateMenuItem = async (req: Request, res: Response) => {
           "items_id.$.price_user": price_user,
           "items_id.$.price_organization": price_organization,
           "items_id.$.isAvailable": isAvailable,
-          "items_id.$.ingredients": ingredients, // ✅ Ensures ingredients update
+          "items_id.$.ingredients": ingredients, 
           "items_id.$.menu_for": menu_for,
           "items_id.$.custom_image":
             custom_image || existingMenu.items_id[itemIndex].custom_image,
         },
       },
       { new: true }
-    );
+    )
+    .populate({
+      path: "items_id.item_id",
+      select: "category subcategory",
+      populate: [
+        {
+          path: "category",
+          select: "category",
+          model: "MenuCategory",
+        },
+        {
+          path: "subcategory",
+          select: "subcategoryName",
+          model: "MenuSubcategory",
+        },
+      ],
+    });
 
     if (!result) {
       throw new CustomError(
@@ -445,10 +484,11 @@ export const updateMenuItem = async (req: Request, res: Response) => {
       );
     }
 
+    const updatedItem = result.items_id.find((item) => item.item_id.toString() === itemId);
     return sendSuccessResponse(
       res,
       "Item updated successfully",
-      result.items_id.find((item) => item.item_id.toString() === itemId),
+      updatedItem,
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -461,6 +501,7 @@ export const updateMenuItem = async (req: Request, res: Response) => {
     );
   }
 };
+
 export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
   try {
     const { kitchenId } = req.params;
@@ -480,12 +521,24 @@ export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
       .populate({
         path: "items_id.item_id",
         select:
-          "item_name item_price description ingredients isAvailable custom_image reviews_id",
+          "item_name item_price description ingredients isAvailable custom_image reviews_id category subcategory",
+        populate: [
+          {
+            path: "category",
+            select: "category",
+            model: "MenuCategory", 
+          }, 
+          {
+            path: "subcategory",
+            select: "subcategoryName",
+            model: "MenuSubcategory",
+          },
+        ],
       })
       .lean();
 
     if (!menu) {
-      return sendSuccessResponse(
+      return sendSuccessResponse( 
         res,
         "No menu found for this kitchen",
         [],
@@ -500,7 +553,7 @@ export const getMenuItemsByKitchen = async (req: Request, res: Response) => {
         _id: menu._id,
         kitchen_id: menu.kitchen_id,
         items_id: menu.items_id,
-        is_deleted: menu.is_deleted,
+        is_deleted: menu.is_deleted,   
         createdAt: menu.createdAt,
         updatedAt: menu.updatedAt,
         __v: menu.__v,

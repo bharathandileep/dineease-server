@@ -152,6 +152,6 @@ export const apiConfig = {
   notification: {
     getUserNotifications: "/get/:userId",
     getNotificationById: "/get/:notificationId",
-    getAllNotifications: "/all",
+    getAllNotifications: "/all",  
   },
 };

@@ -63,7 +63,6 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
 
     await collaboration.save();  
 
-    // Generate notification for the collaboration
     await generateColloborationNotification(organization_id, kitchen_id, kitchen.kitchen_name,organization.organizationName);
 
     const responseData = {
@@ -76,7 +75,6 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
         _id: kitchen._id,
         name: kitchen.kitchen_name
       },
-      // status: collaboration.status,
       createdAt: collaboration.createdAt
     };
 
@@ -95,6 +93,7 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
     );
   }
 };
+
 export const listCollaboratedKitchens = async (req: Request, res: Response) => {
   try {
     const { organization_id } = req.params;
@@ -151,7 +150,7 @@ export const listCollaboratedKitchens = async (req: Request, res: Response) => {
           localField: "_id",
           foreignField: "kitchen_id",
           as: "fssaiDetails",
-        },
+        }, 
       },
       {
         $lookup: {

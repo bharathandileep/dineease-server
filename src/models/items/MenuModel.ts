@@ -1,6 +1,7 @@
+
 import mongoose, { Schema, Document, Model } from "mongoose";
 import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
-import { number } from "joi";
+import { number, required } from "joi";
 
 export interface IMenu extends Document, CommonDBInterface {
   kitchen_id: mongoose.Types.ObjectId;
@@ -20,6 +21,8 @@ export interface IMenu extends Document, CommonDBInterface {
   slug: string;
   menu_image: string;
   is_deleted: boolean;
+  category: mongoose.Types.ObjectId; 
+  subcategory: mongoose.Types.ObjectId; 
 }
 
 export const MenuSchema: Schema<IMenu> = new Schema(
@@ -80,6 +83,16 @@ export const MenuSchema: Schema<IMenu> = new Schema(
     is_deleted: {
       type: Boolean,
       default: false,
+    },
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MenuCategory",
+      required: true,
+    },
+    subcategory: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MenuSubcategory",
+      required: true,
     },
   },
   { timestamps: true }

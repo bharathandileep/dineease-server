@@ -20,12 +20,10 @@ import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
 import { generateOrganizationNotification } from "../notification/notificationController";
 import User from "../../models/users/UserModel";
 import Address from "../../models/address/AddressModel";
-// import { generateOrganizationNotification } from "../notification/notificationController";
 
 const validateOrganizationDetails = (data: any) => {
   const errors: { field: string; message: string }[] = [];
 
-  // PAN Card Validation
   if (!data.panNumber) {
     errors.push({
       field: "panNumber",
@@ -45,7 +43,6 @@ const validateOrganizationDetails = (data: any) => {
     });
   }
 
-  // GST Validation
   if (!data.gstNumber) {
     errors.push({ field: "gstNumber", message: "GST number is required." });
   } else if (
@@ -384,14 +381,14 @@ export const handleGetOrganisations = async (
             $push: {
               _id: "$addresses._id",
               street_address: "$addresses.street_address",
-              city: "$addresses.city", // Keep as string
+              city: "$addresses.city", 
               city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
-              state: "$addresses.state", // Keep as string
+              state: "$addresses.state", 
               state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
-              district: "$addresses.district", // Keep as string
+              district: "$addresses.district", 
               district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
               pincode: "$addresses.pincode",
-              country: "$addresses.country", // Keep as string
+              country: "$addresses.country", 
               country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
               landmark: "$addresses.landmark",
               address_type: "$addresses.address_type",
@@ -1135,119 +1132,4 @@ export const handleAdminApproveOgaisation = async (
   }
 };
 
-// export const handleSelectKitchen = async (req: Request, res: Response): Promise<any> => {
-//   try {
-//     const { orgId, kitchenId } = req.body;
 
-//     // Validate IDs
-//     validateMogooseObjectId(orgId);
-//     validateMogooseObjectId(kitchenId);
-
-//     // Check if the organization exists
-//     const organization = await Organization.findById(orgId);
-//     if (!organization || organization.is_deleted) {
-//       throw new CustomError(
-//         "Organization not found",
-//         HTTP_STATUS_CODE.NOT_FOUND,
-//         ERROR_TYPES.NOT_FOUND_ERROR,
-//         false
-//       );
-//     }
-
-//     // Check if the kitchen exists
-//     const kitchen = await Kitchen.findById(kitchenId);
-//     if (!kitchen || kitchen.is_deleted) {
-//       throw new CustomError(
-//         "Kitchen not found",
-//         HTTP_STATUS_CODE.NOT_FOUND,
-//         ERROR_TYPES.NOT_FOUND_ERROR,
-//         false
-//       );
-//     }
-
-//     // Update the organization with the selected kitchen
-//     organization.selected_kitchen_id = kitchenId;
-//     await organization.save();
-
-//     sendSuccessResponse(
-//       res,
-//       "Kitchen selected successfully!",
-//       { organization },
-//       HTTP_STATUS_CODE.OK
-//     );
-//   } catch (error) {
-//     sendErrorResponse(
-//       res,
-//       error,
-//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-//     );
-//   }
-// };
-
-
-
-//     // Check if the organization exists
-//     const organization = await Organization.findById(orgId);
-//     if (!organization || organization.is_deleted) {
-//       throw new CustomError(
-//         "Organization not found",
-//         HTTP_STATUS_CODE.NOT_FOUND,
-//         ERROR_TYPES.NOT_FOUND_ERROR,
-//         false
-//       );
-//     }
-
-//     // Check if a kitchen is selected
-//     if (!organization.selected_kitchen_id) {
-//       throw new CustomError(
-//         "No kitchen selected for this organization",
-//         HTTP_STATUS_CODE.BAD_REQUEST,
-//         ERROR_TYPES.BAD_REQUEST_ERROR,
-//         false
-//       );
-//     }
-
-//     // Fetch the selected kitchen
-//     const kitchen = await Kitchen.findById(organization.selected_kitchen_id);
-//     if (!kitchen || kitchen.is_deleted) {
-//       throw new CustomError(
-//         "Selected kitchen not found",
-//         HTTP_STATUS_CODE.NOT_FOUND,
-//         ERROR_TYPES.NOT_FOUND_ERROR,
-//         false
-//       );
-//     }
-
-    // Fetch the selected kitchen
-//     export const handleGetSelectedKitchen = async (
-//       req: Request,
-//       res: Response
-//     ): Promise<any> => {
-//       try {
-//         const { orgId } = req.params;
-//     const kitchen = await Kitchen.findById(Organization.selected_kitchen_id);
-//     if (!kitchen || kitchen.is_deleted) {
-//       throw new CustomError(
-//         "Selected kitchen not found",
-//         HTTP_STATUS_CODE.NOT_FOUND,
-//         ERROR_TYPES.NOT_FOUND_ERROR,
-//         false
-//       );
-//     }
-
-//     sendSuccessResponse(
-//       res,
-//       "Selected kitchen retrieved successfully!",
-//       { kitchen },
-//       HTTP_STATUS_CODE.OK
-//     );
-//   } catch (error) {
-//     sendErrorResponse(
-//       res,
-//       error,
-//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-//     );
-//   }
-// };

@@ -1453,7 +1453,7 @@ export const handleGetUserApprovedKitchens = async (
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
-    console.error("Error in handleGetUserApprovedKitchens:", error); // Add logging for debugging
+    console.error("Error in handleGetUserApprovedKitchens:", error); 
     sendErrorResponse(
       res,
       (error as any).message || "Failed to retrieve user's approved kitchens",

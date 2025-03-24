@@ -70,7 +70,6 @@ export const ChatSchema: Schema<IChat> = new Schema(
  
  
  
-// Create and export the Chat model
 const Chat: Model<IChat> = mongoose.model<IChat>('Chat', ChatSchema);
 export default Chat;
  

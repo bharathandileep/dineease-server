@@ -10,7 +10,7 @@ export interface IOrganization extends Document, CommonDBInterface {
   managerName: string;
   register_number: string;
   location: string;
-  selected_kitchen_id: mongoose.Types.ObjectId; // Updated type
+  selected_kitchen_id: mongoose.Types.ObjectId; 
   isapproved: string;
   contact_number: string;
   email: string;
