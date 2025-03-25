@@ -683,7 +683,6 @@ export const handleUpdateOrganisations = async (
       );
     }
     orgId = existingOrg._id;
-    console.log(orgId, "1");
     const organizationLogoUrl = files.organizationLogo
       ? await uploadFileToCloudinary(files.organizationLogo[0].buffer)
       : existingOrg.organizationLogo;

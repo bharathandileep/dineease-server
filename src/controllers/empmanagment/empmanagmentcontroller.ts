@@ -441,8 +441,6 @@ export const getEmployeeById = async (req: Request, res: Response) => {
       );
     }
 
-    console.log("Employee Result:", employee[0]);
-
     sendSuccessResponse(
       res,
       "Employee retrieved successfully",
@@ -656,7 +654,6 @@ export const toggleEmployeeStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     validateMogooseObjectId(id);
-
     const employee = await EmployeeManagement.findById(id);
     if (!employee) {
       throw new CustomError(
@@ -666,7 +663,6 @@ export const toggleEmployeeStatus = async (req: Request, res: Response) => {
         false
       );
     }
-
     employee.employee_status =
       employee.employee_status === "Active" ? "Inactive" : "Active";
     await employee.save();
