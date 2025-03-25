@@ -64,7 +64,6 @@ const validateOrganizationDetails = (data: any) => {
 
   return errors;
 };
-
 export const handleCreateNewOrganisation = async (
   req: Request,
   res: Response
@@ -212,7 +211,6 @@ export const handleCreateNewOrganisation = async (
     );
   }
 };
-
 export const handleGetOrganisations = async (
   req: Request,
   res: Response
@@ -648,7 +646,7 @@ export const handleUpdateOrganisations = async (
         ERROR_TYPES.BAD_REQUEST_ERROR
       );
     }
-    let orgId:any = req.params.id;
+    let orgId: any = req.params.id;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const {
       organizationName,
@@ -685,7 +683,7 @@ export const handleUpdateOrganisations = async (
       );
     }
     orgId = existingOrg._id;
-    console.log(orgId,"1")
+    console.log(orgId, "1");
     const organizationLogoUrl = files.organizationLogo
       ? await uploadFileToCloudinary(files.organizationLogo[0].buffer)
       : existingOrg.organizationLogo;
@@ -825,7 +823,6 @@ export const handledDeleteOrganisations = async (
     );
   }
 };
-
 export const organizationToggleStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -861,7 +858,6 @@ export const organizationToggleStatus = async (req: Request, res: Response) => {
     );
   }
 };
-
 export const handleGetUnapprovedOrganisations = async (
   req: Request,
   res: Response
@@ -953,6 +949,7 @@ export const handleGetUnapprovedOrganisations = async (
           no_of_employees: { $first: "$no_of_employees" },
           categoryDetails: { $first: "$categoryDetails" },
           subcategoryDetails: { $first: "$subcategoryDetails" },
+          slug: { $first: "$slug" },
           addresses: {
             $push: {
               _id: "$addresses._id",
@@ -996,7 +993,6 @@ export const handleGetUnapprovedOrganisations = async (
     );
   }
 };
-
 export const handleGetUserOrganizations = async (
   req: Request,
   res: Response
@@ -1115,7 +1111,6 @@ export const handleGetUserOrganizations = async (
     );
   }
 };
-
 export const handleAdminApproveOgaisation = async (
   req: Request,
   res: Response
