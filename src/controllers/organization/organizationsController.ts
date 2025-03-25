@@ -401,7 +401,6 @@ export const handleGetOrganisations = async (
     );
   }
 };
-
 export const handleGetByIdOrganisations = async (
   req: Request,
   res: Response
@@ -647,7 +646,7 @@ export const handleUpdateOrganisations = async (
         ERROR_TYPES.BAD_REQUEST_ERROR
       );
     }
-    const orgId = req.params.id;
+    let orgId:any = req.params.id;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     const {
       organizationName,
@@ -670,10 +669,8 @@ export const handleUpdateOrganisations = async (
       category,
       subcategoryName,
     } = req.body;
-
-    validateMogooseObjectId(orgId);
     const existingOrg = await Organization.findOne({
-      _id: orgId,
+      slug: orgId,
       is_deleted: false,
     });
 
@@ -685,7 +682,8 @@ export const handleUpdateOrganisations = async (
         false
       );
     }
-
+    orgId = existingOrg._id;
+    console.log(orgId,"1")
     const organizationLogoUrl = files.organizationLogo
       ? await uploadFileToCloudinary(files.organizationLogo[0].buffer)
       : existingOrg.organizationLogo;
@@ -791,7 +789,6 @@ export const handleUpdateOrganisations = async (
     );
   }
 };
-
 export const handledDeleteOrganisations = async (
   req: Request,
   res: Response
@@ -830,7 +827,7 @@ export const handledDeleteOrganisations = async (
 export const organizationToggleStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const organization = await Organization.findOne({slug:id});
+    const organization = await Organization.findOne({ slug: id });
     if (!organization) {
       throw new CustomError(
         "Organization not found",
