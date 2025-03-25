@@ -60,7 +60,7 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
     await collaboration.save();
     await generateColloborationNotification(
       organization_id,
-      kitchen_id,
+      kitchen._id,
       kitchen.kitchen_name,
       organization.organizationName
     );
