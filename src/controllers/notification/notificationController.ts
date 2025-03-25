@@ -79,7 +79,7 @@ export const generateOrganizationNotification = async (userId: any, organization
 
 export const generateColloborationNotification = async (
   organization_id: any, 
-   kitchen_id: string, 
+   kitchen_id: any, 
   organizationName: string,
   kitchenName:string
 ) => {
