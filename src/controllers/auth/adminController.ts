@@ -178,7 +178,7 @@ export const handleForgotPasswordVerification = async (
       );
     }
 
-    // Assuming validateOtp will return the admin details if the OTP is valid
+
     const otpVerificationResult = await validateForgotOtp(email, otp);
     if (!otpVerificationResult) {
       throw new CustomError(
@@ -189,12 +189,12 @@ export const handleForgotPasswordVerification = async (
       );
     }
 
-    // Generate a new JWT token with a 2-minute expiration
+   
     const payload = { id: admin._id, email: admin.email, role: admin.role };
     const token = generateJWTToken(
       accessTokenSecret,
       payload,
-      '2m'  // Token expires in 2 minutes
+      '2m' 
     );
 
     return sendSuccessResponse(
