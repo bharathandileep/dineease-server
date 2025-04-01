@@ -1018,7 +1018,6 @@ export const handleUpdateKitchensById = async (
         expiry_date: ffsai_expiry_date,
         kitchen_id: existingKitchen?._id,
       };
- 
       await FssaiCertificateDetails.findOneAndUpdate(
         { kitchen_id: existingKitchen?._id },
         fssaiData,

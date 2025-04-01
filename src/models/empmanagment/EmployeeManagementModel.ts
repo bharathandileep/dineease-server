@@ -86,7 +86,7 @@ EmployeeManagementSchema.pre<IEmployeeManagement>(
       const Employee = mongoose.model("EmployeeManagement");
       const existing = await Employee.findOne({
         slug: slugToCheck,
-        _id: { $ne: this._id }, // Ensure we're not checking against itself
+        _id: { $ne: this._id },
       });
 
       if (!existing) {
