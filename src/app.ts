@@ -7,7 +7,6 @@ import { apiConfig } from "./config/endpoint ";
 import { CustomError } from "./lib/errors/customError";
 import { HTTP_STATUS_CODE } from "./lib/constants/httpStatusCodes";
 import { ERROR_TYPES } from "./lib/constants/errorType";
-import { sendSuccessResponse } from "./lib/helpers/responseHelper";
 import addressDetailsRoutes from "./routes/addressdetails/addressDetailsRoutes";
 import authRoute from "./routes/auth/AuthRoute";
 import kitchensRoute from "./routes/kitchen/kitchensRoutes";
@@ -56,6 +55,7 @@ app.use(`${apiConfig.baseAPIUrl}/addressDetails`, addressDetailsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/notification`, notificationRoutes);
 app.use(`${apiConfig.baseAPIUrl}/collab`,CollabRoutes);
 // Root route
+
 app.get(`/`, (req, res) => {
   res.send(`
     <!DOCTYPE html>
@@ -78,6 +78,7 @@ app.get(`/`, (req, res) => {
 });
 
 // 404 Error handler for all non-existing routes
+
 app.use("*", (req, res, next) => {
   throw new CustomError(
     `The page ${req.originalUrl} you requested does not exist.`,
