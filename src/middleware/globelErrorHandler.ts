@@ -20,7 +20,7 @@ export const errorHandler = (
     errorType: error.errorType,
     timestamp: new Date().toISOString(),
   };
-  if (node_env == "DEVELOPMENT") {
+  if (node_env == "development") {
     errorBody.stack = error.stack;
   }
   res.status(errorBody.statusCode).json(errorBody);
