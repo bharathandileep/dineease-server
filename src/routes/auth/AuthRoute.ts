@@ -39,6 +39,15 @@ router.post(
   refreshTokenMiddleware,
   handleGenerateAccessToken
 );
+// router.post(`${apiConfig.auth.accessToken}`, (req: any, res: any) => {
+//   console.log("🔥 /auth/new/access-token called");
+//   console.log("📦 Cookies:", req.cookies);
+
+//   res.status(200).json({
+//     message: "Debug route hit successfully!",
+//     cookies: req.cookies, 
+//   });
+// });
 router.post(`${apiConfig.auth.forgotPassword}`, generateForgotPassOtp);
 router.post(
   `${apiConfig.auth.verifyForgotOtp}`,

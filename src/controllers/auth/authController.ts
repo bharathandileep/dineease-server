@@ -267,7 +267,7 @@ export const handleGenerateAccessToken = async (
   }
 };
 
-export const checkUserExistence = async (
+export const checkUserExistence = async ( 
   req: Request,
   res: Response
 ): Promise<any> => {
