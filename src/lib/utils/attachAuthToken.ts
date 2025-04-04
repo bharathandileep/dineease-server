@@ -19,7 +19,7 @@ export const appendRefreshTokenCookies = (
   );
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
-    secure: node_env === "production", 
+    secure: false,
     sameSite: "none",
   });
 };
