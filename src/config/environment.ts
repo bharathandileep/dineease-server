@@ -15,7 +15,7 @@ export const accessTokenSecret: string = process.env.ACCESS_TOKEN_SECRET || "";
 export const refreshTokenSecret: string =
   process.env.REFRESH_TOKEN_SECRET || "";
 
-export const accessTokenExpiration = "15m";
+export const accessTokenExpiration = "7d";
 export const refreshTokenExpiration = "7d";
 
 export const mailId = process.env.AUTH_MAIL_ID;
