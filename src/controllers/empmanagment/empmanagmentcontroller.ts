@@ -178,8 +178,8 @@ export const createEmployee = async (req: Request, res: Response) => {
     );
 
     const newEmployee = new EmployeeManagement({
-      entity_id: payload.id,
-      entity_type: payload.role,
+      entity_id: "67a1083b3c9f01a384e9683c",
+      entity_type: "Admin",
       designation,
       username,
       email,
