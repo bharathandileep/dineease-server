@@ -20,6 +20,6 @@ export const appendRefreshTokenCookies = (
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: false,
-    sameSite: "none",
+    sameSite: "lax",
   });
 };

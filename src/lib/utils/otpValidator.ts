@@ -1,7 +1,6 @@
 
 import Otp from "../../models/users/OTPSModel";
 import PasswordOTPResetOTP from "../../models/users/passwordResetOTP";
-import User from "../../models/users/UserModel";
 import { ERROR_TYPES } from "../constants/errorType";
 import { HTTP_STATUS_CODE } from "../constants/httpStatusCodes";
 import { CustomError } from "../errors/customError";
