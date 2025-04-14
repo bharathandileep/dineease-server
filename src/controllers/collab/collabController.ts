@@ -403,6 +403,84 @@ export const getAllColloborations = async (
     });
   }
 };
+
+// export const getCollaborationById = async (
+//   req: Request,
+//   res: Response
+// ): Promise<void> => {
+//   try {
+//     const { id } = req.params;
+
+//     const collaboration = await CollaborationModel.findOne({
+//       _id: id,
+//       is_deleted: false,
+//     }).lean();
+
+//     if (!collaboration) {
+//       res.status(404).json({ message: "Collaboration not found" });
+//       return;
+//     }
+
+//     // Fetch related organization and kitchen
+//     const organization = await Organization.findOne({
+//       _id: collaboration.organization_id,
+//       is_deleted: false,
+//     })
+//       .select("organizationName organizationLogo slug")
+//       .lean();
+
+//     const kitchen = await Kitchen.findOne({
+//       _id: collaboration.kitchen_id,
+//       is_deleted: false,
+//     })
+//       .select("kitchen_name kitchen_image slug")
+//       .lean();
+
+//     // Format the response
+//     const formattedCollaboration = {
+//       _id: collaboration._id,
+//       organization: organization
+//         ? {
+//             _id: organization._id,
+//             name: organization.organizationName || "Unknown Organization",
+//             logo: organization.organizationLogo || null,
+//             slug: organization.slug || null,
+//           }
+//         : {
+//             _id: collaboration.organization_id,
+//             name: "Unknown Organization",
+//             logo: null,
+//           },
+//       kitchen: kitchen
+//         ? {
+//             _id: kitchen._id,
+//             name: kitchen.kitchen_name || "Unknown Kitchen",
+//             image: kitchen.kitchen_image || null,
+//             slug: kitchen.slug || null,
+//           }
+//         : {
+//             _id: collaboration.kitchen_id,
+//             name: "Unknown Kitchen",
+//             image: null,
+//           },
+//       createdAt: collaboration.createdAt,
+//       updatedAt: collaboration.updatedAt,
+//     };
+
+//     res.status(200).json(formattedCollaboration);
+//   } catch (error: any) {
+//     console.error(
+//       `Error fetching collaboration by ID (${req.params.id}):`,
+//       error
+//     );
+//     console.error(error.stack);
+//     res.status(500).json({
+//       message: "Internal server error",
+//       error: process.env.NODE_ENV === "development" ? error.message : undefined,
+//     });
+//   }
+// };
+
 export const getCollaborationById = async (
   req: Request,
   res: Response
@@ -410,7 +488,7 @@ export const getCollaborationById = async (
   try {
     const { id } = req.params;
 
-    const collaboration = await CollaborationModel.findOne({
+    const collaboration = await Collaboration.findOne({
       _id: id,
       is_deleted: false,
     }).lean();
@@ -425,41 +503,58 @@ export const getCollaborationById = async (
       _id: collaboration.organization_id,
       is_deleted: false,
     })
-      .select("organizationName organizationLogo")
+      .select("organizationName organizationLogo slug")
       .lean();
 
     const kitchen = await Kitchen.findOne({
       _id: collaboration.kitchen_id,
       is_deleted: false,
     })
-      .select("kitchen_name kitchen_image")
+      .select("kitchen_name kitchen_image slug")
       .lean();
 
-    // Format the response
     const formattedCollaboration = {
       _id: collaboration._id,
       organization: organization
         ? {
             _id: organization._id,
-            name: organization.organizationName || "Unknown Organization",
-            logo: organization.organizationLogo || null,
+            name: organization.organizationName,
+            logo: organization.organizationLogo,
+            slug: organization.slug,
           }
         : {
             _id: collaboration.organization_id,
             name: "Unknown Organization",
             logo: null,
+            slug: null,
           },
       kitchen: kitchen
         ? {
             _id: kitchen._id,
-            name: kitchen.kitchen_name || "Unknown Kitchen",
-            image: kitchen.kitchen_image || null,
+            name: kitchen.kitchen_name,
+            image: kitchen.kitchen_image,
+            slug: kitchen.slug,
           }
         : {
             _id: collaboration.kitchen_id,
             name: "Unknown Kitchen",
             image: null,
+            slug: null,
           },
+
+      // Include all quotation & contact-related fields here
+      quotation: {
+        date: collaboration.quotation_date,
+        mealType: collaboration.meal_type,
+        mealCount: collaboration.meal_count,
+        ratePerMeal: collaboration.rate_per_meal,
+        discountOffer: collaboration.discount_offer,
+        paymentTerms: collaboration.payment_terms,
+        contractDuration: collaboration.contract_duration,
+        additionalNotes: collaboration.additional_notes,
+        termsAndConditions: collaboration.terms_and_conditions,
+      },
+
       createdAt: collaboration.createdAt,
       updatedAt: collaboration.updatedAt,
     };
@@ -470,10 +565,114 @@ export const getCollaborationById = async (
       `Error fetching collaboration by ID (${req.params.id}):`,
       error
     );
-    console.error(error.stack);
     res.status(500).json({
       message: "Internal server error",
       error: process.env.NODE_ENV === "development" ? error.message : undefined,
     });
+  }
+};
+
+export const addQuotationDetails = async (req: Request, res: Response) => {
+  try {
+    const { organization_id, kitchen_id, quotation } = req.body; // Destructure properly based on the frontend data
+
+
+    // Check if the organization exists
+    const organization = await Organization.findById(organization_id);
+    if (!organization) {
+      throw new CustomError(
+        "Organization not found",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR,
+        false
+      );
+    }
+
+    // Check if the kitchen exists
+    const kitchen = await Kitchen.findById(kitchen_id);
+    if (!kitchen) {
+      throw new CustomError(
+        "Kitchen not found",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR,
+        false
+      );
+    }
+
+    // Check if the collaboration exists
+    const collaboration = await Collaboration.findOne({
+      organization_id,
+      kitchen_id: kitchen._id,
+      is_deleted: false,
+    });
+
+    if (!collaboration) {
+      throw new CustomError(
+        "Collaboration not found",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR,
+        false
+      );
+    }
+
+    // Add the quotation details to the collaboration
+    collaboration.quotation_date = quotation.date;
+    collaboration.meal_type = quotation.mealType;
+    collaboration.meal_count = quotation.mealCount;
+    collaboration.rate_per_meal = quotation.ratePerMeal;
+    collaboration.discount_offer = quotation.discountOffer;
+    collaboration.payment_terms = quotation.paymentTerms;
+    collaboration.contract_duration = quotation.contractDuration;
+    collaboration.additional_notes = quotation.contractDuration;
+    collaboration.terms_and_conditions = quotation.termsAndConditions;
+
+    // Save the updated collaboration
+    await collaboration.save();
+
+    // Optional: Send a notification
+    await generateColloborationNotification(
+      organization_id,
+      kitchen._id,
+      kitchen.kitchen_name,
+      organization.organizationName
+    );
+
+    const responseData = {
+      _id: collaboration._id,
+      organization: {
+        _id: organization._id,
+        name: organization.organizationName,
+      },
+      kitchen: {
+        _id: kitchen._id,
+        name: kitchen.kitchen_name,
+      },
+      quotationDetails: {
+        quotation_date: collaboration.quotation_date,
+        meal_type: collaboration.meal_type,
+        meal_count: collaboration.meal_count,
+        rate_per_meal: collaboration.rate_per_meal,
+        discount_offer: collaboration.discount_offer,
+        payment_terms: collaboration.payment_terms,
+        contract_duration: collaboration.contract_duration,
+        additional_notes: collaboration.additional_notes,
+        terms_and_conditions: collaboration.terms_and_conditions,
+      },
+      createdAt: collaboration.createdAt,
+    };
+
+    sendSuccessResponse(
+      res,
+      "Quotation details added to collaboration successfully",
+      responseData,
+      HTTP_STATUS_CODE.CREATED
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
   }
 };

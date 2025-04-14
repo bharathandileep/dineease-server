@@ -107,6 +107,8 @@ export const apiConfig = {
     listCollaboratedKitchens:"/organization/:organization_id",
     getAllColloborations:"/all",
     getCollaborationById:"/:id",
+    addCollaboration:"/request/add-new-collab",
+    getCollaborationDetails:"/get-collaboration-details",
 
    },
   designation: {
