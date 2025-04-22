@@ -203,7 +203,7 @@ export const createEmployee = async (req: Request, res: Response) => {
       pincode,
       country,
     });
-    await registerUser(email, username, existingRole.role_id, existingRole._id);
+    await registerUser(email, username, existingRole.role_id);
     sendSuccessResponse(
       res,
       "Employee created successfully",

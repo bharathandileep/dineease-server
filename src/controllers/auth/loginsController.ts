@@ -74,10 +74,9 @@ export const handleRegisterUser = async (req: Request, res: Response) => {
 export const registerUser = async (
   email: string,
   username: string,
-  role: any,
   role_id: any
 ): Promise<void> => {
-  if (!email || !username || !role) {
+  if (!email || !username) {
     throw new CustomError(
       "All fields are required",
       HTTP_STATUS_CODE.BAD_REQUEST,
@@ -101,94 +100,16 @@ export const registerUser = async (
     username,
     email,
     password: hashedPassword,
-    role,
     role_id,
   });
   await newUser.save();
 };
 
-// export const handleUserLogin = async (req: Request, res: Response) => {
-//   try {
-//     const { username, password } = req.body;
-
-//     // Validate input
-//     if (!username || !password) {
-//       throw new CustomError(
-//         "Username and password are required",
-//         HTTP_STATUS_CODE.BAD_REQUEST,
-//         ERROR_TYPES.BAD_REQUEST_ERROR,
-//         false
-//       );
-//     }
-//     const admin = await Logins.findOne({ username });
-//     if (!admin) {
-//       throw new CustomError(
-//         "Invalid credentials",
-//         HTTP_STATUS_CODE.BAD_REQUEST,
-//         ERROR_TYPES.BAD_REQUEST_ERROR,
-//         false
-//       );
-//     }
-//     const isMatch = await comparePassword(password, admin.password);
-//     if (!isMatch) {
-//       throw new CustomError(
-//         "Invalid credentials",
-//         HTTP_STATUS_CODE.BAD_REQUEST,
-//         ERROR_TYPES.BAD_REQUEST_ERROR,
-//         false
-//       );
-//     }
-//     let employee = null;
-//     employee = await EmployeeManagement.findOne({
-//       email: admin.email,
-//       is_deleted: false,
-//     });
-
-//     if (!employee) {
-//       employee = await OrgEmployeeManagement.findOne({
-//         email: admin.email,
-//         is_deleted: false,
-//       });
-//     }
-//     if (!employee ) {
-//       throw new CustomError(
-//         "Employee details not found",
-//         HTTP_STATUS_CODE.NOT_FOUND,
-//         ERROR_TYPES.NOT_FOUND_ERROR,
-//         false
-//       );
-//     }
-
-//     const payload = { id: admin._id, email: admin.email, role: "Employee" };
-//     appendRefreshTokenCookies(res, payload);
-//     const accessToken = generateJWTToken(
-//       accessTokenSecret,
-//       payload,
-//       accessTokenExpiration
-//     );
-
-//     sendSuccessResponse(
-//       res,
-//       "User logged in successfully.",
-//       { token: accessToken, employeeDetails: employee },
-//       HTTP_STATUS_CODE.OK
-//     );
-//   } catch (error) {
-//     sendErrorResponse(
-//       res,
-//       error,
-//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-//     );
-//   }
-// };
-
 export const handleUserLogin = async (req: Request, res: Response) => {
   try {
-    const { username, password } = req.body;
-
+    const { email, password } = req.body;
     // Validate input
-    if (!username || !password) {
+    if (!email || !password) {
       throw new CustomError(
         "Username and password are required",
         HTTP_STATUS_CODE.BAD_REQUEST,
@@ -198,7 +119,7 @@ export const handleUserLogin = async (req: Request, res: Response) => {
     }
 
     // Find the user by username
-    const admin = await Logins.findOne({ username });
+    const admin = await Logins.findOne({ email });
     if (!admin) {
       throw new CustomError(
         "Invalid credentials",
@@ -239,7 +160,7 @@ export const handleUserLogin = async (req: Request, res: Response) => {
         false
       );
     }
-    let slug = "Admin";
+    let slug = "admin";
     if (employee.entity_type !== "Admin") {
       const organization = await Organization.findOne({
         _id: employee.entity_id,

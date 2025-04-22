@@ -15,6 +15,7 @@ import {
   accessTokenExpiration,
   accessTokenSecret,
 } from "../../config/environment";
+import mongoose from "mongoose";
 
 export const handleGoogleAuth = async (
   req: Request,
@@ -267,7 +268,7 @@ export const handleGenerateAccessToken = async (
   }
 };
 
-export const checkUserExistence = async ( 
+export const checkUserExistence = async (
   req: Request,
   res: Response
 ): Promise<any> => {
@@ -355,6 +356,44 @@ export const createUser = async (req: Request, res: Response): Promise<any> => {
       },
       HTTP_STATUS_CODE.CREATED
     );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
+export const getUserInfoById = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const userId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return sendErrorResponse(
+        res,
+        "Invalid user ID format.",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
+
+    const user = await User.findById(userId).select("-__v");
+
+    if (!user) {
+      return sendErrorResponse(
+        res,
+        "User not found.",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR
+      );
+    }
+
+    sendSuccessResponse(res, "User fetched successfully.", user);
   } catch (error) {
     sendErrorResponse(
       res,

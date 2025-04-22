@@ -17,14 +17,20 @@ import mongoose from "mongoose";
 import OrgEmployeeManagement from "../../models/empmanagment/OrgEmployeeManagementModel";
 import { registerUser } from "../auth/loginsController";
 import Role from "../../models/users/RolesModels";
+import RolesAndAccess from "../../models/users/rolesAndAccessModel";
 
 export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
   try {
+    const { id } = req.params;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 8;
     const skip = (page - 1) * limit;
 
-    const matchQuery: any = { is_deleted: false };
+    const matchQuery: any = {
+      entity_id: new mongoose.Types.ObjectId(id),
+      is_deleted: false,
+    };
+
     if (req.query.designation) {
       matchQuery.designation = req.query.designation;
     }
@@ -71,8 +77,8 @@ export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
 
     const orgEmployees = await OrgEmployeeManagement.aggregate(pipeline);
     const totalPipeline = [...pipeline];
-    totalPipeline.pop(); 
-    totalPipeline.pop(); 
+    totalPipeline.pop();
+    totalPipeline.pop();
     totalPipeline.push({ $count: "total" });
 
     const totalDocs = await OrgEmployeeManagement.aggregate(totalPipeline);
@@ -105,8 +111,9 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
     const {
       entity_id,
       entity_type,
-      designation,
-      username,
+      roleName,
+      roleId,
+      fullName,
       email,
       phone_number,
       city,
@@ -122,8 +129,8 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     if (
-      !designation ||
-      !username ||
+      !roleName ||
+      !fullName ||
       !email ||
       !phone_number ||
       !employee_status ||
@@ -137,23 +144,10 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
         false
       );
     }
-    const existingDesignation = await Designation.findById(designation);
-    if (!existingDesignation) {
-      throw new CustomError(
-        "Designation not found",
-        HTTP_STATUS_CODE.NOT_FOUND,
-        ERROR_TYPES.NOT_FOUND_ERROR,
-        false
-      );
-    }
-
-    // Rest of your code...
-    const existingRole = await Role.findOne({
-      role_name: existingDesignation.role_name,
-    });
+    const existingRole = await RolesAndAccess.findById(roleId);
     if (!existingRole) {
       throw new CustomError(
-        "Role not found for the given designation",
+        "Role not found",
         HTTP_STATUS_CODE.NOT_FOUND,
         ERROR_TYPES.NOT_FOUND_ERROR,
         false
@@ -183,11 +177,11 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
     const newEmployee = new OrgEmployeeManagement({
       entity_id,
       entity_type,
-      designation,
-      username,
+      roleName,
+      fullName,
       email,
       phone_number,
-      role: existingRole.role_id,
+      roleId,
       employee_status,
       aadhar_number,
       pan_number,
@@ -205,7 +199,7 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       pincode,
       country,
     });
-    await registerUser(email, username, existingRole.role_id, existingRole._id);
+    await registerUser(email, fullName, roleId);
     sendSuccessResponse(
       res,
       "Employee created successfully",
@@ -253,14 +247,6 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
         },
       },
       {
-        $lookup: {
-          from: "designations",
-          localField: "designation",
-          foreignField: "_id",
-          as: "designation",
-        },
-      },
-      {
         $unwind: {
           path: "$designation",
           preserveNullAndEmptyArrays: true,
@@ -281,8 +267,8 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
                     },
                   ],
                 },
-                then: { $toInt: "$address.state" }, 
-                else: null, 
+                then: { $toInt: "$address.state" },
+                else: null,
               },
             },
           },
@@ -314,8 +300,8 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
                     { $regexMatch: { input: "$address.city", regex: /^\d+$/ } },
                   ],
                 },
-                then: { $toInt: "$address.city" }, 
-                else: null, 
+                then: { $toInt: "$address.city" },
+                else: null,
               },
             },
           },
@@ -349,11 +335,11 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
                         input: "$address.district",
                         regex: /^\d+$/,
                       },
-                    }, 
+                    },
                   ],
                 },
-                then: { $toInt: "$address.district" }, 
-                else: null, 
+                then: { $toInt: "$address.district" },
+                else: null,
               },
             },
           },
@@ -387,11 +373,11 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
                         input: "$address.country",
                         regex: /^\d+$/,
                       },
-                    }, 
+                    },
                   ],
                 },
-                then: { $toInt: "$address.country" }, 
-                else: null, 
+                then: { $toInt: "$address.country" },
+                else: null,
               },
             },
           },
@@ -417,6 +403,7 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
           entity_type: 1,
           username: 1,
           email: 1,
+          roleName: 1,
           phone_number: 1,
           employee_status: 1,
           aadhar_number: 1,
@@ -467,7 +454,6 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
     );
   }
 };
-
 // Update employee
 export const updateOrgEmployee = async (req: Request, res: Response) => {
   try {
@@ -534,7 +520,6 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
       });
     }
 
-
     const updatedEmployee = await OrgEmployeeManagement.findByIdAndUpdate(
       id,
       updateData,
@@ -567,7 +552,6 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
     );
   }
 };
-
 // Toggle employee status
 export const toggleOrgEmployeeStatus = async (req: Request, res: Response) => {
   try {
@@ -790,3 +774,5 @@ export const handleGetEmployeeOrganizations = async (
     );
   }
 };
+
+

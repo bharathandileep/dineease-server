@@ -17,9 +17,10 @@ export const RoleSchema: Schema = new Schema<IRole>(
       ref: "User",
     },
     permission: { type: Number, required: true, default: 0 },
+    
   },
   { timestamps: true }
 );
 
 const Role: Model<IRole> = mongoose.model<IRole>("Role", RoleSchema);
-export default Role;
+export default Role;  

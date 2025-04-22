@@ -16,7 +16,6 @@ const router = express.Router();
 
 router.get(
   `${apiConfig.orgemployee.getAllEmployeesOfOrg}`,
-  upload.fields([{ name: "profile_picture", maxCount: 1 }]),
   getAllEmployeesOfOrg
 );
 router.get(`${apiConfig.orgemployee.getOrgEmployeeById}`, getOrgEmployeeById);
@@ -50,5 +49,6 @@ router.get(
   `${apiConfig.orgemployee.getEmployeesOrg}`,
   handleGetEmployeeOrganizations
 );
+
 
 export default router;

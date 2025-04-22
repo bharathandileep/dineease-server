@@ -4,15 +4,15 @@ import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
 export interface IOrgEmployeeManagement extends Document, CommonDBInterface {
   entity_id: mongoose.Types.ObjectId;
   employee_id: mongoose.Types.ObjectId;
-  designation: mongoose.Types.ObjectId;
+  roleName: string;
   slug: string;
 
   entity_type: string;
-  username: string;
+  fullName: string;
   email: string;
   phone_number: string;
   address_id: mongoose.Types.ObjectId[];
-  role: string;
+  roleId: mongoose.Types.ObjectId;
   employee_status: string;
   aadhar_number: string;
   pan_number: string;
@@ -33,12 +33,11 @@ export const OrgEmployeeManagementSchema: Schema =
         required: true,
         enum: ["Kitchen", "Organization", "Admin"],
       },
-      designation: {
-        type: mongoose.Schema.Types.ObjectId,
+      roleName: {
+        type: String,
         required: true,
-        ref: "designation",
       },
-      username: { type: String, required: true },
+      fullName: { type: String, required: true },
       email: { type: String, required: true, unique: true },
       phone_number: { type: String, required: true },
       address_id: [
@@ -48,7 +47,11 @@ export const OrgEmployeeManagementSchema: Schema =
           required: true,
         },
       ],
-      role: { type: String },
+      roleId: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: "rolesandaccesses",
+      },
       employee_status: { type: String, required: true },
       aadhar_number: { type: String, required: true },
       pan_number: { type: String, required: true },
@@ -62,44 +65,6 @@ export const OrgEmployeeManagementSchema: Schema =
     },
     { timestamps: true }
   );
-
-OrgEmployeeManagementSchema.pre<IOrgEmployeeManagement>(
-  "save",
-  async function (next) {
-    if (!this.isModified("username") && this.slug) {
-      return next();
-    }
-
-    let baseSlug = this.username
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
-
-    let slug = baseSlug;
-    let count = 0;
-    let slugExists = true;
-
-    while (slugExists) {
-      const slugToCheck = count === 0 ? slug : `${baseSlug}-${count}`;
-      const OrgEmployee = mongoose.model("OrgEmployeeManagement");
-      const existing = await OrgEmployee.findOne({
-        slug: slugToCheck,
-        _id: { $ne: this._id },
-      });
-
-      if (!existing) {
-        slug = slugToCheck;
-        slugExists = false;
-      } else {
-        count++;
-      }
-    }
-
-    this.slug = slug;
-    next();
-  }
-);
-
 const OrgEmployeeManagement: Model<IOrgEmployeeManagement> =
   mongoose.model<IOrgEmployeeManagement>(
     "OrgEmployeeManagement",

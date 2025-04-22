@@ -20,6 +20,7 @@ import { uploadFileToCloudinary } from "../../lib/utils/cloudFileManager";
 import { generateOrganizationNotification } from "../notification/notificationController";
 import User from "../../models/users/UserModel";
 import Address from "../../models/address/AddressModel";
+import RolesAndAccess from "../../models/users/rolesAndAccessModel";
 
 const validateOrganizationDetails = (data: any) => {
   const errors: { field: string; message: string }[] = [];
@@ -151,9 +152,18 @@ export const handleCreateNewOrganisation = async (
       role: "user",
       is_deleted: false,
     });
-
     const newOrgId = newOrg._id;
-
+    const newRole = await RolesAndAccess.create({
+      entityType: "Organization",
+      entityId: newOrgId,
+      createdBy: userId,
+      roleName: "Admin",
+      hasFullAccess: true,
+      isDefault: false,
+    });
+    await User.findByIdAndUpdate(userId, {
+      role_id: newRole._id,
+    });
     await createAddressAndUpdateModel(Organization, newOrgId, {
       street_address: streetAddress,
       city,

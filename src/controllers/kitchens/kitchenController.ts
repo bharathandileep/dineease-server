@@ -21,6 +21,7 @@ import { generateKitchenNotification } from "../notification/notificationControl
 import User from "../../models/users/UserModel";
 
 import Address from "../../models/address/AddressModel";
+import RolesAndAccess from "../../models/users/rolesAndAccessModel";
 
 const validateKitchenDetails = (data: any) => {
   const errors: { field: string; message: string }[] = [];
@@ -357,6 +358,17 @@ export const handleCreateNewKitchens = async (
         pan_card_image: panImageUrl,
       });
     }
+    const newRole = await RolesAndAccess.create({
+      entityType: "Kitchen",
+      entityId: kitchenId,
+      createdBy: userId,
+      roleName: "Admin",
+      hasFullAccess: true,
+      isDefault: false,
+    });
+    await User.findByIdAndUpdate(userId, {  
+      role_id: newRole._id,
+    });
     await generateKitchenNotification(payload.id, kitchen_name);
 
     return sendSuccessResponse(
