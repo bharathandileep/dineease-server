@@ -21,18 +21,16 @@ const rolesAndAccessSchema: Schema<IRolesAndAccess> =
     {
       entityType: {
         type: String,
-        enum: ["Admin", "Organization", "Kitchen"],
+        enum: ["Admin", "SuperAdmin", "Organization", "Kitchen"],
         required: true,
       },
       entityId: {
         type: mongoose.Schema.Types.ObjectId,
-        required: true,
         refPath: "entityType",
       },
       createdBy: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
-        required: true,
       },
       roleName: {
         type: String,
@@ -40,7 +38,7 @@ const rolesAndAccessSchema: Schema<IRolesAndAccess> =
         trim: true,
       },
       permissions: {
-        type: Schema.Types.Mixed, // Using Mixed type for nested object
+        type: Schema.Types.Mixed,
         default: {},
       },
       hasFullAccess: {

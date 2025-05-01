@@ -15,14 +15,15 @@ import menuCategoryRoutes from "./routes/kitchen/categoryRoutes";
 import menuSubCategoryRoutes from "./routes/kitchen/subcategoryRoutes";
 import designationRoutes from "./routes/designation/designationRoutes";
 import roelsAndAccessRoutes from "./routes/designation/roelsAndAccessRoutes";
-import OrgEmployeeManagementRoutes from "./routes/empmanagment/OrgEmployeeManagementRoutes";
+import OrgEmployeeManagementRoutes from "./routes/empmanagment/orgEmployeeManagementRoutes";
+import kitchenEmployeeManagementRoutes from "./routes/empmanagment/kitchenEmployManagement";
 import adminControlRoutes from "./routes/admin/adminRoute";
 import menuitemsRoutes from "./routes/menuitems/menuitemsRoutes";
 import kitchensMenuRoutes from "./routes/kitchen/kitchensMenuRoutes";
 import { clientOrigin } from "./config/environment";
 import userLoginsRoutes from "./routes/auth/loginsRoute";
 import notificationRoutes from "./routes/notification/notificationRoutes";
-import EmployeeManagementRoutes from "./routes/empmanagment/EmployeeManagementRoutes";
+import AdminEmployeeManagementRoutes from "./routes/empmanagment/adminEmployeeManagement";
 import CollabRoutes from "./routes/collab/CollabRoutes";
 
 export const app: Application = Express();
@@ -49,10 +50,17 @@ app.use(`${apiConfig.baseAPIUrl}/sub-menu-category`, menuSubCategoryRoutes);
 app.use(`${apiConfig.baseAPIUrl}/designation`, designationRoutes);
 app.use(`${apiConfig.baseAPIUrl}/role-and-access`, roelsAndAccessRoutes);
 app.use(`${apiConfig.baseAPIUrl}/organization`, organizationRoute);
-app.use(`${apiConfig.baseAPIUrl}/employee`, EmployeeManagementRoutes);
+app.use(
+  `${apiConfig.baseAPIUrl}/admin-employee`,
+  AdminEmployeeManagementRoutes
+);
 app.use(`${apiConfig.baseAPIUrl}/kitchens-menu`, kitchensMenuRoutes);
 app.use(`${apiConfig.baseAPIUrl}/menu-items`, menuitemsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/org-employee`, OrgEmployeeManagementRoutes);
+app.use(
+  `${apiConfig.baseAPIUrl}/kitchen-employee`,
+  kitchenEmployeeManagementRoutes
+);
 app.use(`${apiConfig.baseAPIUrl}/addressDetails`, addressDetailsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/notification`, notificationRoutes);
 app.use(`${apiConfig.baseAPIUrl}/collab`, CollabRoutes);

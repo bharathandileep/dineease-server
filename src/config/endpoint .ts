@@ -128,6 +128,14 @@ export const apiConfig = {
     deleteEmployee: "/employees/:id",
     toggleEmployeeStatus: "/employees/:id/toggle-status",
   },
+  kitchenEmployee: {
+    createEmployee: "/employees",
+    getAllEmployees: "/employees-all/:kitchenId",
+    getEmployeeById: "/employees/:id",
+    updateEmployee: "/employees/:id",
+    deleteEmployee: "/employees/:id",
+    toggleEmployeeStatus: "/employees/:id/toggle-status",
+  },
   orgemployee: {
     createOrgEmployee: "/orgemployee",
     getAllEmployeesOfOrg: "/orgemployee/all/:id",

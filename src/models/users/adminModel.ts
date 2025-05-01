@@ -7,8 +7,7 @@ export interface IAdmin extends Document, CommonDBInterface {
   email: string;
   profile_photo?: string;
   password: string;
-  role: string;
-
+  role_id: mongoose.Schema.Types.ObjectId;
 }
 
 export const AdminSchema: Schema = new Schema<IAdmin>(
@@ -19,7 +18,7 @@ export const AdminSchema: Schema = new Schema<IAdmin>(
     profile_photo: { type: String, default: null },
     is_deleted: { type: Boolean, default: false },
     password: { type: String, required: true },
-    role: { type: String, default: "Admin" },
+    role_id: { type: mongoose.Schema.Types.ObjectId, ref: "RolesAndAccess" },
   },
   { timestamps: true }
 );

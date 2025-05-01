@@ -20,7 +20,7 @@ import {
 import { CustomError } from "../../lib/errors/customError";
 import { validateForgotOtp, validateOtp } from "../../lib/utils/otpValidator";
 import { generateAndEmailForgotOtp } from "../../lib/helpers/generateAndSendEmail";
-
+import RolesAndAccess from "../../models/users/rolesAndAccessModel";
 
 export const handleRegisterAdmin = async (req: Request, res: Response) => {
   try {
@@ -45,11 +45,19 @@ export const handleRegisterAdmin = async (req: Request, res: Response) => {
     }
 
     const hashedPassword = await hashPassword(password);
+    const newRole = await RolesAndAccess.create({
+      entityType: "Admin",
+      entityId: "68137ba76a9df5644d7727fa",
+      roleName: "Admin",
+      hasFullAccess: true,
+      isDefault: false,
+    });
     const newAdmin = new Admin({
       fullName,
       username,
       email,
       password: hashedPassword,
+      role_id: newRole._id,
     });
 
     await newAdmin.save();
@@ -101,10 +109,10 @@ export const handleAdminLogin = async (req: Request, res: Response) => {
       );
     }
 
-    const payload = { id: admin._id, email: admin.email, role: admin.role };
+    const payload = { id: admin._id, email: admin.email, role: "Admin" };
     appendRefreshTokenCookies(res, payload);
     const accessToken = generateJWTToken(
-      accessTokenSecret,
+      accessTokenSecret,  
       payload,
       accessTokenExpiration
     );
@@ -190,11 +198,11 @@ export const handleForgotPasswordVerification = async (
     }
 
     // Generate a new JWT token with a 2-minute expiration
-    const payload = { id: admin._id, email: admin.email, role: admin.role };
+    const payload = { id: admin._id, email: admin.email, role: "Admin" };
     const token = generateJWTToken(
       accessTokenSecret,
       payload,
-      '2m'  // Token expires in 2 minutes
+      "2m" // Token expires in 2 minutes
     );
 
     return sendSuccessResponse(
@@ -212,7 +220,10 @@ export const handleForgotPasswordVerification = async (
     );
   }
 };
-export const handleUpdatePassword = async (req: Request, res: Response): Promise<any> => {
+export const handleUpdatePassword = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
   try {
     const { email, newPassword, token } = req.body;
 
