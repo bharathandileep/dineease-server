@@ -28,7 +28,6 @@ import User from "../../models/users/UserModel";
 import RolesAndAccess from "../../models/users/rolesAndAccessModel";
 import Kitchen from "../../models/kitchen/KitchenModel";
 
-
 // not in use need to be removed(for checking)
 export const handleRegisterUser = async (req: Request, res: Response) => {
   try {
@@ -130,6 +129,7 @@ export const handleUserLogin = async (req: Request, res: Response) => {
         false
       );
     }
+    console.log(userInfo);
     const isMatch = await comparePassword(password, userInfo.password);
     if (!isMatch) {
       throw new CustomError(
@@ -139,7 +139,7 @@ export const handleUserLogin = async (req: Request, res: Response) => {
         false
       );
     }
-
+    console.log(userInfo.role_id);
     const roleInfo = await RolesAndAccess.findById(userInfo.role_id);
     if (!roleInfo) {
       throw new CustomError(

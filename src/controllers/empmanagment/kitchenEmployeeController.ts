@@ -21,6 +21,7 @@ import RolesAndAccess from "../../models/users/rolesAndAccessModel";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import mongoose from "mongoose";
 import { Console } from "console";
+import User from "../../models/users/UserModel";
 
 export const handleCreateNewKitchenEmployee = async (
   req: Request,
@@ -250,6 +251,9 @@ export const getKitchenAllEmployees = async (req: Request, res: Response) => {
   }
 };
 export const updateKitchenEmployee = async (req: Request, res: Response) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -267,6 +271,7 @@ export const updateKitchenEmployee = async (req: Request, res: Response) => {
       );
     }
 
+    // Handle designation & role
     if (
       updateData.designation &&
       existingEmployee.roleName !== updateData.designation
@@ -290,7 +295,7 @@ export const updateKitchenEmployee = async (req: Request, res: Response) => {
       updateData.roleId = matchingRole._id;
     }
 
-    // Profile Picture
+    // Handle file uploads (outside DB transaction)
     if (files?.profile_picture) {
       if (existingEmployee.profile_picture) {
         await deleteFromCloudinary(existingEmployee.profile_picture);
@@ -300,7 +305,6 @@ export const updateKitchenEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // PAN Image
     if (files?.pan_image) {
       if (existingEmployee.pan_image) {
         await deleteFromCloudinary(existingEmployee.pan_image);
@@ -310,7 +314,6 @@ export const updateKitchenEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Aadhar Image
     if (files?.aadhar_image) {
       if (existingEmployee.aadhar_image) {
         await deleteFromCloudinary(existingEmployee.aadhar_image);
@@ -320,7 +323,7 @@ export const updateKitchenEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Address update (first address only)
+    // Address update (outside DB transaction)
     if (
       updateData.street_address ||
       updateData.city ||
@@ -330,7 +333,6 @@ export const updateKitchenEmployee = async (req: Request, res: Response) => {
       updateData.country
     ) {
       if (existingEmployee.address_id?.length > 0) {
-        const firstAddressId = existingEmployee.address_id[0].toString();
         await updateAddress(kitchenEmployeeManagement, id, {
           street_address: updateData.street_address,
           city: updateData.city,
@@ -342,8 +344,9 @@ export const updateKitchenEmployee = async (req: Request, res: Response) => {
       }
     }
 
+    // Update employee with transaction
     const updatedEmployee = await kitchenEmployeeManagement
-      .findByIdAndUpdate(id, updateData, { new: true })
+      .findByIdAndUpdate(id, updateData, { new: true, session })
       .populate("address_id", "street city state country");
 
     if (!updatedEmployee) {
@@ -354,6 +357,19 @@ export const updateKitchenEmployee = async (req: Request, res: Response) => {
         false
       );
     }
+    const userData = await User.findOne({
+      email: updatedEmployee.email,
+    }).session(session);
+    if (updateData.roleId && userData) {
+      await User.findOneAndUpdate(
+        { email: updateData.email },
+        { role_id: updateData.roleId },
+        { session }
+      );
+    }
+
+    await session.commitTransaction();
+    session.endSession();
 
     sendSuccessResponse(
       res,
@@ -362,6 +378,9 @@ export const updateKitchenEmployee = async (req: Request, res: Response) => {
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Error in updateKitchenEmployee:", error);
     sendErrorResponse(
       res,
       error,

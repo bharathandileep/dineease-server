@@ -21,6 +21,7 @@ import mongoose from "mongoose";
 import RolesAndAccess from "../../models/users/rolesAndAccessModel";
 import AdminEmployeeManagement from "../../models/empmanagment/AdminEmployeeModel";
 import { registerUser } from "../auth/loginsController";
+import User from "../../models/users/UserModel";
 
 export const handleGetAdminAllEmployees = async (
   req: Request,
@@ -243,6 +244,9 @@ export const getAdminEmployeeById = async (req: Request, res: Response) => {
   }
 };
 export const updateAdminEmployee = async (req: Request, res: Response) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -260,9 +264,10 @@ export const updateAdminEmployee = async (req: Request, res: Response) => {
       );
     }
 
+    // Handle designation & role change
     if (
       updateData.designation &&
-      existingEmployee.roleName !== updateData.roleName
+      existingEmployee.roleName !== updateData.designation
     ) {
       const matchingRole = await RolesAndAccess.findOne({
         entityId: updateData.entity_id,
@@ -283,6 +288,7 @@ export const updateAdminEmployee = async (req: Request, res: Response) => {
       updateData.roleId = matchingRole._id;
     }
 
+    // Handle file uploads (not in DB transaction)
     if (files?.profile_picture) {
       if (existingEmployee.profile_picture) {
         await deleteFromCloudinary(existingEmployee.profile_picture);
@@ -309,6 +315,8 @@ export const updateAdminEmployee = async (req: Request, res: Response) => {
         files.aadhar_image[0].buffer
       );
     }
+
+    // Update address (outside DB transaction)
     if (
       updateData.street_address ||
       updateData.city ||
@@ -318,7 +326,6 @@ export const updateAdminEmployee = async (req: Request, res: Response) => {
       updateData.country
     ) {
       if (existingEmployee.address_id?.length > 0) {
-        const firstAddressId = existingEmployee.address_id[0].toString();
         await updateAddress(AdminEmployeeManagement, id, {
           street_address: updateData.street_address,
           city: updateData.city,
@@ -329,12 +336,12 @@ export const updateAdminEmployee = async (req: Request, res: Response) => {
         });
       }
     }
-
     const updatedEmployee = await AdminEmployeeManagement.findByIdAndUpdate(
       id,
       updateData,
-      { new: true }
+      { new: true, session }
     );
+
     if (!updatedEmployee) {
       throw new CustomError(
         "Employee not found after update",
@@ -343,6 +350,19 @@ export const updateAdminEmployee = async (req: Request, res: Response) => {
         false
       );
     }
+    const userData = await User.findOne({
+      email: updatedEmployee.email,
+    }).session(session);
+    if (updateData.roleId) {
+      await User.findOneAndUpdate(
+        userData?._id,
+        { role_id: updateData.roleId },
+        { session }
+      );
+    }
+
+    await session.commitTransaction();
+    session.endSession();
 
     sendSuccessResponse(
       res,
@@ -351,7 +371,9 @@ export const updateAdminEmployee = async (req: Request, res: Response) => {
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
-    console.error("Error in updateEmployee:", error);
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Error in updateAdminEmployee:", error);
     sendErrorResponse(
       res,
       error,

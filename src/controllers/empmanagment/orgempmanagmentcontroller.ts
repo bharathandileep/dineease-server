@@ -21,6 +21,8 @@ import OrgEmployeeManagement from "../../models/empmanagment/OrgEmployeeManageme
 import { registerUser } from "../auth/loginsController";
 import Role from "../../models/users/RolesModels";
 import RolesAndAccess from "../../models/users/rolesAndAccessModel";
+import User from "../../models/users/UserModel";
+import { userInfo } from "os";
 
 export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
   try {
@@ -255,12 +257,17 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
     );
   }
 };
+
 export const updateOrgEmployee = async (req: Request, res: Response) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { id } = req.params;
     const updateData = req.body;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
     validateMogooseObjectId(id);
+
     const existingEmployee = await OrgEmployeeManagement.findById(id);
     if (!existingEmployee || existingEmployee.is_deleted) {
       throw new CustomError(
@@ -271,6 +278,7 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
+    // Role check and assignment
     if (
       updateData.designation &&
       existingEmployee.roleName !== updateData.designation
@@ -289,9 +297,12 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
           false
         );
       }
+
       updateData.roleName = matchingRole.roleName;
       updateData.roleId = matchingRole._id;
     }
+
+    // File uploads
     if (files?.profile_picture) {
       if (existingEmployee.profile_picture) {
         await deleteFromCloudinary(existingEmployee.profile_picture);
@@ -308,7 +319,6 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
         files.pan_image[0].buffer
       );
     }
-
     if (files?.aadhar_image) {
       if (existingEmployee.aadhar_image) {
         await deleteFromCloudinary(existingEmployee.aadhar_image);
@@ -317,6 +327,8 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
         files.aadhar_image[0].buffer
       );
     }
+
+    // Address update
     if (
       updateData.street_address ||
       updateData.city ||
@@ -336,19 +348,40 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
         });
       }
     }
+
+    // Main employee update
     const updatedEmployee = await OrgEmployeeManagement.findByIdAndUpdate(
       id,
       updateData,
-      { new: true }
+      {
+        new: true,
+        session,
+      }
     );
+
     if (!updatedEmployee) {
       throw new CustomError(
-        "Employee not found after update",
+        "Unable to update employee details",
         HTTP_STATUS_CODE.NOT_FOUND,
         ERROR_TYPES.NOT_FOUND_ERROR,
         false
       );
     }
+
+    const userData = await User.findOne({
+      email: updatedEmployee.email,
+    }).session(session);
+  
+    if (updateData.roleId && userData) {
+      await User.findByIdAndUpdate(
+        userData._id,
+        { role_id: updateData.roleId },
+        { session }
+      );
+    }
+
+    await session.commitTransaction();
+    session.endSession();
 
     sendSuccessResponse(
       res,
@@ -357,6 +390,8 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error("Error in updateOrgEmployee:", error);
     sendErrorResponse(
       res,
@@ -366,6 +401,7 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
     );
   }
 };
+
 // Toggle employee status
 export const toggleOrgEmployeeStatus = async (req: Request, res: Response) => {
   try {
