@@ -20,7 +20,6 @@ export const LoginSchema: Schema = new Schema<ILogin>(
     password: { type: String, required: true },
     status:{type:Boolean,default:true},
     role_id:{type:mongoose.Schema.Types.ObjectId,ref:"Role"},
-    role:{type:String},
     is_deleted: { type: Boolean, default: false },
   },
   { timestamps: true }

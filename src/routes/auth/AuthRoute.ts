@@ -10,6 +10,7 @@ import {
   handleGenerateAccessToken,
   checkUserExistence,
   createUser,
+  getUserInfoById,
 } from "../../controllers/auth/authController";
 import { otpRateLimiter } from "../../middleware/rateLimiter";
 import {
@@ -48,5 +49,6 @@ router.post(
 router.post(`${apiConfig.auth.updatePassword}`, handleUpdatePassword);
 router.post(`${apiConfig.auth.checkUserExistence}`, checkUserExistence);
 router.post(`${apiConfig.auth.createNewUser}`, createUser);
+router.get(`${apiConfig.auth.getUserInfoById}`, getUserInfoById);
 
 export default router;

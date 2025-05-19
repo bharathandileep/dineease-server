@@ -19,10 +19,12 @@ export const apiConfig = {
     userRegister: "/access/register",
     checkUserExistence: "/user/present",
     createNewUser: "/user/new",
+    getUserInfoById: "/user/:id",
   },
   admin: {
     adminApproveOrganization: "/approve/organization/:id",
     adminApproveKitchen: "/approve/kitchen/:id",
+    adminVerifyDoc: "/verify/document",
   },
   kitchens: {
     newkitchens: "/new",
@@ -48,7 +50,6 @@ export const apiConfig = {
     toggleSubcategoryStatus: "/subcategories/:id/toggle-status",
     getUnapprovedKitchens: "/requested/all",
   },
-
   menu: {
     createCategory: "/categories",
     getAllCategories: "/categories",
@@ -99,18 +100,15 @@ export const apiConfig = {
 
     getUnapprovedOrganisations: "/requested/all",
     approveOrganization: "/approve/:id",
-
-
   },
-  collab:{
-    collaborateKitchen:"/select",
-    listCollaboratedKitchens:"/organization/:organization_id",
-    getAllColloborations:"/all",
-    getCollaborationById:"/:id",
-    addCollaboration:"/request/add-new-collab",
-    getCollaborationDetails:"/get-collaboration-details",
-
-   },
+  collab: {
+    collaborateKitchen: "/select",
+    listCollaboratedKitchens: "/organization/:organization_id",
+    getAllColloborations: "/all",
+    getCollaborationById: "/:id",
+    addCollaboration: "/request/add-new-collab",
+    getCollaborationDetails: "/get-collaboration-details",
+  },
   designation: {
     createDesignation: "/designations",
     getAllDesignations: "/designations/all",
@@ -118,6 +116,10 @@ export const apiConfig = {
     updateDesignation: "/designations/:id",
     deleteDesignation: "/designations/:id",
     toggleDesignationStatus: "/designations/:id/toggle-status",
+
+    newRoleAndAccess: "/new",
+    getRoleAndAccess: "/",
+    getRoleAndAccessById: "/:roleId",
   },
   employee: {
     createEmployee: "/employees",
@@ -127,14 +129,25 @@ export const apiConfig = {
     deleteEmployee: "/employees/:id",
     toggleEmployeeStatus: "/employees/:id/toggle-status",
   },
+  kitchenEmployee: {
+    createEmployee: "/employees",
+    getAllEmployees: "/employees-all/:kitchenId",
+    getEmployeeById: "/employees/:id",
+    updateEmployee: "/employees/:id",
+    deleteEmployee: "/employees/:id",
+    toggleEmployeeStatus: "/employees/:id/toggle-status",
+  },
   orgemployee: {
     createOrgEmployee: "/orgemployee",
-    getAllEmployeesOfOrg: "/orgemployee/all",
+    getAllEmployeesOfOrg: "/orgemployee/all/:id",
     getOrgEmployeeById: "/orgemployee/:id",
     updateOrgEmployee: "/orgemployee/:id",
     deleteOrgEmployee: "/orgemployee/:id",
     toggleOrgEmployeeStatus: "/orgemployee/:id/toggle-status",
     getEmployeesOrg: "/employee/org",
+    newDesignation: "/employee/new-designation",
+    getDesignation: "/employee/designations",
+    getRoleAndAccessById: "/employee/role-accesss/:roleId",
   },
   addressDetails: {
     getAllCountries: "/allcountries",

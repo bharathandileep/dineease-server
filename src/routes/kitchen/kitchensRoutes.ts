@@ -28,7 +28,6 @@ import {
   kitchenToggleSubcategoryStatus,
   kitchenUpdateSubcategory,
 } from "../../controllers/kitchens/kitchenSubCategory";
-import { getMenuItemsByKitchen } from "../../controllers/kitchens/menuController";
 import { authorizationAccess } from "../../middleware/TokenValidation";
  
 const router = express.Router();

@@ -1,27 +1,29 @@
 import mongoose, { Document, Model, Schema } from "mongoose";
 import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
+import { boolean } from "joi";
 
-export interface IOrgEmployeeManagement extends Document, CommonDBInterface {
+export interface IAdminEmployeeManagement extends Document, CommonDBInterface {
   entity_id: mongoose.Types.ObjectId;
   employee_id: mongoose.Types.ObjectId;
   roleName: string;
   slug: string;
-
   entity_type: string;
   fullName: string;
   email: string;
   phone_number: string;
   address_id: mongoose.Types.ObjectId[];
-  roleId: mongoose.Types.ObjectId;
-  employee_status: string;
+  role: string;
+  employee_status: boolean;
   aadhar_number: string;
   pan_number: string;
   profile_picture: string;
   pan_image: string;
   aadhar_image: string;
+  roleId: mongoose.Types.ObjectId;
 }
-export const OrgEmployeeManagementSchema: Schema =
-  new Schema<IOrgEmployeeManagement>(
+
+export const AdminEmployeeManagementSchema: Schema =
+  new Schema<IAdminEmployeeManagement>(
     {
       entity_id: {
         type: mongoose.Schema.Types.ObjectId,
@@ -33,13 +35,14 @@ export const OrgEmployeeManagementSchema: Schema =
         required: true,
         enum: ["Kitchen", "Organization", "Admin"],
       },
+      slug: { type: String, unique: true },
+      fullName: { type: String, required: true },
+      email: { type: String, required: true, unique: true },
+      phone_number: { type: String, required: true },
       roleName: {
         type: String,
         required: true,
       },
-      fullName: { type: String, required: true },
-      email: { type: String, required: true, unique: true },
-      phone_number: { type: String, required: true },
       address_id: [
         {
           type: mongoose.Schema.Types.ObjectId,
@@ -52,12 +55,12 @@ export const OrgEmployeeManagementSchema: Schema =
         required: true,
         ref: "rolesandaccesses",
       },
-      employee_status: { type: String, required: true },
+      employee_status: { type: Boolean, required: true, default: true },
       aadhar_number: { type: String, required: true },
-      pan_number: { type: String, required: true },
       pan_image: { type: String, default: null },
-      aadhar_image: { type: String, required: true },
+      pan_number: { type: String, required: true },
       profile_picture: { type: String, default: null },
+      aadhar_image: { type: String, default: null },
       is_deleted: {
         type: Boolean,
         default: false,
@@ -65,10 +68,11 @@ export const OrgEmployeeManagementSchema: Schema =
     },
     { timestamps: true }
   );
-const OrgEmployeeManagement: Model<IOrgEmployeeManagement> =
-  mongoose.model<IOrgEmployeeManagement>(
-    "OrgEmployeeManagement",
-    OrgEmployeeManagementSchema
+
+const AdminEmployeeManagement: Model<IAdminEmployeeManagement> =
+  mongoose.model<IAdminEmployeeManagement>(
+    "AdminEmployeeManagement",
+    AdminEmployeeManagementSchema
   );
 
-export default OrgEmployeeManagement;
+export default AdminEmployeeManagement;

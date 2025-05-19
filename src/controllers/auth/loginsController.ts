@@ -21,10 +21,14 @@ import { CustomError } from "../../lib/errors/customError";
 import Logins from "../../models/users/loginsModel";
 import { generateRandomPassword } from "../../lib/helpers/generateRandomPassword";
 import { generateAndSendCredentialsEmail } from "../../lib/helpers/generateAndSendEmail";
-import EmployeeManagement from "../../models/empmanagment/EmployeeManagementModel";
+import EmployeeManagement from "../../models/empmanagment/AdminEmployeeModel";
 import OrgEmployeeManagement from "../../models/empmanagment/OrgEmployeeManagementModel";
 import Organization from "../../models/organisations/OrgModel";
+import User from "../../models/users/UserModel";
+import RolesAndAccess from "../../models/users/rolesAndAccessModel";
+import Kitchen from "../../models/kitchen/KitchenModel";
 
+// not in use need to be removed(for checking)
 export const handleRegisterUser = async (req: Request, res: Response) => {
   try {
     const { email, username, password } = req.body;
@@ -73,11 +77,10 @@ export const handleRegisterUser = async (req: Request, res: Response) => {
 
 export const registerUser = async (
   email: string,
-  username: string,
-  role: any,
+  fullName: string,
   role_id: any
 ): Promise<void> => {
-  if (!email || !username || !role) {
+  if (!email || !fullName) {
     throw new CustomError(
       "All fields are required",
       HTTP_STATUS_CODE.BAD_REQUEST,
@@ -85,7 +88,7 @@ export const registerUser = async (
       false
     );
   }
-  const existingUser = await Logins.findOne({ email });
+  const existingUser = await User.findOne({ email });
   if (existingUser) {
     throw new CustomError(
       "User already exists",
@@ -95,100 +98,21 @@ export const registerUser = async (
     );
   }
   const password = generateRandomPassword();
-  generateAndSendCredentialsEmail(email, username, password);
+  generateAndSendCredentialsEmail(email, fullName, password);
   const hashedPassword = await hashPassword(password);
-  const newUser = new Logins({
-    username,
+  const newUser = new User({
+    fullName,
     email,
     password: hashedPassword,
-    role,
     role_id,
   });
   await newUser.save();
 };
 
-// export const handleUserLogin = async (req: Request, res: Response) => {
-//   try {
-//     const { username, password } = req.body;
-
-//     // Validate input
-//     if (!username || !password) {
-//       throw new CustomError(
-//         "Username and password are required",
-//         HTTP_STATUS_CODE.BAD_REQUEST,
-//         ERROR_TYPES.BAD_REQUEST_ERROR,
-//         false
-//       );
-//     }
-//     const admin = await Logins.findOne({ username });
-//     if (!admin) {
-//       throw new CustomError(
-//         "Invalid credentials",
-//         HTTP_STATUS_CODE.BAD_REQUEST,
-//         ERROR_TYPES.BAD_REQUEST_ERROR,
-//         false
-//       );
-//     }
-//     const isMatch = await comparePassword(password, admin.password);
-//     if (!isMatch) {
-//       throw new CustomError(
-//         "Invalid credentials",
-//         HTTP_STATUS_CODE.BAD_REQUEST,
-//         ERROR_TYPES.BAD_REQUEST_ERROR,
-//         false
-//       );
-//     }
-//     let employee = null;
-//     employee = await EmployeeManagement.findOne({
-//       email: admin.email,
-//       is_deleted: false,
-//     });
-
-//     if (!employee) {
-//       employee = await OrgEmployeeManagement.findOne({
-//         email: admin.email,
-//         is_deleted: false,
-//       });
-//     }
-//     if (!employee ) {
-//       throw new CustomError(
-//         "Employee details not found",
-//         HTTP_STATUS_CODE.NOT_FOUND,
-//         ERROR_TYPES.NOT_FOUND_ERROR,
-//         false
-//       );
-//     }
-
-//     const payload = { id: admin._id, email: admin.email, role: "Employee" };
-//     appendRefreshTokenCookies(res, payload);
-//     const accessToken = generateJWTToken(
-//       accessTokenSecret,
-//       payload,
-//       accessTokenExpiration
-//     );
-
-//     sendSuccessResponse(
-//       res,
-//       "User logged in successfully.",
-//       { token: accessToken, employeeDetails: employee },
-//       HTTP_STATUS_CODE.OK
-//     );
-//   } catch (error) {
-//     sendErrorResponse(
-//       res,
-//       error,
-//       HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-//       ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-//     );
-//   }
-// };
-
 export const handleUserLogin = async (req: Request, res: Response) => {
   try {
-    const { username, password } = req.body;
-
-    // Validate input
-    if (!username || !password) {
+    const { email, password } = req.body;
+    if (!email || !password) {
       throw new CustomError(
         "Username and password are required",
         HTTP_STATUS_CODE.BAD_REQUEST,
@@ -196,10 +120,8 @@ export const handleUserLogin = async (req: Request, res: Response) => {
         false
       );
     }
-
-    // Find the user by username
-    const admin = await Logins.findOne({ username });
-    if (!admin) {
+    const userInfo = await User.findOne({ email });
+    if (!userInfo) {
       throw new CustomError(
         "Invalid credentials",
         HTTP_STATUS_CODE.BAD_REQUEST,
@@ -207,9 +129,8 @@ export const handleUserLogin = async (req: Request, res: Response) => {
         false
       );
     }
-
-    // Validate password
-    const isMatch = await comparePassword(password, admin.password);
+    console.log(userInfo);
+    const isMatch = await comparePassword(password, userInfo.password);
     if (!isMatch) {
       throw new CustomError(
         "Invalid credentials",
@@ -218,20 +139,9 @@ export const handleUserLogin = async (req: Request, res: Response) => {
         false
       );
     }
-
-    // Find employee details by email
-    let employee = await EmployeeManagement.findOne({
-      email: admin.email,
-      is_deleted: false,
-    });
-
-    if (!employee) {
-      employee = await OrgEmployeeManagement.findOne({
-        email: admin.email,
-        is_deleted: false,
-      });
-    }
-    if (!employee) {
+    console.log(userInfo.role_id);
+    const roleInfo = await RolesAndAccess.findById(userInfo.role_id);
+    if (!roleInfo) {
       throw new CustomError(
         "Employee details not found",
         HTTP_STATUS_CODE.NOT_FOUND,
@@ -239,33 +149,31 @@ export const handleUserLogin = async (req: Request, res: Response) => {
         false
       );
     }
-    let slug = "Admin";
-    if (employee.entity_type !== "Admin") {
-      const organization = await Organization.findOne({
-        _id: employee.entity_id,
-        is_deleted: false,
-      });
-
-      if (!organization) {
-        throw new CustomError(
-          "Organization details not found",
-          HTTP_STATUS_CODE.NOT_FOUND,
-          ERROR_TYPES.NOT_FOUND_ERROR,
-          false
-        );
-      }
-
-      slug = organization.slug; 
-    }
-
-    const payload = {
-      id: admin._id,
-      email: admin.email,
-      role: "Employee", 
-      employeeDetails: employee, 
+    const empDetails = {
+      contextId: roleInfo.entityId,
+      contextType: roleInfo.entityType,
+      slug: "Admin",
+      role: roleInfo._id,
     };
-
-    // Append refresh token to cookies
+    if (roleInfo.entityType === "Organization") {
+      const entityInfo = await Organization.findById(roleInfo.entityId);
+      if (!entityInfo) {
+        throw new Error(`Organization not found`);
+      }
+      empDetails.slug = entityInfo.slug;
+    }
+    if (roleInfo.entityType === "Kitchen") {
+      const entityInfo = await Kitchen.findById(roleInfo.entityId);
+      if (!entityInfo) {
+        throw new Error(`Kitchen not found`);
+      }
+      empDetails.slug = entityInfo.slug;
+    }
+    const payload = {
+      id: userInfo._id,
+      email: userInfo.email,
+      role: "Employee",
+    };
     appendRefreshTokenCookies(res, payload);
 
     const accessToken = generateJWTToken(
@@ -278,7 +186,7 @@ export const handleUserLogin = async (req: Request, res: Response) => {
     sendSuccessResponse(
       res,
       "User logged in successfully.",
-      { token: accessToken, employeeDetails: employee, slug },
+      { token: accessToken, employeeDetails: empDetails },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {

@@ -98,7 +98,7 @@ export const generateAndSendCredentialsEmail = async (
     // Email subject and content
     const subject = "Your Account Credentials - Dineeas";
     const text = `Hello ${username},\n\nYour account has been created successfully.`;
-    const html = generateWelcomeEmailHtml(username, password);
+    const html = generateWelcomeEmailHtml(email, password);
     const isMailSent = await sendEmail({ email, subject, html, text });
     return { success: true, isMailSent };
   } catch (error) {

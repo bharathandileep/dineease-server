@@ -7,6 +7,7 @@ import {
   sendSuccessResponse,
 } from "../../lib/helpers/responseHelper";
 import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
+import Designation from "../../models/designation/designationModel";
 import {
   createAddressAndUpdateModel,
   getFullAddressById,
@@ -17,62 +18,41 @@ import {
   uploadFileToCloudinary,
 } from "../../lib/utils/cloudFileManager";
 import mongoose from "mongoose";
-import OrgEmployeeManagement from "../../models/empmanagment/OrgEmployeeManagementModel";
-import { registerUser } from "../auth/loginsController";
-import Role from "../../models/users/RolesModels";
 import RolesAndAccess from "../../models/users/rolesAndAccessModel";
+import AdminEmployeeManagement from "../../models/empmanagment/AdminEmployeeModel";
+import { registerUser } from "../auth/loginsController";
 import User from "../../models/users/UserModel";
-import { userInfo } from "os";
 
-export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
+export const handleGetAdminAllEmployees = async (
+  req: Request,
+  res: Response
+) => {
   try {
-    const { id } = req.params;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 8;
     const skip = (page - 1) * limit;
 
-    const matchQuery: any = {
-      entity_id: new mongoose.Types.ObjectId(id),
-      is_deleted: false,
-    };
+    const matchQuery: any = { is_deleted: false };
 
     if (req.query.designation) {
-      matchQuery.designation = req.query.designation;
+      matchQuery.designation = new mongoose.Types.ObjectId(
+        req.query.designation as string
+      );
     }
+
     if (req.query.status) {
-      matchQuery.status = req.query.status;
+      matchQuery.status = req.query.status === "true";
     }
-
-    const pipeline: any[] = [
-      { $match: matchQuery },
-      {
-        $lookup: {
-          from: "designations",
-          localField: "designation",
-          foreignField: "_id",
-          as: "designation",
-        },
-      },
-      { $unwind: { path: "$designation", preserveNullAndEmptyArrays: true } },
-      {
-        $lookup: {
-          from: "addresses",
-          localField: "address_id",
-          foreignField: "_id",
-          as: "address",
-        },
-      },
-    ];
-
+    const pipeline: any[] = [{ $match: matchQuery }];
     if (req.query.search) {
       const searchRegex = new RegExp(req.query.search as string, "i");
       pipeline.push({
         $match: {
           $or: [
-            { username: searchRegex },
+            { fullName: searchRegex },
             { email: searchRegex },
             { phone_number: searchRegex },
-            { "designation.designation_name": searchRegex },
+            { roleName: searchRegex },
           ],
         },
       });
@@ -80,20 +60,24 @@ export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
 
     pipeline.push({ $skip: skip }, { $limit: limit });
 
-    const orgEmployees = await OrgEmployeeManagement.aggregate(pipeline);
-    const totalPipeline = [...pipeline];
-    totalPipeline.pop();
-    totalPipeline.pop();
+    const employees = await AdminEmployeeManagement.aggregate(pipeline);
+
+    const employeesWithAddresses = employees.map((emp) => ({
+      ...emp,
+      addresses: emp.address || [],
+    }));
+
+    const totalPipeline = pipeline.slice(0, -2);
     totalPipeline.push({ $count: "total" });
 
-    const totalDocs = await OrgEmployeeManagement.aggregate(totalPipeline);
+    const totalDocs = await AdminEmployeeManagement.aggregate(totalPipeline);
     const totalEmployees = totalDocs.length > 0 ? totalDocs[0].total : 0;
 
     sendSuccessResponse(
       res,
       "Employees retrieved successfully",
       {
-        orgEmployees,
+        employees: employeesWithAddresses,
         totalPages: Math.ceil(totalEmployees / limit),
         currentPage: page,
         totalEmployees,
@@ -109,8 +93,7 @@ export const getAllEmployeesOfOrg = async (req: Request, res: Response) => {
     );
   }
 };
-// Create new employee
-export const createOrgEmployee = async (req: Request, res: Response) => {
+export const createAdminEmployee = async (req: Request, res: Response) => {
   try {
     const {
       entity_id,
@@ -122,22 +105,21 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       phone_number,
       city,
       state,
-      district = "",
+      district,
       pincode,
       country,
       street_address,
-      employee_status = "Active",
       aadhar_number,
       pan_number,
     } = req.body;
 
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+
     if (
       !roleName ||
       !fullName ||
       !email ||
       !phone_number ||
-      !employee_status ||
       !aadhar_number ||
       !pan_number
     ) {
@@ -148,17 +130,8 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
         false
       );
     }
-    const existingRole = await RolesAndAccess.findById(roleId);
-    if (!existingRole) {
-      throw new CustomError(
-        "Role not found",
-        HTTP_STATUS_CODE.NOT_FOUND,
-        ERROR_TYPES.NOT_FOUND_ERROR,
-        false
-      );
-    }
 
-    const existingEmployee = await OrgEmployeeManagement.findOne({ email });
+    const existingEmployee = await AdminEmployeeManagement.findOne({ email });
     if (existingEmployee) {
       throw new CustomError(
         "Employee with this email already exists",
@@ -178,7 +151,17 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       files.aadhar_image?.[0]?.buffer
     );
 
-    const newEmployee = new OrgEmployeeManagement({
+    const existingRole = await RolesAndAccess.findById(roleId);
+    if (!existingRole) {
+      throw new CustomError(
+        "Role not found",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR,
+        false
+      );
+    }
+
+    const newEmployee = new AdminEmployeeManagement({
       entity_id,
       entity_type,
       roleName,
@@ -186,7 +169,6 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       email,
       phone_number,
       roleId,
-      employee_status,
       aadhar_number,
       pan_number,
       profile_picture,
@@ -195,7 +177,8 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
     });
 
     const empDetails = await newEmployee.save();
-    await createAddressAndUpdateModel(OrgEmployeeManagement, empDetails._id, {
+
+    await createAddressAndUpdateModel(AdminEmployeeManagement, empDetails._id, {
       street_address,
       city,
       state,
@@ -203,7 +186,9 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
       pincode,
       country,
     });
+
     await registerUser(email, fullName, roleId);
+
     sendSuccessResponse(
       res,
       "Employee created successfully",
@@ -219,13 +204,14 @@ export const createOrgEmployee = async (req: Request, res: Response) => {
     );
   }
 };
-export const getOrgEmployeeById = async (req: Request, res: Response) => {
+export const getAdminEmployeeById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     validateMogooseObjectId(id);
 
-    const employee = await OrgEmployeeManagement.findById(id);
-    if (!employee || employee.is_deleted) {
+    const employee = await AdminEmployeeManagement.findById(id).lean();
+
+    if (!employee || employee?.is_deleted) {
       throw new CustomError(
         "Employee not found",
         HTTP_STATUS_CODE.NOT_FOUND,
@@ -234,21 +220,21 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
       );
     }
 
-    const address = await getFullAddressById(employee?.address_id[0]);
+    const address = await getFullAddressById(employee?.address_id?.[0]);
 
-    const employeeWithDetails = {
-      ...employee.toObject(),
+    const employeeWithAddress = {
+      ...employee,
       address,
     };
 
     sendSuccessResponse(
       res,
       "Employee retrieved successfully",
-      employeeWithDetails,
+      employeeWithAddress,
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
-    console.error("Error in getOrgEmployeeById:", error);
+    console.error("Error in getEmployeeById:", error);
     sendErrorResponse(
       res,
       error,
@@ -257,8 +243,7 @@ export const getOrgEmployeeById = async (req: Request, res: Response) => {
     );
   }
 };
-
-export const updateOrgEmployee = async (req: Request, res: Response) => {
+export const updateAdminEmployee = async (req: Request, res: Response) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -266,9 +251,10 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
     const { id } = req.params;
     const updateData = req.body;
     const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+
     validateMogooseObjectId(id);
 
-    const existingEmployee = await OrgEmployeeManagement.findById(id);
+    const existingEmployee = await AdminEmployeeManagement.findById(id);
     if (!existingEmployee || existingEmployee.is_deleted) {
       throw new CustomError(
         "Employee not found",
@@ -278,7 +264,7 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Role check and assignment
+    // Handle designation & role change
     if (
       updateData.designation &&
       existingEmployee.roleName !== updateData.designation
@@ -302,7 +288,7 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
       updateData.roleId = matchingRole._id;
     }
 
-    // File uploads
+    // Handle file uploads (not in DB transaction)
     if (files?.profile_picture) {
       if (existingEmployee.profile_picture) {
         await deleteFromCloudinary(existingEmployee.profile_picture);
@@ -311,6 +297,7 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
         files.profile_picture[0].buffer
       );
     }
+
     if (files?.pan_image) {
       if (existingEmployee.pan_image) {
         await deleteFromCloudinary(existingEmployee.pan_image);
@@ -319,6 +306,7 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
         files.pan_image[0].buffer
       );
     }
+
     if (files?.aadhar_image) {
       if (existingEmployee.aadhar_image) {
         await deleteFromCloudinary(existingEmployee.aadhar_image);
@@ -328,7 +316,7 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    // Address update
+    // Update address (outside DB transaction)
     if (
       updateData.street_address ||
       updateData.city ||
@@ -338,7 +326,7 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
       updateData.country
     ) {
       if (existingEmployee.address_id?.length > 0) {
-        await updateAddress(OrgEmployeeManagement, id, {
+        await updateAddress(AdminEmployeeManagement, id, {
           street_address: updateData.street_address,
           city: updateData.city,
           state: updateData.state,
@@ -348,33 +336,26 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
         });
       }
     }
-
-    // Main employee update
-    const updatedEmployee = await OrgEmployeeManagement.findByIdAndUpdate(
+    const updatedEmployee = await AdminEmployeeManagement.findByIdAndUpdate(
       id,
       updateData,
-      {
-        new: true,
-        session,
-      }
+      { new: true, session }
     );
 
     if (!updatedEmployee) {
       throw new CustomError(
-        "Unable to update employee details",
+        "Employee not found after update",
         HTTP_STATUS_CODE.NOT_FOUND,
         ERROR_TYPES.NOT_FOUND_ERROR,
         false
       );
     }
-
     const userData = await User.findOne({
       email: updatedEmployee.email,
     }).session(session);
-  
-    if (updateData.roleId && userData) {
-      await User.findByIdAndUpdate(
-        userData._id,
+    if (updateData.roleId) {
+      await User.findOneAndUpdate(
+        userData?._id,
         { role_id: updateData.roleId },
         { session }
       );
@@ -385,14 +366,14 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
 
     sendSuccessResponse(
       res,
-      "Organization employee updated successfully",
+      "Employee updated successfully",
       updatedEmployee,
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-    console.error("Error in updateOrgEmployee:", error);
+    console.error("Error in updateAdminEmployee:", error);
     sendErrorResponse(
       res,
       error,
@@ -401,15 +382,16 @@ export const updateOrgEmployee = async (req: Request, res: Response) => {
     );
   }
 };
-
-// Toggle employee status
-export const toggleOrgEmployeeStatus = async (req: Request, res: Response) => {
+export const toggleAdminEmployeeStatus = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const { id } = req.params;
     validateMogooseObjectId(id);
 
-    const orgemployees = await OrgEmployeeManagement.findById(id);
-    if (!orgemployees) {
+    const employee = await AdminEmployeeManagement.findById(id);
+    if (!employee) {
       throw new CustomError(
         "Employee not found",
         HTTP_STATUS_CODE.NOT_FOUND,
@@ -418,14 +400,15 @@ export const toggleOrgEmployeeStatus = async (req: Request, res: Response) => {
       );
     }
 
-    orgemployees.employee_status =
-      orgemployees.employee_status === "Active" ? "Inactive" : "Active";
-    await orgemployees.save();
+    employee.employee_status = !employee.employee_status;
+    await employee.save();
 
     sendSuccessResponse(
       res,
-      `Employee status changed to ${orgemployees.employee_status}`,
-      orgemployees,
+      `Employee status changed to ${
+        employee.employee_status ? "Active" : "Inactive"
+      }`,
+      employee,
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -437,14 +420,13 @@ export const toggleOrgEmployeeStatus = async (req: Request, res: Response) => {
     );
   }
 };
-// Soft delete employee
-export const deleteOrgEmployee = async (req: Request, res: Response) => {
+export const deleteAdminEmployee = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     validateMogooseObjectId(id);
 
-    const orgemployees = await OrgEmployeeManagement.findById(id);
-    if (!orgemployees) {
+    const employee = await AdminEmployeeManagement.findById(id);
+    if (!employee || employee.is_deleted) {
       throw new CustomError(
         "Employee not found",
         HTTP_STATUS_CODE.NOT_FOUND,
@@ -453,8 +435,8 @@ export const deleteOrgEmployee = async (req: Request, res: Response) => {
       );
     }
 
-    orgemployees.is_deleted = true;
-    await orgemployees.save();
+    employee.is_deleted = true;
+    await employee.save();
 
     sendSuccessResponse(
       res,
@@ -463,157 +445,6 @@ export const deleteOrgEmployee = async (req: Request, res: Response) => {
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
-    sendErrorResponse(
-      res,
-      error,
-      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
-      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
-    );
-  }
-};
-export const handleGetEmployeeOrganizations = async (
-  req: Request,
-  res: Response
-): Promise<any> => {
-  try {
-    const userEmail = req.query.email as string;
-    if (!userEmail) {
-      return sendErrorResponse(
-        res,
-        new Error("Email parameter is required"),
-        HTTP_STATUS_CODE.BAD_REQUEST,
-        ERROR_TYPES.BAD_REQUEST_ERROR
-      );
-    }
-
-    const employeeOrganizations = await OrgEmployeeManagement.aggregate([
-      {
-        $match: {
-          email: userEmail,
-          is_deleted: false,
-        },
-      },
-      {
-        $lookup: {
-          from: "organizations",
-          localField: "entity_id",
-          foreignField: "_id",
-          as: "organizationDetails",
-        },
-      },
-      {
-        $unwind: {
-          path: "$organizationDetails",
-          preserveNullAndEmptyArrays: true,
-        },
-      },
-      {
-        $lookup: {
-          from: "addresses",
-          localField: "organizationDetails.address_id",
-          foreignField: "_id",
-          as: "addresses",
-        },
-      },
-      { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
-      {
-        $lookup: {
-          from: "states",
-          let: { stateId: { $toInt: "$addresses.state" } },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
-          as: "stateInfo",
-        },
-      },
-      {
-        $lookup: {
-          from: "cities",
-          let: { cityId: { $toInt: "$addresses.city" } },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
-          as: "cityInfo",
-        },
-      },
-      {
-        $lookup: {
-          from: "countries",
-          let: { countryId: { $toInt: "$addresses.country" } },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
-          as: "countryInfo",
-        },
-      },
-      {
-        $lookup: {
-          from: "categories",
-          localField: "organizationDetails.category",
-          foreignField: "_id",
-          as: "categoryDetails",
-        },
-      },
-      {
-        $lookup: {
-          from: "subcategories",
-          localField: "organizationDetails.subcategoryName",
-          foreignField: "_id",
-          as: "subcategoryDetails",
-        },
-      },
-      {
-        $project: {
-          _id: "$organizationDetails._id",
-          id: "$organizationDetails._id",
-          name: "$organizationDetails.organizationName",
-          address: {
-            $concat: [
-              { $ifNull: ["$addresses.street_address", ""] },
-              ", ",
-              { $ifNull: [{ $arrayElemAt: ["$cityInfo.name", 0] }, ""] },
-              ", ",
-              { $ifNull: [{ $arrayElemAt: ["$stateInfo.name", 0] }, ""] },
-              ", ",
-              { $ifNull: ["$addresses.pincode", ""] },
-              ", ",
-              { $ifNull: [{ $arrayElemAt: ["$countryInfo.name", 0] }, ""] },
-            ],
-          },
-          profilePic: "$organizationDetails.organizationLogo",
-          employees: "$organizationDetails.no_of_employees",
-          isapproved: "$organizationDetails.isapproved",
-          slug: "$organizationDetails.slug",
-          industry: {
-            $concatArrays: [
-              {
-                $ifNull: [
-                  { $arrayElemAt: ["$categoryDetails.category", 0] },
-                  [],
-                ],
-              },
-              {
-                $ifNull: [
-                  { $arrayElemAt: ["$subcategoryDetails.subcategoryName", 0] },
-                  [],
-                ],
-              },
-            ],
-          },
-        },
-      },
-    ]);
-    if (employeeOrganizations.length === 0) {
-      return sendSuccessResponse(
-        res,
-        "No organizations found for this email",
-        { organizations: [] },
-        HTTP_STATUS_CODE.OK
-      );
-    }
-
-    sendSuccessResponse(
-      res,
-      "User's approved organizations retrieved successfully!",
-      { organizations: employeeOrganizations },
-      HTTP_STATUS_CODE.OK
-    );
-  } catch (error) {
-    console.error("Error fetching employee organizations:", error);
     sendErrorResponse(
       res,
       error,
