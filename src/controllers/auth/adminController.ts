@@ -21,6 +21,9 @@ import { CustomError } from "../../lib/errors/customError";
 import { validateForgotOtp, validateOtp } from "../../lib/utils/otpValidator";
 import { generateAndEmailForgotOtp } from "../../lib/helpers/generateAndSendEmail";
 import RolesAndAccess from "../../models/users/rolesAndAccessModel";
+import GstCertificateDetails from "../../models/documentations/GstModel";
+import FssaiCertificateDetails from "../../models/documentations/FfsaiModel";
+import PanCardDetails from "../../models/documentations/PanModel";
 
 export const handleRegisterAdmin = async (req: Request, res: Response) => {
   try {
@@ -110,16 +113,22 @@ export const handleAdminLogin = async (req: Request, res: Response) => {
     }
 
     const payload = { id: admin._id, email: admin.email, role: "Admin" };
+    const context = {
+      contextId: admin._id,
+      contextType: "Admin",
+      slug: "admin",
+      role: admin.role_id,
+    };
     appendRefreshTokenCookies(res, payload);
     const accessToken = generateJWTToken(
-      accessTokenSecret,  
+      accessTokenSecret,
       payload,
       accessTokenExpiration
     );
     sendSuccessResponse(
       res,
       "User logged in successfully.",
-      { token: accessToken },
+      { token: accessToken, context },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -278,7 +287,80 @@ export const handleUpdatePassword = async (
     return sendSuccessResponse(
       res,
       "Your password has been updated successfully.",
+      HTTP_STATUS_CODE.OK
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
 
+export const verifyDocuments = async (req: Request, res: Response) => {
+  try {
+    const { documentType, documentId } = req.query;
+
+    if (!documentType || !documentId) {
+      return sendErrorResponse(
+        res,
+        "Missing documentType or documentId",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
+
+    const docType = String(documentType).toUpperCase();
+    const docId = String(documentId);
+
+    let updatedDoc;
+    switch (docType) {
+      case "PAN":
+        updatedDoc = await PanCardDetails.findByIdAndUpdate(
+          docId,
+          { is_verified: true },
+          { new: true }
+        );
+        break;
+
+      case "GST":
+        updatedDoc = await GstCertificateDetails.findByIdAndUpdate(
+          docId,
+          { is_verified: true },
+          { new: true }
+        );
+        break;
+      case "FASSI":
+        updatedDoc = await FssaiCertificateDetails.findByIdAndUpdate(
+          docId,
+          { is_verified: true },
+          { new: true }
+        );
+        break;
+
+      default:
+        return sendErrorResponse(
+          res,
+          "Invalid document type",
+          HTTP_STATUS_CODE.BAD_REQUEST,
+          ERROR_TYPES.BAD_REQUEST_ERROR
+        );
+    }
+
+    if (!updatedDoc) {
+      return sendErrorResponse(
+        res,
+        "Document not found",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR
+      );
+    }
+
+    return sendSuccessResponse(
+      res,
+      "Document verified successfully",
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {

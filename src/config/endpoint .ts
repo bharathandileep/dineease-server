@@ -24,6 +24,7 @@ export const apiConfig = {
   admin: {
     adminApproveOrganization: "/approve/organization/:id",
     adminApproveKitchen: "/approve/kitchen/:id",
+    adminVerifyDoc: "/verify/document",
   },
   kitchens: {
     newkitchens: "/new",
