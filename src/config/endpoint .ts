@@ -120,6 +120,7 @@ export const apiConfig = {
     newRoleAndAccess: "/new",
     getRoleAndAccess: "/",
     getRoleAndAccessById: "/:roleId",
+    updateRoleName: "/:roleId",
   },
   employee: {
     createEmployee: "/employees",

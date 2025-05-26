@@ -185,3 +185,36 @@ export const createRoleAndAccess = async (req: Request, res: Response) => {
     );
   }
 };
+export const updateRoleName = async (req: Request, res: Response) => {
+  try {
+    const { roleName } = req.body;
+    const { roleId } = req.params;
+    const existingRole = await RolesAndAccess.findById(roleId);
+
+    if (!existingRole) {
+      sendSuccessResponse(
+        res,
+        `Role '${roleName}' can't find, try after sometime!`,
+        existingRole,
+        HTTP_STATUS_CODE.OK
+      );
+    }
+    if (existingRole) {
+      existingRole.roleName = roleName;
+      await existingRole.save();
+    }
+    return sendSuccessResponse(
+      res,
+      `Role '${roleName}'updated successfully`,
+      existingRole,
+      HTTP_STATUS_CODE.OK
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};

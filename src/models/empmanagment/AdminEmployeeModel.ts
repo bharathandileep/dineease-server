@@ -35,7 +35,6 @@ export const AdminEmployeeManagementSchema: Schema =
         required: true,
         enum: ["Kitchen", "Organization", "Admin"],
       },
-      slug: { type: String, unique: true },
       fullName: { type: String, required: true },
       email: { type: String, required: true, unique: true },
       phone_number: { type: String, required: true },

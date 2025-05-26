@@ -65,7 +65,7 @@ export const OrgEmployeeManagementSchema: Schema =
     },
     { timestamps: true }
   );
-const OrgEmployeeManagement: Model<IOrgEmployeeManagement> =
+const   OrgEmployeeManagement: Model<IOrgEmployeeManagement> =
   mongoose.model<IOrgEmployeeManagement>(
     "OrgEmployeeManagement",
     OrgEmployeeManagementSchema

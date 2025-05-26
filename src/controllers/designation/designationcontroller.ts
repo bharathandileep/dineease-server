@@ -288,7 +288,6 @@ export const updateDesignation = async (req: Request, res: Response): Promise<vo
     });
   }
 };
-
 export const deleteDesignation = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;

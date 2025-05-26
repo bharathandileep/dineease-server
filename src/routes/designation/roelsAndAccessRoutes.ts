@@ -4,12 +4,14 @@ import {
   createRoleAndAccess,
   getRoleAndAccessById,
   getRolesByEntity,
+  updateRoleName,
 } from "../../controllers/designation/roleAccessController";
 
 const router = express.Router();
 
 router.post(`${apiConfig.designation.newRoleAndAccess}`, createRoleAndAccess);
 router.get(`${apiConfig.designation.getRoleAndAccess}`, getRolesByEntity);
+router.patch(`${apiConfig.designation.updateRoleName}`, updateRoleName);
 router.get(
   `${apiConfig.designation.getRoleAndAccessById}`,
   getRoleAndAccessById
