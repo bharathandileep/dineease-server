@@ -15,4 +15,5 @@ router.patch(
 );
 router.patch(`${apiConfig.admin.adminVerifyDoc}`, verifyDocuments);
 
+
 export default router;

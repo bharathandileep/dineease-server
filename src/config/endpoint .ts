@@ -49,6 +49,8 @@ export const apiConfig = {
     deleteSubcategory: "/subcategories/:id",
     toggleSubcategoryStatus: "/subcategories/:id/toggle-status",
     getUnapprovedKitchens: "/requested/all",
+
+    getCollabDetails:"/get-details"
   },
   menu: {
     createCategory: "/categories",
