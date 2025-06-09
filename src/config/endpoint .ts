@@ -50,7 +50,7 @@ export const apiConfig = {
     toggleSubcategoryStatus: "/subcategories/:id/toggle-status",
     getUnapprovedKitchens: "/requested/all",
 
-    getCollabDetails:"/get-details"
+    getCollabDetails: "/get-details",
   },
   menu: {
     createCategory: "/categories",
@@ -75,6 +75,12 @@ export const apiConfig = {
     deleteItem: "/allmenuitems/:id",
     changeItemStatus: "/allmenuitems/:id/status",
     getMenuItemsByKitchen: "/kitchen/:kitchenId",
+
+    createNewMenuTags: "/new/menu-tags",
+    getAllTags: "/get/menu-tags",
+    toggleStatus: "/toggle/menu-tags/:id",
+    updateTag: "/update/menu-tags/:id",
+    deleteTag: "/delete/menu-tags/:id",
   },
   organization: {
     newOrganization: "/new",

@@ -25,6 +25,7 @@ import GstCertificateDetails from "../../models/documentations/GstModel";
 import FssaiCertificateDetails from "../../models/documentations/FfsaiModel";
 import PanCardDetails from "../../models/documentations/PanModel";
 
+
 export const handleRegisterAdmin = async (req: Request, res: Response) => {
   try {
     const { fullName, email, username, password } = req.body;
@@ -298,7 +299,6 @@ export const handleUpdatePassword = async (
     );
   }
 };
-
 export const verifyDocuments = async (req: Request, res: Response) => {
   try {
     const { documentType, documentId } = req.query;
@@ -372,3 +372,4 @@ export const verifyDocuments = async (req: Request, res: Response) => {
     );
   }
 };
+

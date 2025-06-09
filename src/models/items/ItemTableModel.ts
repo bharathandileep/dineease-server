@@ -4,7 +4,7 @@ import { CommonDBInterface } from "../../lib/interfaces/DBinterfaces";
 export interface IItem extends Document, CommonDBInterface {
   item_name: string;
   category: mongoose.Schema.Types.ObjectId;
-  slug: string; // Add slug field
+  slug: string;
   subcategory: mongoose.Schema.Types.ObjectId;
   status: boolean;
   item_image: string;
@@ -18,8 +18,7 @@ export const ItemSchema: Schema = new Schema<IItem>(
       ref: "MenuCategory",
       required: true,
     },
-    slug: { type: String, unique: true }, // Slug field
-
+    slug: { type: String, unique: true },
     subcategory: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "MenuSubcategory",
@@ -55,7 +54,7 @@ ItemSchema.pre<IItem>("save", async function (next) {
     const Item = mongoose.model("Item");
     const existing = await Item.findOne({
       slug: slugToCheck,
-      _id: { $ne: this._id }, // Ensure we're not checking against itself
+      _id: { $ne: this._id },
     });
 
     if (!existing) {
