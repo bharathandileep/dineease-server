@@ -15,7 +15,7 @@ jobs:
     - name: Test SSH Connection
       uses: appleboy/ssh-action@master
       with:
-        host: "3.111.58.143"
+        host: "13.203.219.144"
         username: "ubuntu"
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
@@ -25,7 +25,7 @@ jobs:
     - name: Stop Pm2 Process
       uses: appleboy/ssh-action@master
       with:
-        host: "3.111.58.143"
+        host: "13.203.219.144"
         username: "ubuntu"
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
@@ -37,7 +37,7 @@ jobs:
     - name: Deploy Application to AWS EC2
       uses: appleboy/scp-action@master
       with:
-        host: "3.111.58.143"
+        host: "13.203.219.144"
         username: "ubuntu"
         key: ${{ secrets.EC2_SSH_KEY }}
         source: "./"
@@ -48,7 +48,7 @@ jobs:
     - name: Copy .env File to Deployment Directory
       uses: appleboy/ssh-action@master
       with:
-        host: "3.111.58.143"
+        host: "13.203.219.144"
         username: "ubuntu"
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
@@ -57,7 +57,7 @@ jobs:
     - name: Copy firebase File to Deployment Directory
       uses: appleboy/ssh-action@master
       with:
-        host: "3.111.58.143"
+        host: "13.203.219.144"
         username: "ubuntu"
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
@@ -66,7 +66,7 @@ jobs:
     - name: Install Dependencies and Restart Application
       uses: appleboy/ssh-action@master
       with:
-        host: "3.111.58.143"
+        host: "13.203.219.144"
         username: "ubuntu"
         key: ${{ secrets.EC2_SSH_KEY }}
         script: |
