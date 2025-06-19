@@ -19,7 +19,6 @@ import {
 import mongoose from "mongoose";
 import OrgEmployeeManagement from "../../models/empmanagment/OrgEmployeeManagementModel";
 import { registerUser } from "../auth/loginsController";
-import Role from "../../models/users/RolesModels";
 import RolesAndAccess from "../../models/users/rolesAndAccessModel";
 import User from "../../models/users/UserModel";
 import { userInfo } from "os";
