@@ -11,7 +11,7 @@ import {
   handleGetEmployeeOrganizations,
   toggleOrgEmployeeStatus,
   updateOrgEmployee,
-} from "../../controllers/empmanagment/orgEmpmanagmentController";
+} from "../../controllers/empmanagment/orgEmployeeController";
 
 const router = express.Router();
 
