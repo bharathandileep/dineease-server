@@ -19,7 +19,7 @@ import {
   handleForgotPasswordVerification,
   handleRegisterAdmin,
   handleUpdatePassword,
-} from "../../controllers/auth/adminController";
+} from "../../controllers/admin/adminController";
 import { refreshTokenMiddleware } from "../../middleware/TokenValidation";
 
 const router = express.Router();

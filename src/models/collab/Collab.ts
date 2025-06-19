@@ -55,11 +55,6 @@ const CollaborationSchema = new Schema<ICollaboration, CollaborationModel, IColl
   { timestamps: true }
 );
 
-CollaborationSchema.method("softDelete", async function () {
-  this.is_deleted = true;
-  await this.save();
-});
-
 const Collaboration = mongoose.model<ICollaboration, CollaborationModel>(
   "Collaboration",
   CollaborationSchema

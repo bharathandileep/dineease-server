@@ -77,7 +77,9 @@ export const listItems = async (req: Request, res: Response) => {
       matchQuery.category = new mongoose.Types.ObjectId(category as string);
     }
     if (subcategory) {
-      matchQuery.subcategory = new mongoose.Types.ObjectId(subcategory as string);
+      matchQuery.subcategory = new mongoose.Types.ObjectId(
+        subcategory as string
+      );
     }
 
     if (search && typeof search === "string" && search.trim() !== "") {
@@ -87,17 +89,23 @@ export const listItems = async (req: Request, res: Response) => {
         { item_description: { $regex: searchRegex } },
       ];
 
-      const categoryMatch = await mongoose.model("MenuCategory").find({
-        category: { $regex: searchRegex },
-      }).select("_id");
+      const categoryMatch = await mongoose
+        .model("MenuCategory")
+        .find({
+          category: { $regex: searchRegex },
+        })
+        .select("_id");
       const categoryIds = categoryMatch.map((cat) => cat._id);
       if (categoryIds.length > 0) {
         matchQuery.$or.push({ category: { $in: categoryIds } });
       }
 
-      const subcategoryMatch = await mongoose.model("MenuSubcategory").find({
-        subcategoryName: { $regex: searchRegex },
-      }).select("_id");
+      const subcategoryMatch = await mongoose
+        .model("MenuSubcategory")
+        .find({
+          subcategoryName: { $regex: searchRegex },
+        })
+        .select("_id");
       const subcategoryIds = subcategoryMatch.map((sub) => sub._id);
       if (subcategoryIds.length > 0) {
         matchQuery.$or.push({ subcategory: { $in: subcategoryIds } });
@@ -107,7 +115,7 @@ export const listItems = async (req: Request, res: Response) => {
     const totalItems = await Item.countDocuments(matchQuery);
     const items = await Item.aggregate([
       { $match: matchQuery },
-      { $sort: { createdAt: -1 } },   
+      { $sort: { createdAt: -1 } },
       {
         $lookup: {
           from: "menucategories",
@@ -118,7 +126,7 @@ export const listItems = async (req: Request, res: Response) => {
       },
       {
         $lookup: {
-          from: "menusubcategories", 
+          from: "menusubcategories",
           localField: "subcategory",
           foreignField: "_id",
           as: "subcategoryInfo",
@@ -147,7 +155,9 @@ export const listItems = async (req: Request, res: Response) => {
               if: { $gt: [{ $size: "$subcategoryInfo" }, 0] },
               then: {
                 _id: { $arrayElemAt: ["$subcategoryInfo._id", 0] },
-                subcategoryName: { $arrayElemAt: ["$subcategoryInfo.subcategoryName", 0] },
+                subcategoryName: {
+                  $arrayElemAt: ["$subcategoryInfo.subcategoryName", 0],
+                },
               },
               else: null,
             },

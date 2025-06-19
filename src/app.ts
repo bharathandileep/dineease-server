@@ -11,8 +11,7 @@ import addressDetailsRoutes from "./routes/addressdetails/addressDetailsRoutes";
 import authRoute from "./routes/auth/AuthRoute";
 import kitchensRoute from "./routes/kitchen/kitchensRoutes";
 import organizationRoute from "./routes/organization/organizationRoute";
-import menuCategoryRoutes from "./routes/kitchen/categoryRoutes";
-import menuSubCategoryRoutes from "./routes/kitchen/subcategoryRoutes";
+import menuRoutes from "./routes/admin/menuRoutes";
 import designationRoutes from "./routes/designation/designationRoutes";
 import roelsAndAccessRoutes from "./routes/designation/roelsAndAccessRoutes";
 import OrgEmployeeManagementRoutes from "./routes/empmanagment/orgEmployeeManagementRoutes";
@@ -40,13 +39,11 @@ app.use(
 );
 
 // Routes
-
 app.use(`${apiConfig.baseAPIUrl}/auth`, authRoute);
 app.use(`${apiConfig.baseAPIUrl}/user`, userLoginsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/admin`, adminControlRoutes);
 app.use(`${apiConfig.baseAPIUrl}/kitchens`, kitchensRoute);
-app.use(`${apiConfig.baseAPIUrl}/menu-category`, menuCategoryRoutes);
-app.use(`${apiConfig.baseAPIUrl}/sub-menu-category`, menuSubCategoryRoutes);
+app.use(`${apiConfig.baseAPIUrl}/menu`, menuRoutes);
 app.use(`${apiConfig.baseAPIUrl}/designation`, designationRoutes);
 app.use(`${apiConfig.baseAPIUrl}/role-and-access`, roelsAndAccessRoutes);
 app.use(`${apiConfig.baseAPIUrl}/organization`, organizationRoute);

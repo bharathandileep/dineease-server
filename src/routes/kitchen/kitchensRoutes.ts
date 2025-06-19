@@ -1,10 +1,10 @@
-
 import express, { Application, Router } from "express";
 import { apiConfig } from "../../config/endpoint ";
 import upload from "../../lib/helpers/uploadMiddleware";
 import {
   handleCreateNewKitchens,
   handleDeleteKitchens,
+  handleGetCollaborationStatus,
   handleGetKitchens,
   handleGetKitchensById,
   handleGetUnapprovedKitchens,
@@ -29,9 +29,9 @@ import {
   kitchenUpdateSubcategory,
 } from "../../controllers/kitchens/kitchenSubCategory";
 import { authorizationAccess } from "../../middleware/TokenValidation";
- 
+
 const router = express.Router();
- 
+
 router.post(
   `${apiConfig.kitchens.newkitchens}`,
   upload.fields([
@@ -44,7 +44,11 @@ router.post(
   handleCreateNewKitchens
 );
 router.get(`${apiConfig.kitchens.getAllkitchens}`, handleGetKitchens);
-router.get(`${apiConfig.kitchens.getkitchensById}`, handleGetKitchensById);
+router.get(
+  `${apiConfig.kitchens.getkitchensById}`,
+  authorizationAccess,
+  handleGetKitchensById
+);
 router.put(
   `${apiConfig.kitchens.updatekitchens}`,
   upload.fields([
@@ -56,19 +60,14 @@ router.put(
   authorizationAccess,
   handleUpdateKitchensById
 );
- 
+
 router.delete(`${apiConfig.kitchens.deletekitchens}`, handleDeleteKitchens);
 router.get(`${apiConfig.kitchens.toggleKitchensStatus}`, kitchenToggleStatus);
-router.get(`${apiConfig.kitchens.handleGetUserApprovedKitchens}`,authorizationAccess, handleGetUserApprovedKitchens);
- 
- 
- 
- 
- 
-
-
-
-
+router.get(
+  `${apiConfig.kitchens.handleGetUserApprovedKitchens}`,
+  authorizationAccess,
+  handleGetUserApprovedKitchens
+);
 
 //kitchen category routes
 router.get(`${apiConfig.kitchens.getallCategories}`, kitchenGetAllCategories);
@@ -79,7 +78,7 @@ router.patch(
   `${apiConfig.menu.toggleCategoryStatus}`,
   kitchenToggleCategoryStatus
 );
- 
+
 //kitchen subcategory
 router.get(
   `${apiConfig.kitchens.getSubcategoriesByCategory}`,
@@ -99,16 +98,19 @@ router.patch(
   `${apiConfig.kitchens.toggleSubcategoryStatus}`,
   kitchenToggleSubcategoryStatus
 );
- 
+
 router.patch(`${apiConfig.kitchens.toggleSubcategoryStatus}`);
 router.get(
   `${apiConfig.kitchens.getallSubCategories}`,
   kitchenGetAllSubCategories
 );
- 
-router.get(`${apiConfig.kitchens.getUnapprovedKitchens}`,handleGetUnapprovedKitchens)
- 
- 
-export default router; 
- 
- 
+
+router.get(
+  `${apiConfig.kitchens.getUnapprovedKitchens}`,
+  handleGetUnapprovedKitchens
+);
+router.post(
+  `${apiConfig.kitchens.getCollabDetails}`,
+  handleGetCollaborationStatus
+);
+export default router;

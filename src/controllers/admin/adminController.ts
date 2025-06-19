@@ -25,6 +25,7 @@ import GstCertificateDetails from "../../models/documentations/GstModel";
 import FssaiCertificateDetails from "../../models/documentations/FfsaiModel";
 import PanCardDetails from "../../models/documentations/PanModel";
 
+
 export const handleRegisterAdmin = async (req: Request, res: Response) => {
   try {
     const { fullName, email, username, password } = req.body;
@@ -298,17 +299,16 @@ export const handleUpdatePassword = async (
     );
   }
 };
-
 export const verifyDocuments = async (req: Request, res: Response) => {
   try {
     const { documentType, documentId } = req.query;
 
     if (!documentType || !documentId) {
-      return sendErrorResponse(
-        res,
+      throw new CustomError(
         "Missing documentType or documentId",
         HTTP_STATUS_CODE.BAD_REQUEST,
-        ERROR_TYPES.BAD_REQUEST_ERROR
+        ERROR_TYPES.BAD_REQUEST_ERROR,
+        false
       );
     }
 
@@ -332,7 +332,7 @@ export const verifyDocuments = async (req: Request, res: Response) => {
           { new: true }
         );
         break;
-      case "FASSI":
+      case "FSSAI":
         updatedDoc = await FssaiCertificateDetails.findByIdAndUpdate(
           docId,
           { is_verified: true },
@@ -341,24 +341,24 @@ export const verifyDocuments = async (req: Request, res: Response) => {
         break;
 
       default:
-        return sendErrorResponse(
-          res,
+        throw new CustomError(
           "Invalid document type",
           HTTP_STATUS_CODE.BAD_REQUEST,
-          ERROR_TYPES.BAD_REQUEST_ERROR
+          ERROR_TYPES.BAD_REQUEST_ERROR,
+          false
         );
     }
 
     if (!updatedDoc) {
-      return sendErrorResponse(
-        res,
+      throw new CustomError(
         "Document not found",
         HTTP_STATUS_CODE.NOT_FOUND,
-        ERROR_TYPES.NOT_FOUND_ERROR
+        ERROR_TYPES.NOT_FOUND_ERROR,
+        false
       );
     }
 
-    return sendSuccessResponse(
+    sendSuccessResponse(
       res,
       "Document verified successfully",
       HTTP_STATUS_CODE.OK
@@ -372,3 +372,4 @@ export const verifyDocuments = async (req: Request, res: Response) => {
     );
   }
 };
+

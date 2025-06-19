@@ -3,7 +3,7 @@ import Kitchen, { IKitchen } from "../../models/kitchen/KitchenModel";
 import Organization, {
   IOrganization,
 } from "../../models/organisations/OrgModel";
-import Collaboration from "../../models/collab/Collab"; // Ensure this import is correct
+import Collaboration from "../../models/collab/Collab";
 import CollaborationModel, { ICollaboration } from "../../models/collab/Collab";
 import {
   sendErrorResponse,
@@ -14,7 +14,7 @@ import { ERROR_TYPES } from "../../lib/constants/errorType";
 import { CustomError } from "../../lib/errors/customError";
 import { generateColloborationNotification } from "../notification/notificationController";
 
-export const collaborateKitchen = async (req: Request, res: Response) => {
+export const collaborateKitchen = async (req: Request, res: Response) => {  
   try {
     const { organization_id, kitchen_id } = req.body;
     const organization = await Organization.findById(organization_id);
@@ -27,7 +27,7 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
       );
     }
 
-    const kitchen = await Kitchen.findOne({ slug: kitchen_id });
+    const kitchen = await Kitchen.findById(kitchen_id);
     if (!kitchen) {
       throw new CustomError(
         "Kitchen not found",
@@ -36,55 +36,93 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
         false
       );
     }
-
     const existingCollaboration = await Collaboration.findOne({
       organization_id,
       kitchen_id: kitchen._id,
-      is_deleted: false,
     });
+
+    let responseMessage = "";
+    let responseData = {};
+    let statusCode = HTTP_STATUS_CODE.OK;
 
     if (existingCollaboration) {
-      throw new CustomError(
-        "Collaboration already exists",
-        HTTP_STATUS_CODE.BAD_REQUEST,
-        ERROR_TYPES.BAD_REQUEST_ERROR,
-        false
+      if (existingCollaboration.is_deleted === false) {
+        existingCollaboration.is_deleted = true;
+        await existingCollaboration.save();
+
+        responseMessage = "Kitchen collaboration removed successfully";
+        responseData = {
+          _id: existingCollaboration._id,
+          organization: {
+            _id: organization._id,
+            name: organization.organizationName,
+          },
+          kitchen: {
+            _id: kitchen._id,
+            name: kitchen.kitchen_name,
+          },
+          status: "removed",
+          updatedAt: existingCollaboration.updatedAt,
+        };
+      } else {
+        existingCollaboration.is_deleted = false;
+        await existingCollaboration.save();
+        await generateColloborationNotification(
+          organization_id,
+          kitchen._id,
+          kitchen.kitchen_name,
+          organization.organizationName
+        );
+
+        responseMessage = "Kitchen collaboration restored successfully";
+        responseData = {
+          _id: existingCollaboration._id,
+          organization: {
+            _id: organization._id,
+            name: organization.organizationName,
+          },
+          kitchen: {
+            _id: kitchen._id,
+            name: kitchen.kitchen_name,
+          },
+          status: "restored",
+          updatedAt: existingCollaboration.updatedAt,
+        };
+      }
+    } else {
+      // No existing collaboration - create new one
+      const collaboration = new Collaboration({
+        organization_id,
+        kitchen_id: kitchen._id,
+      });
+      await collaboration.save();
+
+      // Generate notification for new collaboration
+      await generateColloborationNotification(
+        organization_id,
+        kitchen._id,
+        kitchen.kitchen_name,
+        organization.organizationName
       );
+
+      responseMessage = "Collaboration request created successfully";
+      statusCode = HTTP_STATUS_CODE.CREATED;
+      responseData = {
+        _id: collaboration._id,
+        organization: {
+          _id: organization._id,
+          name: organization.organizationName,
+        },
+        kitchen: {
+          _id: kitchen._id,
+          name: kitchen.kitchen_name,
+        },
+        status: "created",
+        createdAt: collaboration.createdAt,
+      };
     }
 
-    const collaboration = new Collaboration({
-      organization_id,
-      kitchen_id: kitchen._id,
-    });
-
-    await collaboration.save();
-    await generateColloborationNotification(
-      organization_id,
-      kitchen._id,
-      kitchen.kitchen_name,
-      organization.organizationName
-    );
-
-    const responseData = {
-      _id: collaboration._id,
-      organization: {
-        _id: organization._id,
-        name: organization.organizationName,
-      },
-      kitchen: {
-        _id: kitchen._id,
-        name: kitchen.kitchen_name,
-      },
-      // status: collaboration.status,
-      createdAt: collaboration.createdAt,
-    };
-
-    sendSuccessResponse(
-      res,
-      "Collaboration request created successfully",
-      responseData,
-      HTTP_STATUS_CODE.CREATED
-    );
+    sendSuccessResponse(res, responseMessage, responseData, statusCode);
   } catch (error) {
     sendErrorResponse(
       res,
@@ -94,13 +132,15 @@ export const collaborateKitchen = async (req: Request, res: Response) => {
     );
   }
 };
+
 export const listCollaboratedKitchens = async (req: Request, res: Response) => {
   try {
     const { organization_id } = req.params;
 
-    const collaborations = await Collaboration.find({ organization_id }).select(
-      "kitchen_id status"
-    );
+    const collaborations = await Collaboration.find({
+      organization_id,
+      is_deleted: false,
+    }).select("kitchen_id status");
 
     if (!collaborations || collaborations.length === 0) {
       throw new CustomError(
@@ -496,8 +536,7 @@ export const getCollaborationById = async (
 };
 export const addQuotationDetails = async (req: Request, res: Response) => {
   try {
-    const { organization_id, kitchen_id, quotation } = req.body; 
-
+    const { organization_id, kitchen_id, quotation } = req.body;
 
     // Check if the organization exists
     const organization = await Organization.findById(organization_id);

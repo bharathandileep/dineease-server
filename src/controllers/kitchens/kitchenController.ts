@@ -10,6 +10,7 @@ import mongoose from "mongoose";
 import { CustomError } from "../../lib/errors/customError";
 import {
   createAddressAndUpdateModel,
+  getFullAddressById,
   updateAddress,
 } from "../../lib/helpers/addressUpdater";
 import PanCardDetails from "../../models/documentations/PanModel";
@@ -22,6 +23,7 @@ import User from "../../models/users/UserModel";
 
 import Address from "../../models/address/AddressModel";
 import RolesAndAccess from "../../models/users/rolesAndAccessModel";
+import Collaboration from "../../models/collab/Collab";
 
 const validateKitchenDetails = (data: any) => {
   const errors: { field: string; message: string }[] = [];
@@ -81,6 +83,7 @@ const validateKitchenDetails = (data: any) => {
 
   return errors;
 };
+
 export const handleCreateNewKitchens = async (
   req: Request,
   res: Response
@@ -125,6 +128,7 @@ export const handleCreateNewKitchens = async (
       pre_ordering_options,
     } = req.body;
     let userId = payload.id;
+    console.log(req.body);
     if (payload.role === "Admin") {
       const user = await User.findOne({ email: owner_email });
       userId = user?._id;
@@ -287,6 +291,8 @@ export const handleCreateNewKitchens = async (
     const kitchenImageUrl = files?.kitchen_image?.[0]?.buffer
       ? await uploadFileToCloudinary(files.kitchen_image[0].buffer)
       : null;
+
+    // ✅ FIX: Use the parsed arrays instead of empty arrays
     const newKitchen = await Kitchen.create({
       kitchen_name,
       user_id: userId,
@@ -302,8 +308,8 @@ export const handleCreateNewKitchens = async (
       role: "User",
       isapproved: payload.role === "Admin" ? "approved" : "processing",
       is_deleted: false,
-      working_days: [],
-      pre_ordering_options: [],
+      working_days: parsedWorkingDays, // ✅ Use parsed working days
+      pre_ordering_options: parsedPreOrderingOptions, // ✅ Use parsed pre-ordering options
     });
 
     const kitchenId = newKitchen._id;
@@ -366,7 +372,7 @@ export const handleCreateNewKitchens = async (
       hasFullAccess: true,
       isDefault: false,
     });
-    await User.findByIdAndUpdate(userId, {  
+    await User.findByIdAndUpdate(userId, {
       role_id: newRole._id,
     });
     await generateKitchenNotification(payload.id, kitchen_name);
@@ -390,6 +396,7 @@ export const handleCreateNewKitchens = async (
     );
   }
 };
+
 export const handleGetKitchens = async (
   req: Request,
   res: Response
@@ -568,25 +575,19 @@ export const handleGetKitchens = async (
     );
   }
 };
+
 export const handleGetKitchensById = async (
   req: Request,
   res: Response
 ): Promise<any> => {
   try {
     const { kitchenId } = req.params;
+    const { payload } = req.body;
     const kitchen = await Kitchen.aggregate([
       {
         $match: {
           slug: kitchenId,
           is_deleted: false,
-        },
-      },
-      {
-        $lookup: {
-          from: "addresses",
-          localField: "address_id",
-          foreignField: "_id",
-          as: "addresses",
         },
       },
       {
@@ -597,7 +598,6 @@ export const handleGetKitchensById = async (
           as: "categoryDetails",
         },
       },
-
       {
         $lookup: {
           from: "kitchensubcategories",
@@ -606,7 +606,6 @@ export const handleGetKitchensById = async (
           as: "subcategoryDetails",
         },
       },
-
       {
         $lookup: {
           from: "kitchenfssaicertificatedetails",
@@ -653,114 +652,57 @@ export const handleGetKitchensById = async (
           as: "gstDetails",
         },
       },
-      { $unwind: { path: "$addresses", preserveNullAndEmptyArrays: true } },
       {
-        $lookup: {
-          from: "states",
-          let: { stateId: { $toInt: "$addresses.state" } },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$stateId"] } } }],
-          as: "stateInfo",
-        },
-      },
-      {
-        $lookup: {
-          from: "cities",
-          let: { cityId: { $toInt: "$addresses.city" } },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$cityId"] } } }],
-          as: "cityInfo",
-        },
-      },
-      {
-        $lookup: {
-          from: "districts",
-          let: { districtId: { $toInt: "$addresses.district" } },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$districtId"] } } }],
-          as: "districtInfo",
-        },
-      },
-      {
-        $lookup: {
-          from: "countries",
-          let: { countryId: { $toInt: "$addresses.country" } },
-          pipeline: [{ $match: { $expr: { $eq: ["$id", "$$countryId"] } } }],
-          as: "countryInfo",
-        },
-      },
-      {
-        $group: {
-          _id: "$_id",
-          kitchen_name: { $first: "$kitchen_name" },
-          kitchen_status: { $first: "$kitchen_status" },
-          kitchen_owner_name: { $first: "$kitchen_owner_name" },
-          owner_email: { $first: "$owner_email" },
-          status: { $first: "$status" },
-          owner_phone_number: { $first: "$owner_phone_number" },
-          restaurant_type: { $first: "$restaurant_type" },
+        $project: {
+          _id: 1,
+          kitchen_name: 1,
+          kitchen_status: 1,
+          kitchen_owner_name: 1,
+          owner_email: 1,
+          status: 1,
+          owner_phone_number: 1,
+          restaurant_type: 1,
+          address_id: 1, // Keep address_id for separate lookup
 
           // Get both ID and name for category
           category: {
-            $first: {
-              $cond: {
-                if: { $gt: [{ $size: "$categoryDetails" }, 0] },
-                then: {
-                  _id: { $arrayElemAt: ["$categoryDetails._id", 0] },
-                  category_name: {
-                    $arrayElemAt: ["$categoryDetails.category", 0],
-                  },
+            $cond: {
+              if: { $gt: [{ $size: "$categoryDetails" }, 0] },
+              then: {
+                _id: { $arrayElemAt: ["$categoryDetails._id", 0] },
+                category_name: {
+                  $arrayElemAt: ["$categoryDetails.category", 0],
                 },
-                else: { _id: "$category", category_name: null }, // Fall back to just the ID
               },
+              else: { _id: "$category", category_name: null },
             },
           },
 
-          // Get both ID and name for subcategory
           subcategoryName: {
-            $first: {
-              $cond: {
-                if: { $gt: [{ $size: "$subcategoryDetails" }, 0] },
-                then: {
-                  _id: { $arrayElemAt: ["$subcategoryDetails._id", 0] },
-                  subcategory_name: {
-                    $arrayElemAt: ["$subcategoryDetails.subcategoryName", 0],
-                  },
+            $cond: {
+              if: { $gt: [{ $size: "$subcategoryDetails" }, 0] },
+              then: {
+                _id: { $arrayElemAt: ["$subcategoryDetails._id", 0] },
+                subcategory_name: {
+                  $arrayElemAt: ["$subcategoryDetails.subcategoryName", 0],
                 },
-                else: { _id: "$subcategoryName", subcategory_name: null }, // Fall back to just the ID
               },
+              else: { _id: "$subcategoryName", subcategory_name: null },
             },
           },
 
-          kitchen_type: { $first: "$kitchen_type" },
-          kitchen_phone_number: { $first: "$kitchen_phone_number" },
-          kitchen_document_verification: {
-            $first: "$kitchen_document_verification",
-          },
-          kitchen_image: { $first: "$kitchen_image" },
-          working_days: { $first: "$working_days" },
-          pre_ordering_options: { $first: "$pre_ordering_options" },
-          panDetails: { $first: "$panDetails" },
-          gstDetails: { $first: "$gstDetails" },
-          fssaiDetails: { $first: "$fssaiDetails" },
-          addresses: {
-            $push: {
-              _id: "$addresses._id",
-              street_address: "$addresses.street_address",
-              city_id: "$addresses.city",
-              city_name: { $arrayElemAt: ["$cityInfo.name", 0] },
-              state_id: "$addresses.state",
-              state_name: { $arrayElemAt: ["$stateInfo.name", 0] },
-              district_id: "$addresses.district",
-              district_name: { $arrayElemAt: ["$districtInfo.name", 0] },
-              pincode: "$addresses.pincode",
-              country_id: "$addresses.country",
-              country_name: { $arrayElemAt: ["$countryInfo.name", 0] },
-              landmark: "$addresses.landmark",
-              address_type: "$addresses.address_type",
-            },
-          },
+          kitchen_type: 1,
+          kitchen_phone_number: 1,
+          kitchen_document_verification: 1,
+          kitchen_image: 1,
+          working_days: 1,
+          pre_ordering_options: 1,
+          panDetails: 1,
+          gstDetails: 1,
+          fssaiDetails: 1,
         },
       },
     ]);
-
     if (!kitchen || kitchen.length === 0) {
       throw new CustomError(
         "Kitchen not found",
@@ -769,10 +711,20 @@ export const handleGetKitchensById = async (
         false
       );
     }
+
+    const kitchenData = kitchen[0];
+    if (kitchenData.address_id) {
+      kitchenData.addresses = await getFullAddressById(
+        kitchenData.address_id[0]
+      );
+    }
+
+    delete kitchenData.address_id;
+
     sendSuccessResponse(
       res,
       "Kitchen retrieved successfully!",
-      kitchen[0],
+      kitchenData,
       HTTP_STATUS_CODE.OK
     );
   } catch (error: any) {
@@ -784,6 +736,7 @@ export const handleGetKitchensById = async (
     );
   }
 };
+
 export const handleUpdateKitchensById = async (
   req: Request,
   res: Response
@@ -1055,6 +1008,7 @@ export const handleUpdateKitchensById = async (
     );
   }
 };
+
 export const handleDeleteKitchens = async (
   req: Request,
   res: Response
@@ -1090,6 +1044,7 @@ export const handleDeleteKitchens = async (
     );
   }
 };
+
 export const kitchenToggleStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -1127,6 +1082,7 @@ export const kitchenToggleStatus = async (req: Request, res: Response) => {
     );
   }
 };
+
 export const handleGetUnapprovedKitchens = async (
   req: Request,
   res: Response
@@ -1260,6 +1216,7 @@ export const handleGetUnapprovedKitchens = async (
     );
   }
 };
+
 export const handleGetUserApprovedKitchens = async (
   req: Request,
   res: Response
@@ -1390,6 +1347,7 @@ export const handleGetUserApprovedKitchens = async (
     );
   }
 };
+
 export const handleAdminApproveKitchen = async (
   req: Request,
   res: Response
@@ -1423,6 +1381,54 @@ export const handleAdminApproveKitchen = async (
       "approve Kitchen created successfully",
       HTTP_STATUS_CODE.CREATED
     );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
+export const handleGetCollaborationStatus = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { kitchenId, orgID } = req.body;
+    if (!kitchenId || !orgID) {
+      throw new CustomError(
+        "Kitchen ID and Organization ID are required.",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR,
+        false
+      );
+    }
+
+    const collaboration = await Collaboration.findOne({
+      kitchen_id: kitchenId,
+      organization_id: orgID,
+      is_deleted: false,
+    });
+
+    if (collaboration) {
+      return sendSuccessResponse(
+        res,
+        "active collaboration found between the organization and kitchen",
+        {
+          exists: true,
+        }
+      );
+    } else {
+      return sendSuccessResponse(
+        res,
+        "No active collaboration found between the organization and kitchen.",
+        {
+          exists: false,
+        }
+      );
+    }
   } catch (error) {
     sendErrorResponse(
       res,

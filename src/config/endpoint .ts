@@ -49,6 +49,8 @@ export const apiConfig = {
     deleteSubcategory: "/subcategories/:id",
     toggleSubcategoryStatus: "/subcategories/:id/toggle-status",
     getUnapprovedKitchens: "/requested/all",
+
+    getCollabDetails: "/get-details",
   },
   menu: {
     createCategory: "/categories",
@@ -73,6 +75,12 @@ export const apiConfig = {
     deleteItem: "/allmenuitems/:id",
     changeItemStatus: "/allmenuitems/:id/status",
     getMenuItemsByKitchen: "/kitchen/:kitchenId",
+
+    createNewMenuTags: "/new/menu-tags",
+    getAllTags: "/get/menu-tags",
+    toggleStatus: "/toggle/menu-tags/:id",
+    updateTag: "/update/menu-tags/:id",
+    deleteTag: "/delete/menu-tags/:id",
   },
   organization: {
     newOrganization: "/new",
@@ -120,6 +128,7 @@ export const apiConfig = {
     newRoleAndAccess: "/new",
     getRoleAndAccess: "/",
     getRoleAndAccessById: "/:roleId",
+    updateRoleName: "/:roleId",
   },
   employee: {
     createEmployee: "/employees",
