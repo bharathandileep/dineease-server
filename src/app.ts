@@ -14,7 +14,6 @@ import organizationRoute from "./routes/organization/organizationRoute";
 import menuRoutes from "./routes/admin/menuRoutes";
 import designationRoutes from "./routes/designation/designationRoutes";
 import roelsAndAccessRoutes from "./routes/designation/roelsAndAccessRoutes";
-import OrgEmployeeManagementRoutes from "./routes/empmanagment/orgEmployeeManagementRoutes";
 import kitchenEmployeeManagementRoutes from "./routes/empmanagment/kitchenEmployManagement";
 import adminControlRoutes from "./routes/admin/adminRoute";
 import menuitemsRoutes from "./routes/menuitems/menuitemsRoutes";
@@ -53,7 +52,6 @@ app.use(
 );
 app.use(`${apiConfig.baseAPIUrl}/kitchens-menu`, kitchensMenuRoutes);
 app.use(`${apiConfig.baseAPIUrl}/menu-items`, menuitemsRoutes);
-app.use(`${apiConfig.baseAPIUrl}/org-employee`, OrgEmployeeManagementRoutes);
 app.use(
   `${apiConfig.baseAPIUrl}/kitchen-employee`,
   kitchenEmployeeManagementRoutes
