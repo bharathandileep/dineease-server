@@ -24,8 +24,6 @@ router.post(`${apiConfig.menu.createItem}`,
     createItem
 );
 
-
-
 router.put("/allmenuitems/:id", upload.fields([
     {name : "item_image",maxCount:1}
     ]),updateItem);

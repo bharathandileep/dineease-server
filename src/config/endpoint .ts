@@ -173,6 +173,9 @@ export const apiConfig = {
     updateKitchenMenu: "/:kitchenId/menu-item/:itemId",
     deleteSubcategory: "/kitchen-menu/subcategories/:id",
     toggleSubcategoryStatus: "/kitchen-menu/subcategories/:id/toggle-status",
+    
+    // change menu end points
+    createMenuItem:"/items/creatd"
   },
   notification: {
     getUserNotifications: "/get/:userId",

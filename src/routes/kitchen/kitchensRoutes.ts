@@ -27,7 +27,7 @@ import {
   kitchenGetSubcategoriesByCategory,
   kitchenToggleSubcategoryStatus,
   kitchenUpdateSubcategory,
-} from "../../controllers/kitchens/kitchenSubCategory";
+} from "../../controllers/kitchens/kitchenSubCategory"
 import { authorizationAccess } from "../../middleware/TokenValidation";
 
 const router = express.Router();

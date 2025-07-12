@@ -1085,6 +1085,7 @@ export const handleGetUserOrganizations = async (
           employees: "$no_of_employees",
           isapproved: "$isapproved",
           slug: "$slug",
+          createdAt:"$createdAt",
           industry: {
             $concatArrays: [
               {

@@ -19,6 +19,7 @@ import kitchenEmployeeManagementRoutes from "./routes/empmanagment/kitchenEmploy
 import adminControlRoutes from "./routes/admin/adminRoute";
 import menuitemsRoutes from "./routes/menuitems/menuitemsRoutes";
 import kitchensMenuRoutes from "./routes/kitchen/kitchensMenuRoutes";
+import menuItemRoutes from "./routes/menuitems/menuRoutes";
 import { clientOrigin } from "./config/environment";
 import userLoginsRoutes from "./routes/auth/loginsRoute";
 import notificationRoutes from "./routes/notification/notificationRoutes";
@@ -43,7 +44,8 @@ app.use(`${apiConfig.baseAPIUrl}/auth`, authRoute);
 app.use(`${apiConfig.baseAPIUrl}/user`, userLoginsRoutes);
 app.use(`${apiConfig.baseAPIUrl}/admin`, adminControlRoutes);
 app.use(`${apiConfig.baseAPIUrl}/kitchens`, kitchensRoute);
-app.use(`${apiConfig.baseAPIUrl}/menu`, menuRoutes);
+app.use(`${apiConfig.baseAPIUrl}/menu`, menuRoutes); //OLD ONE NEED TO REMOVE
+app.use(`${apiConfig.baseAPIUrl}/kit-menu`, menuItemRoutes); // NEW ONE KEEP
 app.use(`${apiConfig.baseAPIUrl}/designation`, designationRoutes);
 app.use(`${apiConfig.baseAPIUrl}/role-and-access`, roelsAndAccessRoutes);
 app.use(`${apiConfig.baseAPIUrl}/organization`, organizationRoute);

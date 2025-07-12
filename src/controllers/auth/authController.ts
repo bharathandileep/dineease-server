@@ -37,6 +37,7 @@ export const handleGoogleAuth = async (
       email: user.email,
       fullName: user.fullName,
       role: "User",
+      profile_photo: picture,
     };
     appendRefreshTokenCookies(res, payload);
     const accessToken = generateJWTToken(
