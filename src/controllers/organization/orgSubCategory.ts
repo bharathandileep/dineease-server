@@ -10,20 +10,49 @@ import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import OrgSubcategory from "../../models/organisations/OrgSubCategory";
 import OrgCategory from "../../models/organisations/OrgCategory";
 
+
+
 export const orgGetAllSubCategories = async (req: Request, res: Response) => {
   try {
-    const categories = await OrgSubcategory.find().populate(
-      "category",
-      "category status"
-    );
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string)?.trim() || '';
+    const status = req.query.status as string;
+    const startIndex = (page - 1) * limit;
+
+  
+    const query: any = {};
+    if (search) {
+      query.subcategoryName = { $regex: search, $options: "i" }; 
+    }
+    if (status && status !== "all") {
+      query.status = status === "active" ? true : false; 
+    }
+
+    
+
+    const total = await OrgSubcategory.countDocuments(query);
+    const categories = await OrgSubcategory.find(query)
+      .populate("category", "category status") 
+      .skip(startIndex)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    const pagination = {
+      currentPage: page,
+      totalItems: total,
+      totalPages: Math.ceil(total / limit),
+      itemsPerPage: limit,
+    };
 
     sendSuccessResponse(
       res,
-      "Categories retrieved successfully",
-      categories,
+      "Subcategories retrieved successfully",
+      { categories, pagination },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
+    console.error("Backend error:", error);
     sendErrorResponse(
       res,
       error,
@@ -33,11 +62,10 @@ export const orgGetAllSubCategories = async (req: Request, res: Response) => {
   }
 };
 
-// Create subcategory
+
 export const orgCreateSubcategory = async (req: Request, res: Response) => {
   try {
     const { category, subcategoryName } = req.body;
-    console.log(req.body);
     if (!category || !subcategoryName) {
       throw new CustomError(
         "Subcategory name and category are required",
@@ -94,7 +122,7 @@ export const orgCreateSubcategory = async (req: Request, res: Response) => {
   }
 };
 
-// Get subcategories by category
+
 export const orgGetSubcategoriesByCategory = async (
   req: Request,
   res: Response
@@ -138,7 +166,7 @@ export const orgGetSubcategoriesByCategory = async (
   }
 };
 
-// Update subcategory
+
 export const orgUpdateSubcategory = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -257,7 +285,7 @@ export const orgToggleSubcategoryStatus = async (
   }
 };
 
-// Delete subcategory
+
 export const orgDeleteSubcategory = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -290,7 +318,7 @@ export const orgDeleteSubcategory = async (req: Request, res: Response) => {
   }
 };
 
-// Get all categories
+
 export const getAllCategoriesByStatus = async (req: Request, res: Response) => {
   try {
     const categories = await OrgCategory.find({ status: true });

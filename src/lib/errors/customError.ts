@@ -14,7 +14,7 @@ export class CustomError extends Error {
     this.status = status;
     this.errorType = errorType;
 
-    // Ensure the prototype chain is properly set
+    
     Object.setPrototypeOf(this, CustomError.prototype);
   }
 }

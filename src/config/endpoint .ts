@@ -7,14 +7,24 @@ export const apiConfig = {
     verifyOtp: "/verify-otp",
     verifyLoginOtp: "/verify-loginotp",
     logout: "/logout",
+
     adminLogin: "/admin/login",
     adminRegister: "/admin/register",
     accessToken: "/new/access-token",
+    forgotPassword: "/admin/forgot-password",
+    verifyForgotOtp: "/admin/verify-password",
+    updatePassword: "/admin/update-password",
+
+    userLogins: "/access/login",
+    userRegister: "/access/register",
+    checkUserExistence: "/user/present",
+    createNewUser: "/user/new",
+    getUserInfoById: "/user/:id",
   },
-  users: {
-    getUser: "/users/:id",
-    createUser: "/users",
-    updateUser: "/users/:id",
+  admin: {
+    adminApproveOrganization: "/approve/organization/:id",
+    adminApproveKitchen: "/approve/kitchen/:id",
+    adminVerifyDoc: "/verify/document",
   },
   kitchens: {
     newkitchens: "/new",
@@ -22,20 +32,25 @@ export const apiConfig = {
     deletekitchens: "/delete/:kitchenId",
     getAllkitchens: "/all",
     getkitchensById: "/:kitchenId",
+    toggleKitchensStatus: "/status/:id",
+    handleGetUserApprovedKitchens: "/user/approved",
 
     createCategory: "/categories",
-    getAllCategories: "/categories/all",
+    getallCategories: "/categories/all",
     updateCategory: "/categories/:id",
     deleteCategory: "/categories/:id",
     toggleCategoryStatus: "/categories/:id/toggle-status",
 
-    getAllSubCategories: "/subcategories/all",
+    getallSubCategories: "/subcategories/all",
     createSubcategory: "/subcategories",
     getSubcategoriesByCategory: "/categories/:categoryId/subcategories",
     getSubcategoryById: "/subcategories/:id",
     updateSubcategory: "/subcategories/:id",
     deleteSubcategory: "/subcategories/:id",
     toggleSubcategoryStatus: "/subcategories/:id/toggle-status",
+    getUnapprovedKitchens: "/requested/all",
+
+    getCollabDetails: "/get-details",
   },
   menu: {
     createCategory: "/categories",
@@ -58,15 +73,23 @@ export const apiConfig = {
     listItems: "/allmenuitems",
     updateItem: "/allmenuitems/:id",
     deleteItem: "/allmenuitems/:id",
-    // changeItemStatus:"/allmenuitems/:id/status"
     changeItemStatus: "/allmenuitems/:id/status",
+    getMenuItemsByKitchen: "/kitchen/:kitchenId",
+
+    createNewMenuTags: "/new/menu-tags",
+    getAllTags: "/get/menu-tags",
+    toggleStatus: "/toggle/menu-tags/:id",
+    updateTag: "/update/menu-tags/:id",
+    deleteTag: "/delete/menu-tags/:id",
   },
   organization: {
     newOrganization: "/new",
     updateOrganization: "/update/:id",
-    deleteOrganization: "/delete/:kitchenId",
+    deleteOrganization: "/delete/:orgId",
     getAllOrganization: "/all",
     getOrganizationById: "/:orgId",
+    toggleOrganizationStatus: "/status/:id",
+    handleGetUserOrganizations: "/user/get-all",
 
     createCategory: "/categories",
     getAllCategories: "/categories/all",
@@ -82,6 +105,17 @@ export const apiConfig = {
     deleteSubcategory: "/subcategories/:id",
     toggleSubcategoryStatus: "/subcategories/:id/toggle-status",
     getAllCategoriesByStatus: "/category/status",
+
+    getUnapprovedOrganisations: "/requested/all",
+    approveOrganization: "/approve/:id",
+  },
+  collab: {
+    collaborateKitchen: "/select",
+    listCollaboratedKitchens: "/organization/:organization_id",
+    getAllColloborations: "/all",
+    getCollaborationById: "/:id",
+    addCollaboration: "/request/add-new-collab",
+    getCollaborationDetails: "/get-collaboration-details",
   },
   designation: {
     createDesignation: "/designations",
@@ -90,6 +124,11 @@ export const apiConfig = {
     updateDesignation: "/designations/:id",
     deleteDesignation: "/designations/:id",
     toggleDesignationStatus: "/designations/:id/toggle-status",
+
+    newRoleAndAccess: "/new",
+    getRoleAndAccess: "/",
+    getRoleAndAccessById: "/:roleId",
+    updateRoleName: "/:roleId",
   },
   employee: {
     createEmployee: "/employees",
@@ -99,21 +138,48 @@ export const apiConfig = {
     deleteEmployee: "/employees/:id",
     toggleEmployeeStatus: "/employees/:id/toggle-status",
   },
+  kitchenEmployee: {
+    createEmployee: "/employees",
+    getAllEmployees: "/employees-all/:kitchenId",
+    getEmployeeById: "/employees/:id",
+    updateEmployee: "/employees/:id",
+    deleteEmployee: "/employees/:id",
+    toggleEmployeeStatus: "/employees/:id/toggle-status",
+  },
   orgemployee: {
     createOrgEmployee: "/orgemployee",
-    getAllEmployeesOfOrg: "/orgemployee/all",
+    getAllEmployeesOfOrg: "/orgemployee/all/:id",
     getOrgEmployeeById: "/orgemployee/:id",
     updateOrgEmployee: "/orgemployee/:id",
     deleteOrgEmployee: "/orgemployee/:id",
     toggleOrgEmployeeStatus: "/orgemployee/:id/toggle-status",
+    getEmployeesOrg: "/employee/org",
+    newDesignation: "/employee/new-designation",
+    getDesignation: "/employee/designations",
+    getRoleAndAccessById: "/employee/role-accesss/:roleId",
   },
+  addressDetails: {
+    getAllCountries: "/allcountries",
+    getStatesByCountry: "/states/:countryName",
+    getCitiesByState: "/cities/:stateName",
+    getDistrictsByState: "/districts/:stateId",
+  },
+
   kitchenMenu: {
     getKitchenMenu: "/kitchen-menu/:kitchenId",
     createkitchenMenu: "/kitchen-menu/:id",
+    getkitchenMenuItemDetail: "/:kitchenId/menu-item/:itemId",
     removekitchenMenu: "/kitchen-menu/:kitchen_id/remove/:item_id",
-    getSubcategoryById: "/kitchen-menu/subcategories/:id",
-    updateSubcategory: "/kitchen-menu/subcategories/:id",
+    updateKitchenMenu: "/:kitchenId/menu-item/:itemId",
     deleteSubcategory: "/kitchen-menu/subcategories/:id",
     toggleSubcategoryStatus: "/kitchen-menu/subcategories/:id/toggle-status",
+    
+    // change menu end points
+    createMenuItem:"/items/creatd"
+  },
+  notification: {
+    getUserNotifications: "/get/:userId",
+    getNotificationById: "/get/:notificationId",
+    getAllNotifications: "/all",
   },
 };

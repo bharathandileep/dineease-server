@@ -4,9 +4,14 @@ import upload from "../../lib/helpers/uploadMiddleware";
 import {
   handleCreateNewKitchens,
   handleDeleteKitchens,
+  handleGetCollaborationStatus,
   handleGetKitchens,
   handleGetKitchensById,
+  handleGetUnapprovedKitchens,
+  // handleGetUnapprovedKitchens,
+  handleGetUserApprovedKitchens,
   handleUpdateKitchensById,
+  kitchenToggleStatus,
 } from "../../controllers/kitchens/kitchenController";
 import {
   kitchenCreateCategory,
@@ -22,7 +27,8 @@ import {
   kitchenGetSubcategoriesByCategory,
   kitchenToggleSubcategoryStatus,
   kitchenUpdateSubcategory,
-} from "../../controllers/kitchens/kitchenSubCategory";
+} from "../../controllers/kitchens/kitchenSubCategory"
+import { authorizationAccess } from "../../middleware/TokenValidation";
 
 const router = express.Router();
 
@@ -34,10 +40,15 @@ router.post(
     { name: "gst_certificate_image", maxCount: 1 },
     { name: "ffsai_certificate_image", maxCount: 1 },
   ]),
+  authorizationAccess,
   handleCreateNewKitchens
 );
 router.get(`${apiConfig.kitchens.getAllkitchens}`, handleGetKitchens);
-router.get(`${apiConfig.kitchens.getkitchensById}`, handleGetKitchensById);
+router.get(
+  `${apiConfig.kitchens.getkitchensById}`,
+  authorizationAccess,
+  handleGetKitchensById
+);
 router.put(
   `${apiConfig.kitchens.updatekitchens}`,
   upload.fields([
@@ -46,13 +57,20 @@ router.put(
     { name: "gst_certificate_image", maxCount: 1 },
     { name: "ffsai_certificate_image", maxCount: 1 },
   ]),
+  authorizationAccess,
   handleUpdateKitchensById
 );
 
 router.delete(`${apiConfig.kitchens.deletekitchens}`, handleDeleteKitchens);
+router.get(`${apiConfig.kitchens.toggleKitchensStatus}`, kitchenToggleStatus);
+router.get(
+  `${apiConfig.kitchens.handleGetUserApprovedKitchens}`,
+  authorizationAccess,
+  handleGetUserApprovedKitchens
+);
 
 //kitchen category routes
-router.get(`${apiConfig.kitchens.getAllCategories}`, kitchenGetAllCategories);
+router.get(`${apiConfig.kitchens.getallCategories}`, kitchenGetAllCategories);
 router.post(`${apiConfig.kitchens.createCategory}`, kitchenCreateCategory);
 router.put(`${apiConfig.kitchens.updateCategory}`, kitchenUpdateCategory);
 router.delete(`${apiConfig.kitchens.deleteCategory}`, kitchenDeleteCategory);
@@ -75,14 +93,24 @@ router.delete(
   `${apiConfig.kitchens.deleteSubcategory}`,
   kitchenDeleteSubcategory
 );
+
 router.patch(
   `${apiConfig.kitchens.toggleSubcategoryStatus}`,
   kitchenToggleSubcategoryStatus
 );
+
 router.patch(`${apiConfig.kitchens.toggleSubcategoryStatus}`);
 router.get(
-  `${apiConfig.kitchens.getAllSubCategories}`,
+  `${apiConfig.kitchens.getallSubCategories}`,
   kitchenGetAllSubCategories
 );
 
+router.get(
+  `${apiConfig.kitchens.getUnapprovedKitchens}`,
+  handleGetUnapprovedKitchens
+);
+router.post(
+  `${apiConfig.kitchens.getCollabDetails}`,
+  handleGetCollaborationStatus
+);
 export default router;

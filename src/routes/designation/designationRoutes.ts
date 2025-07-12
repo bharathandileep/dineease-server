@@ -1,4 +1,6 @@
 import express from "express";
+
+import { apiConfig } from "../../config/endpoint ";
 import {
   createDesignation,
   deleteDesignation,
@@ -7,7 +9,6 @@ import {
   toggleDesignationStatus,
   updateDesignation,
 } from "../../controllers/designation/designationcontroller";
-import { apiConfig } from "../../config/endpoint ";
 
 const router = express.Router();
 
@@ -16,6 +17,9 @@ router.get(`${apiConfig.designation.getDesignationById}`, getDesignationById);
 router.post(`${apiConfig.designation.createDesignation}`, createDesignation);
 router.put(`${apiConfig.designation.updateDesignation}`, updateDesignation);
 router.delete(`${apiConfig.designation.deleteDesignation}`, deleteDesignation);
-router.patch(`${apiConfig.designation.toggleDesignationStatus}`, toggleDesignationStatus);
+router.patch(
+  `${apiConfig.designation.toggleDesignationStatus}`,
+  toggleDesignationStatus
+);
 
 export default router;

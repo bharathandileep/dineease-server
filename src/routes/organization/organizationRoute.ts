@@ -2,11 +2,19 @@ import express, { Application, Router } from "express";
 import { apiConfig } from "../../config/endpoint ";
 import upload from "../../lib/helpers/uploadMiddleware";
 import {
+ // handleApproveorganisation,
+  // handleApproveOrganization,
+  // handleApproveOrganization,
   handleCreateNewOrganisation,
   handledDeleteOrganisations,
   handleGetByIdOrganisations,
   handleGetOrganisations,
+  //handleGetSelectedKitchen,
+  handleGetUnapprovedOrganisations,
+  handleGetUserOrganizations,
+  //handleSelectKitchen,
   handleUpdateOrganisations,
+  organizationToggleStatus,
 } from "../../controllers/organization/organizationsController";
 import {
   orgCreateCategory,
@@ -24,9 +32,9 @@ import {
   orgToggleSubcategoryStatus,
   orgUpdateSubcategory,
 } from "../../controllers/organization/orgSubCategory";
+import { authorizationAccess } from "../../middleware/TokenValidation";
 
 const router = express.Router();
-
 router.post(
   apiConfig.organization.newOrganization,
   upload.fields([
@@ -34,6 +42,7 @@ router.post(
     { name: "panCardImage", maxCount: 1 },
     { name: "gstCertificateImage", maxCount: 1 },
   ]),
+  authorizationAccess,
   handleCreateNewOrganisation
 );
 router.get(
@@ -57,6 +66,16 @@ router.delete(
   `${apiConfig.organization.deleteOrganization}`,
   handledDeleteOrganisations
 );
+router.get(
+  `${apiConfig.organization.toggleOrganizationStatus}`,
+  organizationToggleStatus
+);
+router.get(
+  `${apiConfig.organization.handleGetUserOrganizations}`,
+  authorizationAccess,
+  handleGetUserOrganizations
+);
+
 
 //kitchen category routes
 router.get(`${apiConfig.organization.getAllCategories}`, orgGetAllCategories);
@@ -96,4 +115,5 @@ router.get(
   getAllCategoriesByStatus
 );
 
+router.get(`${apiConfig.organization.getUnapprovedOrganisations}`,handleGetUnapprovedOrganisations)
 export default router;

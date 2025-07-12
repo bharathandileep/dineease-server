@@ -10,7 +10,7 @@ import kitchenCategory from "../../models/kitchen/KitchenCategoryModel";
 import mongoose from "mongoose";
 import kitchenSubcategory from "../../models/kitchen/KitchenSubCategorymodel";
 
-// Create a new category
+
 export const kitchenCreateCategory = async (req: Request, res: Response) => {
   try {
     const { category } = req.body;
@@ -55,17 +55,50 @@ export const kitchenCreateCategory = async (req: Request, res: Response) => {
   }
 };
 
-// Get all categories
+
+
 export const kitchenGetAllCategories = async (req: Request, res: Response) => {
   try {
-    const categories = await kitchenCategory.find();
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string)?.trim() || '';
+    const status = req.query.status as string;
+    const startIndex = (page - 1) * limit;
+
+
+    const query: any = {};
+    if (search) {
+      query.category = { $regex: search, $options: "i" }; 
+    }
+    if (status && status !== "all") {
+      query.status = status === "active" ? true : false; 
+    }
+
+
+
+    const total = await kitchenCategory.countDocuments(query);
+    const categories = await kitchenCategory.find(query)
+      .skip(startIndex)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    
+
+    const pagination = {
+      currentPage: page,
+      totalItems: total,
+      totalPages: Math.ceil(total / limit),
+      itemsPerPage: limit,
+    };
+
     sendSuccessResponse(
       res,
       "Categories retrieved successfully",
-      categories,
+      { categories, pagination },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
+    console.error("Backend error:", error);
     sendErrorResponse(
       res,
       error,
@@ -183,7 +216,7 @@ export const kitchenUpdateCategory = async (req: Request, res: Response) => {
   }
 };
 
-// Delete category
+
 export const kitchenDeleteCategory = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -214,3 +247,6 @@ export const kitchenDeleteCategory = async (req: Request, res: Response) => {
     );
   }
 };
+
+
+

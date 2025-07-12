@@ -18,23 +18,27 @@ export const uploadFileToCloudinary = async (
     return null;
   }
 };
-
-
+ 
 export const deleteFromCloudinary = async (
-  publicId: string
+  input: string 
 ): Promise<boolean> => {
   try {
+    let publicId = input;
+    if (input.includes("cloudinary.com")) {
+      const parts = input.split("/");
+      const filename = parts.pop(); 
+      if (!filename) return false;
+      const nameOnly = filename.split(".")[0]; 
+      const folder = parts.slice(parts.indexOf("upload") + 1).join("/"); 
+      publicId = `${folder}/${nameOnly}`;
+    }
+
     const result = await cloudinary.uploader.destroy(publicId);
 
-    if (result.result === "ok") {
-      console.log("File deleted:", publicId);
-      return true;
-    } else {
-      console.log("File deletion failed:", publicId);
-      return false;
-    }
+    return result.result === "ok";
   } catch (error) {
     console.error("Delete error:", error);
     return false;
   }
 };
+

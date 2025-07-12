@@ -10,21 +10,51 @@ import { validateMogooseObjectId } from "../../lib/helpers/validateObjectid";
 import kitchenSubcategory from "../../models/kitchen/KitchenSubCategorymodel";
 import kitchenCategory from "../../models/kitchen/KitchenCategoryModel";
 
-export const kitchenGetAllSubCategories = async (
-  req: Request,
-  res: Response
-) => {
+
+
+export const kitchenGetAllSubCategories = async (req: Request, res: Response) => {
   try {
-    const categories = await kitchenSubcategory
-      .find()
-      .populate("category", "category");
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+    const search = (req.query.search as string)?.trim() || '';
+    const status = req.query.status as string;
+    const startIndex = (page - 1) * limit;
+
+    // Build query object
+    const query: any = {};
+    if (search) {
+      query.subcategoryName = { $regex: search, $options: "i" }; 
+    }
+    if (status && status !== "all") {
+      query.status = status === "active" ? true : false; 
+    }
+
+
+
+    const total = await kitchenSubcategory.countDocuments(query);
+    const categories = await kitchenSubcategory.find(query)
+      .populate("category", "category status") 
+      .skip(startIndex)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+
+
+    const pagination = {
+      currentPage: page,
+      totalItems: total,
+      totalPages: Math.ceil(total / limit),
+      itemsPerPage: limit,
+    };
+
     sendSuccessResponse(
       res,
-      "Categories retrieved successfully",
-      categories,
+      "Subcategories retrieved successfully",
+      { categories, pagination },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
+    console.error("Backend error:", error);
     sendErrorResponse(
       res,
       error,
@@ -34,7 +64,8 @@ export const kitchenGetAllSubCategories = async (
   }
 };
 
-// Create subcategory
+
+
 export const kitchenCreateSubcategory = async (req: Request, res: Response) => {
   try {
     const { category, subcategoryName } = req.body;
@@ -94,14 +125,13 @@ export const kitchenCreateSubcategory = async (req: Request, res: Response) => {
   }
 };
 
-// Get subcategories by category
 export const kitchenGetSubcategoriesByCategory = async (
   req: Request,
   res: Response
 ) => {
   try {
+    
     const { categoryId } = req.params;
-
     validateMogooseObjectId(categoryId);
 
     const category = await kitchenCategory.findOne({
@@ -209,7 +239,7 @@ export const kitchenToggleSubcategoryStatus = async (
 ) => {
   try {
     const { id } = req.params;
-    console.log(id);
+ 
     const subcategory = await kitchenSubcategory.findById(id).populate<{
       category: any;
     }>("category", "category status");
@@ -222,6 +252,7 @@ export const kitchenToggleSubcategoryStatus = async (
         false
       );
     }
+
     const newStatus = !subcategory.status;
     if (newStatus && !subcategory.category.status) {
       throw new CustomError(
@@ -253,7 +284,6 @@ export const kitchenToggleSubcategoryStatus = async (
     );
   }
 };
-
 // Delete subcategory
 export const kitchenDeleteSubcategory = async (req: Request, res: Response) => {
   try {
@@ -286,3 +316,4 @@ export const kitchenDeleteSubcategory = async (req: Request, res: Response) => {
     );
   }
 };
+

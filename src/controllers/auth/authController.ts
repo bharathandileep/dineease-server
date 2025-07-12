@@ -6,7 +6,7 @@ import {
 } from "../../lib/helpers/responseHelper";
 import { HTTP_STATUS_CODE } from "../../lib/constants/httpStatusCodes";
 import { ERROR_TYPES } from "../../lib/constants/errorType";
-import { generateAndEmailOtp } from "../../lib/utils/generateAndEmailOtp";
+import { generateAndEmailOtp } from "../../lib/helpers/generateAndSendEmail";
 import { validateOtp } from "../../lib/utils/otpValidator";
 import User from "../../models/users/UserModel";
 import { appendRefreshTokenCookies } from "../../lib/utils/attachAuthToken";
@@ -15,6 +15,7 @@ import {
   accessTokenExpiration,
   accessTokenSecret,
 } from "../../config/environment";
+import mongoose from "mongoose";
 
 export const handleGoogleAuth = async (
   req: Request,
@@ -32,9 +33,11 @@ export const handleGoogleAuth = async (
       await user.save();
     }
     const payload = {
+      id: user._id,
       email: user.email,
       fullName: user.fullName,
-      profileImg: user.profile_photo,
+      role: "User",
+      profile_photo: picture,
     };
     appendRefreshTokenCookies(res, payload);
     const accessToken = generateJWTToken(
@@ -46,7 +49,12 @@ export const handleGoogleAuth = async (
       ? "Welcome! Your account has been created successfully."
       : "User logged in successfully.";
 
-    return sendSuccessResponse(res, message, accessToken, HTTP_STATUS_CODE.OK);
+    return sendSuccessResponse(
+      res,
+      message,
+      { token: accessToken },
+      HTTP_STATUS_CODE.OK
+    );
   } catch (error) {
     sendErrorResponse(
       res,
@@ -157,10 +165,23 @@ export const handleAuthenticateOtp = async (
         false
       );
     }
+    let user = await User.findOne({ email });
+    const payload = {
+      id: user?._id,
+      email: user?.email,
+      fullName: user?.fullName,
+      role: "User",
+    };
+    appendRefreshTokenCookies(res, payload);
+    const accessToken = generateJWTToken(
+      accessTokenSecret,
+      payload,
+      accessTokenExpiration
+    );
     return sendSuccessResponse(
       res,
       "Great! Your email address has been successfully verified.",
-      null,
+      { token: accessToken },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -189,10 +210,23 @@ export const handleLoginOtpVerification = async (
       );
     }
     await validateOtp(email, otp);
+    const payload = {
+      id: user._id,
+      email: user.email,
+      fullName: user.fullName,
+      role: "User",
+    };
+    appendRefreshTokenCookies(res, payload);
+    const accessToken = generateJWTToken(
+      accessTokenSecret,
+      payload,
+      accessTokenExpiration
+    );
+
     sendSuccessResponse(
       res,
       "Great! Your email address has been successfully verified.",
-      null,
+      { token: accessToken },
       HTTP_STATUS_CODE.OK
     );
   } catch (error) {
@@ -235,6 +269,138 @@ export const handleGenerateAccessToken = async (
   }
 };
 
-// note to change
-// make a single function that can generate and send otp
-// make sure that db error not to the client (validate fields before db)
+export const checkUserExistence = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      throw new CustomError(
+        "Email is required.",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      throw new CustomError(
+        "User does not exist.",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR
+      );
+    }
+
+    sendSuccessResponse(
+      res,
+      "User found successfully.",
+      {
+        id: user._id,
+        email: user.email,
+        fullName: user.fullName,
+        phone: user.phone_number,
+      },
+      HTTP_STATUS_CODE.OK
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
+export const createUser = async (req: Request, res: Response): Promise<any> => {
+  try {
+    const { email, phone, name } = req.body;
+
+    if (!email || !phone || !name) {
+      throw new CustomError(
+        "Email, phone number, and full name are required.",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
+
+    const existingUser = await User.findOne({
+      $or: [{ email }, { phone }],
+    });
+
+    if (existingUser) {
+      throw new CustomError(
+        "User with this email or phone number already exists.",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.CONFLICT_ERROR
+      );
+    }
+
+    const newUser = new User({
+      email,
+      phone_number: phone,
+      fullName: name,
+    });
+    await newUser.save();
+
+    sendSuccessResponse(
+      res,
+      "User created successfully.",
+      {
+        id: newUser._id,
+        email: newUser.email,
+        phone: newUser.phone_number,
+        fullName: newUser.fullName,
+      },
+      HTTP_STATUS_CODE.CREATED
+    );
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};
+
+export const getUserInfoById = async (
+  req: Request,
+  res: Response
+): Promise<any> => {
+  try {
+    const userId = req.params.id;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return sendErrorResponse(
+        res,
+        "Invalid user ID format.",
+        HTTP_STATUS_CODE.BAD_REQUEST,
+        ERROR_TYPES.BAD_REQUEST_ERROR
+      );
+    }
+
+    const user = await User.findById(userId).select("-__v");
+
+    if (!user) {
+      return sendErrorResponse(
+        res,
+        "User not found.",
+        HTTP_STATUS_CODE.NOT_FOUND,
+        ERROR_TYPES.NOT_FOUND_ERROR
+      );
+    }
+
+    sendSuccessResponse(res, "User fetched successfully.", user);
+  } catch (error) {
+    sendErrorResponse(
+      res,
+      error,
+      HTTP_STATUS_CODE.INTERNAL_SERVER_ERROR,
+      ERROR_TYPES.INTERNAL_SERVER_ERROR_TYPE
+    );
+  }
+};

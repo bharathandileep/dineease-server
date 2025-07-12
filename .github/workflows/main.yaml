@@ -1,0 +1,77 @@
+name: DineEase backend CI/CD on Ubuntu 
+
+on:
+  push:
+    branches: [ development ]  
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Test SSH Connection
+      uses: appleboy/ssh-action@master
+      with:
+        host: "13.233.245.17"
+        username: "ubuntu"
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          echo "SSH connection test successful"
+          sudo rm -rf /var/www/backend
+          
+    - name: Stop Pm2 Process
+      uses: appleboy/ssh-action@master
+      with:
+        host: "13.233.245.17"
+        username: "ubuntu"
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          cd /var/www/html
+          pm2 stop backend   
+
+         
+
+    - name: Deploy Application to AWS EC2
+      uses: appleboy/scp-action@master
+      with:
+        host: "13.233.245.17"
+        username: "ubuntu"
+        key: ${{ secrets.EC2_SSH_KEY }}
+        source: "./"
+        target: "/var/www/backend"
+        overwrite: true
+        rm: true
+        
+    - name: Copy .env File to Deployment Directory
+      uses: appleboy/ssh-action@master
+      with:
+        host: "13.233.245.17"
+        username: "ubuntu"
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          sudo cp /home/ubuntu/secret/backend/.env /var/www/backend/.env
+          
+    - name: Copy firebase File to Deployment Directory
+      uses: appleboy/ssh-action@master
+      with:
+        host: "13.233.245.17"
+        username: "ubuntu"
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          sudo cp /home/ubuntu/secret/backend/FirebaseServiceAccount.json /var/www/backend/src/config/FirebaseServiceAccount.json  
+
+    - name: Install Dependencies and Restart Application
+      uses: appleboy/ssh-action@master
+      with:
+        host: "13.233.245.17"
+        username: "ubuntu"
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          cd /var/www/backend/
+          npm i
+          npm run build
+          pm2 start backend
+          

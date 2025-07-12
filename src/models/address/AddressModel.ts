@@ -6,6 +6,7 @@ export interface IAddress extends Document, CommonDBInterface {
   city: string;
   state: string;
   district: string;
+ 
   pincode: string;
   country: string;
   landmark?: string;
@@ -19,18 +20,18 @@ export const AddressSchema: Schema<IAddress> = new Schema<IAddress>(
     state: { type: String, required: true },
     district: { type: String, required: true },
     pincode: { type: String, required: true },
-    country: { type: String, required: true },
+   country: { type: String, required: true },
     landmark: { type: String, default: null },
     address_type: { type: String },
     is_deleted: {
-      type: Boolean,
+      type: Boolean, 
       default: false,
     },
   },
   { timestamps: true }
 );  
 
-const Address: Model<IAddress> = mongoose.model<IAddress>(
+const Address: Model<IAddress> = mongoose.model<IAddress>(  
   "Address",
   AddressSchema
 );

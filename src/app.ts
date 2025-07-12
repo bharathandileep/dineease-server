@@ -7,54 +7,87 @@ import { apiConfig } from "./config/endpoint ";
 import { CustomError } from "./lib/errors/customError";
 import { HTTP_STATUS_CODE } from "./lib/constants/httpStatusCodes";
 import { ERROR_TYPES } from "./lib/constants/errorType";
-import { sendSuccessResponse } from "./lib/helpers/responseHelper";
-
-import authRoute from "./routes/AuthRoute";
+import addressDetailsRoutes from "./routes/addressdetails/addressDetailsRoutes";
+import authRoute from "./routes/auth/AuthRoute";
 import kitchensRoute from "./routes/kitchen/kitchensRoutes";
 import organizationRoute from "./routes/organization/organizationRoute";
-import menuCategoryRoutes from "./routes/kitchen/categoryRoutes";
-import menuSubCategoryRoutes from "./routes/kitchen/subcategoryRoutes";
+import menuRoutes from "./routes/admin/menuRoutes";
 import designationRoutes from "./routes/designation/designationRoutes";
-import EmployeeManagementRoutes from "./routes/empmanagment/EmployeeManagementRoutes";
-import OrgEmployeeManagementRoutes from "./routes/empmanagment/OrgEmployeeManagementRoutes";
+import roelsAndAccessRoutes from "./routes/designation/roelsAndAccessRoutes";
+import OrgEmployeeManagementRoutes from "./routes/empmanagment/orgEmployeeManagement";
+import kitchenEmployeeManagementRoutes from "./routes/empmanagment/kitchenEmployManagement";
+import adminControlRoutes from "./routes/admin/adminRoute";
 import menuitemsRoutes from "./routes/menuitems/menuitemsRoutes";
 import kitchensMenuRoutes from "./routes/kitchen/kitchensMenuRoutes";
+import menuItemRoutes from "./routes/menuitems/menuRoutes";
+import { clientOrigin } from "./config/environment";
+import userLoginsRoutes from "./routes/auth/loginsRoute";
+import notificationRoutes from "./routes/notification/notificationRoutes";
+import AdminEmployeeManagementRoutes from "./routes/empmanagment/adminEmployeeManagement";
+import CollabRoutes from "./routes/collab/CollabRoutes";
 
 export const app: Application = Express();
 
+// Middleware
 app.use(Express.json());
 app.use(Express.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(
   cors({
-    origin: true,
+    origin: clientOrigin,
     credentials: true,
   })
 );
-app.use(cookieParser());
 
+// Routes
 app.use(`${apiConfig.baseAPIUrl}/auth`, authRoute);
+app.use(`${apiConfig.baseAPIUrl}/user`, userLoginsRoutes);
+app.use(`${apiConfig.baseAPIUrl}/admin`, adminControlRoutes);
 app.use(`${apiConfig.baseAPIUrl}/kitchens`, kitchensRoute);
-app.use(`${apiConfig.baseAPIUrl}/menu-category`, menuCategoryRoutes);
-app.use(`${apiConfig.baseAPIUrl}/sub-menu-category`, menuSubCategoryRoutes);
-app.use(`${apiConfig.baseAPIUrl}/organization`, organizationRoute);
+app.use(`${apiConfig.baseAPIUrl}/menu`, menuRoutes); //OLD ONE NEED TO REMOVE
+app.use(`${apiConfig.baseAPIUrl}/kit-menu`, menuItemRoutes); // NEW ONE KEEP
 app.use(`${apiConfig.baseAPIUrl}/designation`, designationRoutes);
-app.use(`${apiConfig.baseAPIUrl}/employee`, EmployeeManagementRoutes);
-app.use(`${apiConfig.baseAPIUrl}/menu-items`, menuitemsRoutes);
-app.use(`${apiConfig.baseAPIUrl}/orgemployee`, OrgEmployeeManagementRoutes);
+app.use(`${apiConfig.baseAPIUrl}/role-and-access`, roelsAndAccessRoutes);
+app.use(`${apiConfig.baseAPIUrl}/organization`, organizationRoute);
+app.use(
+  `${apiConfig.baseAPIUrl}/admin-employee`,
+  AdminEmployeeManagementRoutes
+);
 app.use(`${apiConfig.baseAPIUrl}/kitchens-menu`, kitchensMenuRoutes);
-app.use(`${apiConfig.baseAPIUrl}/menu-items`,menuitemsRoutes)
-app.use(`${apiConfig.baseAPIUrl}/org-employee`,OrgEmployeeManagementRoutes)
+app.use(`${apiConfig.baseAPIUrl}/menu-items`, menuitemsRoutes);
+app.use(`${apiConfig.baseAPIUrl}/org-employee`, OrgEmployeeManagementRoutes);
+app.use(
+  `${apiConfig.baseAPIUrl}/kitchen-employee`,
+  kitchenEmployeeManagementRoutes
+);
+app.use(`${apiConfig.baseAPIUrl}/addressDetails`, addressDetailsRoutes);
+app.use(`${apiConfig.baseAPIUrl}/notification`, notificationRoutes);
+app.use(`${apiConfig.baseAPIUrl}/collab`, CollabRoutes);
+// Root route
 
-
-// Health check route
-app.get(`${apiConfig.baseAPIUrl}/health`, (req, res) => {
-  sendSuccessResponse( 
-    res,
-    "The server is up and running. All systems are operational."
-  );
+app.get(`/`, (req, res) => {
+  res.send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Server Status</title>
+      <style>
+        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
+        .status { font-size: 24px; color: green; }
+      </style>
+    </head>
+    <body>
+      <h1 class="status">The server is up and running.</h1>
+      <p>All systems are operational.</p>
+    </body>
+    </html>
+  `);
 });
 
 // 404 Error handler for all non-existing routes
+
 app.use("*", (req, res, next) => {
   throw new CustomError(
     `The page ${req.originalUrl} you requested does not exist.`,
@@ -64,4 +97,5 @@ app.use("*", (req, res, next) => {
   );
 });
 
+// Error handler middleware
 app.use(errorHandler);

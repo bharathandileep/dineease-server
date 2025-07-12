@@ -11,6 +11,7 @@ import{
 }from "../../controllers/Item/itemsController";
 import { apiConfig } from "../../config/endpoint ";
 import upload from "../../lib/helpers/uploadMiddleware";
+import { getMenuItemsByKitchen } from "../../controllers/kitchens/menuController";
 
 const router = express.Router();
 
@@ -22,11 +23,12 @@ router.post(`${apiConfig.menu.createItem}`,
     ]),
     createItem
 );
-// router.put(`${apiConfig.menu.updateItem}`,updateItem);
+
 router.put("/allmenuitems/:id", upload.fields([
     {name : "item_image",maxCount:1}
     ]),updateItem);
+    
 router.delete(`${apiConfig.menu.deleteItem}`,deleteItem);
 router.patch(`${apiConfig.menu.changeItemStatus}`,changeItemStatus)
-
+router.get(`${apiConfig.menu.getMenuItemsByKitchen}`,getMenuItemsByKitchen)
 export default router;
